@@ -27,6 +27,13 @@ In **SQL Editor**, run in order:
    aircraft, schools). Regenerate anytime with `node scripts/generate-seed.ts`
    (it reads `src/lib/mock-data.ts`).
 
+If your database was created from an older `schema.sql`, don't reset — run the
+idempotent patch files instead (each one is also folded into `schema.sql` for
+fresh installs):
+
+- `supabase/add-school-submissions.sql` — "Add a School" submissions table
+- `supabase/add-admin-policies.sql` — admin RLS policies + owner-policy hardening
+
 Users, reviews, and comments are not seeded — they come from real signups.
 
 ## 3. Auth configuration

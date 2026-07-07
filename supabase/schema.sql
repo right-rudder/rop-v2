@@ -143,6 +143,28 @@ create table public.reviews (
   created_at       timestamptz not null default now()
 );
 
+-- ── School Submissions ────────────────────────────────────────
+-- Raw "Add Your Flight School" form payloads. Reviewed by the team
+-- in the dashboard, then curated into flight_schools by hand.
+create table public.school_submissions (
+  id                    uuid primary key default gen_random_uuid(),
+  submitted_by          uuid not null references auth.users (id) on delete cascade,
+  status                text not null default 'pending' check (status in ('pending', 'approved', 'rejected')),
+  name                  text not null,
+  description           text not null,
+  website               text not null default '',
+  phone                 text not null default '',
+  airport_code          text not null,
+  city                  text not null,
+  state                 text not null,
+  faa_part              text check (faa_part in ('61', '141', 'both')),
+  programs              jsonb not null default '[]',
+  estimated_planes      text,
+  estimated_instructors text,
+  contacts              jsonb not null default '[]',
+  created_at            timestamptz not null default now()
+);
+
 -- ── Comments ──────────────────────────────────────────────────
 create table public.comments (
   id         uuid primary key default gen_random_uuid(),
@@ -167,6 +189,7 @@ alter table public.school_programs enable row level security;
 alter table public.school_aircraft enable row level security;
 alter table public.reviews        enable row level security;
 alter table public.comments       enable row level security;
+alter table public.school_submissions enable row level security;
 
 -- Public read for catalog / browse tables
 create policy "Public read" on public.states          for select using (true);
@@ -182,21 +205,134 @@ create policy "Public read" on public.comments        for select using (true);
 
 -- Profiles: public read (profile pages + reviewer names on reviews); owner can update
 create policy "Public read"        on public.profiles for select using (true);
-create policy "Own profile update" on public.profiles for update using (auth.uid() = id);
+create policy "Own profile update" on public.profiles
+  for update to authenticated
+  using ((select auth.uid()) = id)
+  with check ((select auth.uid()) = id);
+
+-- Users may not change their own role — column-level grant excludes `role`.
+-- Promotion to admin happens via the dashboard / service role only.
+revoke update on public.profiles from anon, authenticated;
+grant update (first_name, last_name, bio, pilot_certificates)
+  on public.profiles to authenticated;
 
 -- Reviews: authenticated insert; owner can update/delete
 create policy "Authenticated insert" on public.reviews for insert with check (auth.uid() = user_id);
-create policy "Owner update"         on public.reviews for update using (auth.uid() = user_id);
+create policy "Owner update"         on public.reviews
+  for update to authenticated
+  using ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
 create policy "Owner delete"         on public.reviews for delete using (auth.uid() = user_id);
 
 -- Comments: authenticated insert; owner can update/delete
 create policy "Authenticated insert" on public.comments for insert with check (auth.uid() = user_id);
-create policy "Owner update"         on public.comments for update using (auth.uid() = user_id);
+create policy "Owner update"         on public.comments
+  for update to authenticated
+  using ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
 create policy "Owner delete"         on public.comments for delete using (auth.uid() = user_id);
 
 -- Flight schools: managed_by owner can update
 create policy "Owner update" on public.flight_schools
-  for update using (auth.uid() = managed_by);
+  for update to authenticated
+  using ((select auth.uid()) = managed_by)
+  with check ((select auth.uid()) = managed_by);
+
+-- School submissions: authenticated insert; submitter can read their own.
+create policy "Authenticated insert" on public.school_submissions
+  for insert to authenticated with check (auth.uid() = submitted_by);
+create policy "Own submissions read" on public.school_submissions
+  for select to authenticated using (auth.uid() = submitted_by);
+
+-- ============================================================
+-- Admin role (profiles.role = 'admin')
+-- ============================================================
+
+-- SECURITY INVOKER on purpose: runs as the caller and works because
+-- profiles has a public-read policy. Never SECURITY DEFINER here.
+create or replace function public.is_admin()
+returns boolean
+language sql
+stable
+security invoker
+set search_path = public
+as $$
+  select exists (
+    select 1 from public.profiles
+    where id = (select auth.uid()) and role = 'admin'
+  );
+$$;
+
+-- Moderation: admins can edit/remove any review or comment
+create policy "Admin update" on public.reviews
+  for update to authenticated
+  using ((select public.is_admin())) with check ((select public.is_admin()));
+create policy "Admin delete" on public.reviews
+  for delete to authenticated using ((select public.is_admin()));
+create policy "Admin update" on public.comments
+  for update to authenticated
+  using ((select public.is_admin())) with check ((select public.is_admin()));
+create policy "Admin delete" on public.comments
+  for delete to authenticated using ((select public.is_admin()));
+
+-- Curation: admins can create/update listings and locations
+create policy "Admin insert" on public.flight_schools
+  for insert to authenticated with check ((select public.is_admin()));
+create policy "Admin update" on public.flight_schools
+  for update to authenticated
+  using ((select public.is_admin())) with check ((select public.is_admin()));
+create policy "Admin insert" on public.airports
+  for insert to authenticated with check ((select public.is_admin()));
+create policy "Admin update" on public.airports
+  for update to authenticated
+  using ((select public.is_admin())) with check ((select public.is_admin()));
+create policy "Admin insert" on public.cities
+  for insert to authenticated with check ((select public.is_admin()));
+create policy "Admin update" on public.cities
+  for update to authenticated
+  using ((select public.is_admin())) with check ((select public.is_admin()));
+
+-- Submission review: admins can read and approve/reject all submissions
+create policy "Admin read" on public.school_submissions
+  for select to authenticated using ((select public.is_admin()));
+create policy "Admin update" on public.school_submissions
+  for update to authenticated
+  using ((select public.is_admin())) with check ((select public.is_admin()));
+
+-- School join tables: owner + admin write (program/aircraft sync on edit,
+-- and creating links when approving a submission)
+create policy "Owner write" on public.school_programs
+  for insert to authenticated
+  with check (exists (
+    select 1 from public.flight_schools fs
+    where fs.id = school_id and fs.managed_by = (select auth.uid())
+  ));
+create policy "Owner delete" on public.school_programs
+  for delete to authenticated
+  using (exists (
+    select 1 from public.flight_schools fs
+    where fs.id = school_id and fs.managed_by = (select auth.uid())
+  ));
+create policy "Admin write" on public.school_programs
+  for insert to authenticated with check ((select public.is_admin()));
+create policy "Admin delete" on public.school_programs
+  for delete to authenticated using ((select public.is_admin()));
+create policy "Owner write" on public.school_aircraft
+  for insert to authenticated
+  with check (exists (
+    select 1 from public.flight_schools fs
+    where fs.id = school_id and fs.managed_by = (select auth.uid())
+  ));
+create policy "Owner delete" on public.school_aircraft
+  for delete to authenticated
+  using (exists (
+    select 1 from public.flight_schools fs
+    where fs.id = school_id and fs.managed_by = (select auth.uid())
+  ));
+create policy "Admin write" on public.school_aircraft
+  for insert to authenticated with check ((select public.is_admin()));
+create policy "Admin delete" on public.school_aircraft
+  for delete to authenticated using ((select public.is_admin()));
 
 -- ============================================================
 -- Keep flight_schools.rating / review_count in sync with reviews
