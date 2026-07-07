@@ -9,7 +9,7 @@ Create a project at [database.new](https://database.new), then replace the
 placeholders in `.env.local` with the values from
 **Project Settings → API**:
 
-```
+```ini
 NEXT_PUBLIC_SUPABASE_URL=https://<project-ref>.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon key>
 SUPABASE_SERVICE_ROLE_KEY=<service role key>   # server-only, never expose
@@ -20,8 +20,10 @@ NEXT_PUBLIC_SITE_URL=http://localhost:3000     # production URL when deployed
 
 In **SQL Editor**, run in order:
 
-1. `supabase/schema.sql` — tables, RLS policies, profile trigger, rating trigger
-2. `supabase/seed.sql` — catalog data (states, cities, airports, programs,
+1. `supabase/reset.sql` — only if the project already has tables from an
+   older schema version (drops all app tables; does not touch auth.users)
+2. `supabase/schema.sql` — tables, RLS policies, profile trigger, rating trigger
+3. `supabase/seed.sql` — catalog data (states, cities, airports, programs,
    aircraft, schools). Regenerate anytime with `node scripts/generate-seed.ts`
    (it reads `src/lib/mock-data.ts`).
 
