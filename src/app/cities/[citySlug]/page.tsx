@@ -10,6 +10,7 @@ import {
   getStateBySlug,
 } from "@/lib/data";
 import { SchoolCard } from "@/components/SchoolCard";
+import { EmptyState } from "@/components/EmptyState";
 
 type Props = { params: Promise<{ citySlug: string }> };
 
@@ -191,17 +192,10 @@ export default async function CityDetailPage({ params }: Props) {
               })}
             </div>
           ) : (
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-10 text-center text-slate-500 dark:text-slate-400">
-              <p className="text-lg font-medium mb-1">
-                No listings yet for {city.name}
-              </p>
-              <p className="text-sm">
-                Know a flight school here?{" "}
-                <Link href="#" className="text-blue-600 hover:underline">
-                  Submit a listing
-                </Link>
-              </p>
-            </div>
+            <EmptyState
+              title={`No listings yet for ${city.name}`}
+              hint="Know a flight school here?"
+            />
           )}
         </section>
       </div>
