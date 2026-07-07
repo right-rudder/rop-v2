@@ -346,6 +346,63 @@ export type Database = {
         };
         Relationships: [];
       };
+      school_submissions: {
+        Row: {
+          id: string;
+          submitted_by: string;
+          status: string;
+          name: string;
+          description: string;
+          website: string;
+          phone: string;
+          airport_code: string;
+          city: string;
+          state: string;
+          faa_part: string | null;
+          programs: Json;
+          estimated_planes: string | null;
+          estimated_instructors: string | null;
+          contacts: Json;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          submitted_by: string;
+          status?: string;
+          name: string;
+          description: string;
+          website?: string;
+          phone?: string;
+          airport_code: string;
+          city: string;
+          state: string;
+          faa_part?: string | null;
+          programs?: Json;
+          estimated_planes?: string | null;
+          estimated_instructors?: string | null;
+          contacts?: Json;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          submitted_by?: string;
+          status?: string;
+          name?: string;
+          description?: string;
+          website?: string;
+          phone?: string;
+          airport_code?: string;
+          city?: string;
+          state?: string;
+          faa_part?: string | null;
+          programs?: Json;
+          estimated_planes?: string | null;
+          estimated_instructors?: string | null;
+          contacts?: Json;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       comments: {
         Row: {
           id: string;
