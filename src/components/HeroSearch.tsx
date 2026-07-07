@@ -154,7 +154,8 @@ export function HeroSearch({
 
   return (
     <div ref={containerRef} className="max-w-2xl mx-auto relative">
-      <div className="flex rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/20 bg-white/10 backdrop-blur-md">
+      <div className="flex items-center rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/20 bg-white/10 backdrop-blur-md transition focus-within:ring-2 focus-within:ring-rose-300/70 focus-within:bg-white/15">
+        <Search className="w-5 h-5 text-slate-300 shrink-0 ml-5" aria-hidden />
         <input
           type="text"
           value={query}
@@ -167,12 +168,12 @@ export function HeroSearch({
           onFocus={() => results.length > 0 && setOpen(true)}
           placeholder="e.g. Mesa AZ, KFFZ, Arizona Pilot Academy..."
           autoComplete="off"
-          className="flex-1 px-6 py-5 text-lg text-slate-100 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-rose-300 bg-transparent"
+          className="flex-1 px-4 py-5 text-lg text-slate-100 placeholder:text-slate-400 focus:outline-none bg-transparent"
         />
       </div>
 
       {open && (
-        <ul className="absolute z-50 top-full left-0 right-0 mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-2xl overflow-hidden">
+        <ul className="absolute z-50 top-full left-0 right-0 mt-2 bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 rounded-xl shadow-2xl ring-1 ring-black/5 overflow-hidden text-left">
           {results.map((result, i) => (
             <li key={result.id}>
               <button
