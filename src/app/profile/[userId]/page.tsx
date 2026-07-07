@@ -47,10 +47,10 @@ export default async function ProfilePage({ params }: Props) {
   return (
     <div className="pb-20">
       {/* Hero */}
-      <section className="bg-gradient-to-br from-blue-950 to-slate-700 text-white py-16 px-4">
+      <section className="bg-linear-to-br from-slate-950 via-blue-950 to-indigo-900 text-white py-16 px-4">
         <div className="max-w-3xl mx-auto flex flex-col sm:flex-row items-center sm:items-start gap-6">
           {/* Avatar */}
-          <div className="w-20 h-20 rounded-full bg-blue-700 flex items-center justify-center text-2xl font-extrabold flex-shrink-0">
+          <div className="w-20 h-20 rounded-full bg-blue-700 flex items-center justify-center text-2xl font-extrabold shrink-0">
             {initials}
           </div>
 
@@ -145,7 +145,7 @@ export default async function ProfilePage({ params }: Props) {
                           </p>
                         )}
                       </div>
-                      <div className="flex items-center gap-0.5 flex-shrink-0">
+                      <div className="flex items-center gap-0.5 shrink-0">
                         {Array.from({ length: 5 }).map((_, i) => (
                           <Star
                             key={i}
@@ -293,7 +293,7 @@ export default async function ProfilePage({ params }: Props) {
                     </div>
                     <Link
                       href={`/schools/${school.slug}/edit`}
-                      className="text-sm font-semibold text-blue-700 dark:text-blue-400 hover:underline flex-shrink-0"
+                      className="text-sm font-semibold text-blue-700 dark:text-blue-400 hover:underline shrink-0"
                     >
                       Edit
                     </Link>

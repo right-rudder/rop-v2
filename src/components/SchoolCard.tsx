@@ -1,13 +1,13 @@
 import Link from "next/link";
-import { MapPin, Star } from "lucide-react";
+import { MapPin, Plane, Star } from "lucide-react";
 
 type SchoolCardProps = {
   name: string;
-  location: string;       // e.g. "Mesa, AZ"
+  location: string; // e.g. "Mesa, AZ"
   rating?: number;
   reviewCount?: number;
   imageGradient?: string;
-  href?: string;          // when provided, the whole card becomes a link
+  href?: string; // when provided, the whole card becomes a link
 };
 
 export function SchoolCard({
@@ -15,27 +15,41 @@ export function SchoolCard({
   location,
   rating = 4.8,
   reviewCount = 142,
-  imageGradient = "from-slate-200 to-slate-300 dark:from-slate-700 dark:to-slate-600",
+  imageGradient = "from-blue-600/20 via-indigo-600/10 to-blue-900/30 dark:from-blue-900/40 dark:via-indigo-950/40 dark:to-slate-900/60",
   href,
 }: SchoolCardProps) {
   const inner = (
     <>
-      <div className={`h-48 bg-gradient-to-br ${imageGradient}`} />
+      {/* Thumbnail */}
+      <div
+        className={`relative h-44 bg-linear-to-br ${imageGradient} flex items-center justify-center`}
+      >
+        <Plane
+          size={52}
+          className="text-blue-400/30 dark:text-blue-400/20 rotate-12"
+        />
+      </div>
+
       <div className="p-5">
-        <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-1 line-clamp-2">
+        <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 mb-1.5 line-clamp-2 leading-snug">
           {name}
         </h3>
-        <div className="flex items-center gap-1.5 text-sm text-slate-600 dark:text-slate-400 mb-3">
-          <MapPin size={16} />
-          {location}
+        <div className="flex items-center gap-1.5 text-sm text-slate-500 dark:text-slate-400 mb-4">
+          <MapPin size={13} className="shrink-0" />
+          <span className="truncate">{location}</span>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="flex items-center text-amber-500">
-            <Star size={18} fill="currentColor" />
-            <span className="ml-1 font-semibold">{rating.toFixed(1)}</span>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1 text-amber-500">
+              <Star size={14} fill="currentColor" />
+              <span className="text-sm font-bold">{rating.toFixed(1)}</span>
+            </div>
+            <span className="text-xs text-slate-400 dark:text-slate-500">
+              ({reviewCount})
+            </span>
           </div>
-          <span className="text-sm text-slate-500 dark:text-slate-400">
-            ({reviewCount} reviews)
+          <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">
+            View →
           </span>
         </div>
       </div>
@@ -43,7 +57,7 @@ export function SchoolCard({
   );
 
   const cls =
-    "bg-white dark:bg-slate-900 rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-shadow duration-200 border border-slate-200 dark:border-slate-700 block";
+    "bg-white dark:bg-zinc-900 rounded-2xl shadow-sm overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border border-slate-100 dark:border-zinc-800 block";
 
   if (href) {
     return (

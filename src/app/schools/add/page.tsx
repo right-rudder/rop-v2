@@ -18,7 +18,7 @@ export default function AddSchoolPage() {
   return (
     <div className="pb-20">
       {/* Hero */}
-      <section className="bg-gradient-to-br from-blue-950 to-slate-700 text-white py-16 px-4">
+      <section className="bg-linear-to-br from-slate-950 via-blue-950 to-indigo-900 text-white py-16 px-4">
         <div className="max-w-3xl mx-auto text-center">
           <div className="flex justify-center mb-4">
             <PlaneTakeoff className="w-12 h-12 text-blue-300" />

@@ -558,7 +558,7 @@ export function AdvancedSearchExplorer({ schools, programs, aircraft, states, ci
 
       <div className="flex gap-8">
         {/* Desktop sidebar */}
-        <aside className="hidden lg:block w-64 flex-shrink-0">
+        <aside className="hidden lg:block w-64 shrink-0">
           <div className="sticky top-20 p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm">
             <div className="flex items-center justify-between mb-5">
               <h2 className="font-semibold text-slate-800 dark:text-slate-100 flex items-center gap-2">

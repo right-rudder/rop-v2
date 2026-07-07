@@ -3,12 +3,31 @@
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Search, MapPin, Plane } from "lucide-react";
-import { flightSchools, airports, getCityBySlug, getStateBySlug } from "@/lib/mock-data";
+import {
+  flightSchools,
+  airports,
+  getCityBySlug,
+  getStateBySlug,
+} from "@/lib/mock-data";
 import { schoolHref } from "@/lib/utils";
 
 type Result =
-  | { kind: "school"; id: string; name: string; location: string; href: string; airport: string }
-  | { kind: "airport"; id: string; code: string; name: string; location: string; href: string };
+  | {
+      kind: "school";
+      id: string;
+      name: string;
+      location: string;
+      href: string;
+      airport: string;
+    }
+  | {
+      kind: "airport";
+      id: string;
+      code: string;
+      name: string;
+      location: string;
+      href: string;
+    };
 
 function search(q: string): Result[] {
   const needle = q.toLowerCase().trim();
@@ -19,7 +38,8 @@ function search(q: string): Result[] {
   for (const school of flightSchools) {
     const city = getCityBySlug(school.citySlug);
     const state = getStateBySlug(school.stateSlug);
-    const location = city && state ? `${city.name}, ${state.abbreviation}` : school.citySlug;
+    const location =
+      city && state ? `${city.name}, ${state.abbreviation}` : school.citySlug;
 
     const hit =
       school.name.toLowerCase().includes(needle) ||
@@ -27,7 +47,7 @@ function search(q: string): Result[] {
       location.toLowerCase().includes(needle) ||
       (city?.name.toLowerCase().includes(needle) ?? false) ||
       (state?.name.toLowerCase().includes(needle) ?? false) ||
-      (state?.abbreviation.toLowerCase() === needle);
+      state?.abbreviation.toLowerCase() === needle;
 
     if (hit) {
       results.push({
@@ -44,7 +64,8 @@ function search(q: string): Result[] {
   for (const airport of airports) {
     const city = getCityBySlug(airport.citySlug);
     const state = getStateBySlug(airport.stateSlug);
-    const location = city && state ? `${city.name}, ${state.abbreviation}` : airport.citySlug;
+    const location =
+      city && state ? `${city.name}, ${state.abbreviation}` : airport.citySlug;
 
     const hit =
       airport.icao.toLowerCase().includes(needle) ||
@@ -90,7 +111,10 @@ export function HeroSearch({ initialQuery = "" }: { initialQuery?: string }) {
   // Close on outside click
   useEffect(() => {
     function onClickOutside(e: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(e.target as Node)
+      ) {
         setOpen(false);
       }
     }
@@ -122,7 +146,7 @@ export function HeroSearch({ initialQuery = "" }: { initialQuery?: string }) {
 
   return (
     <div ref={containerRef} className="max-w-2xl mx-auto relative">
-      <div className="flex rounded-lg overflow-hidden shadow-xl bg-slate-500">
+      <div className="flex rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/20 bg-white/10 backdrop-blur-md">
         <input
           type="text"
           value={query}
@@ -151,7 +175,7 @@ export function HeroSearch({ initialQuery = "" }: { initialQuery?: string }) {
               >
                 {result.kind === "school" ? (
                   <>
-                    <Search className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                    <Search className="w-4 h-4 text-slate-400 shrink-0" />
                     <div className="min-w-0">
                       <p className="font-semibold text-slate-800 dark:text-slate-100 truncate">
                         {result.name}
@@ -159,16 +183,20 @@ export function HeroSearch({ initialQuery = "" }: { initialQuery?: string }) {
                       <p className="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-1">
                         <MapPin className="w-3 h-3" />
                         {result.location}
-                        <span className="ml-1 text-xs text-slate-400">· {result.airport}</span>
+                        <span className="ml-1 text-xs text-slate-400">
+                          · {result.airport}
+                        </span>
                       </p>
                     </div>
                   </>
                 ) : (
                   <>
-                    <Plane className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                    <Plane className="w-4 h-4 text-blue-500 shrink-0" />
                     <div className="min-w-0">
                       <p className="font-semibold text-slate-800 dark:text-slate-100 truncate">
-                        <span className="text-blue-700 dark:text-blue-400">{result.code}</span>
+                        <span className="text-blue-700 dark:text-blue-400">
+                          {result.code}
+                        </span>
                         <span className="text-slate-400 mx-1">&nbsp;</span>
                         {result.name}
                       </p>

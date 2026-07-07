@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { ForgotPasswordForm } from "./ForgotPasswordForm";
 
 export const metadata: Metadata = {
   title: "Forgot Password – Flight School Finder",
@@ -20,40 +20,7 @@ export default function ForgotPasswordPage() {
             </p>
           </div>
 
-          <form className="space-y-5">
-            <div>
-              <label
-                htmlFor="email"
-                className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1"
-              >
-                Email Address
-              </label>
-              <input
-                id="email"
-                type="email"
-                autoComplete="email"
-                placeholder="you@example.com"
-                className="w-full px-4 py-3 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
-              />
-            </div>
-
-            <button
-              type="submit"
-              className="w-full py-3 bg-blue-700 hover:bg-blue-800 text-white font-semibold rounded-lg transition"
-            >
-              Send Reset Link
-            </button>
-          </form>
-
-          <div className="mt-6 text-center text-sm text-slate-500 dark:text-slate-400">
-            Remembered it?{" "}
-            <Link
-              href="/login"
-              className="text-blue-700 dark:text-blue-400 font-semibold hover:underline"
-            >
-              Back to log in
-            </Link>
-          </div>
+          <ForgotPasswordForm />
         </div>
       </div>
     </div>

@@ -28,7 +28,7 @@ export default function FeaturedSchoolsPage() {
   return (
     <div className="pb-20">
       {/* Hero */}
-      <section className="bg-gradient-to-br from-blue-950 to-slate-700 text-white py-16 px-4">
+      <section className="bg-linear-to-br from-slate-950 via-blue-950 to-indigo-900 text-white py-16 px-4">
         <div className="max-w-4xl mx-auto text-center">
           <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-4">
             Featured Flight Schools
