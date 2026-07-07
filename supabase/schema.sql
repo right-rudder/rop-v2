@@ -180,8 +180,8 @@ create policy "Public read" on public.school_aircraft for select using (true);
 create policy "Public read" on public.reviews         for select using (true);
 create policy "Public read" on public.comments        for select using (true);
 
--- Profiles: owner can read/update their own row
-create policy "Own profile read"   on public.profiles for select using (auth.uid() = id);
+-- Profiles: public read (profile pages + reviewer names on reviews); owner can update
+create policy "Public read"        on public.profiles for select using (true);
 create policy "Own profile update" on public.profiles for update using (auth.uid() = id);
 
 -- Reviews: authenticated insert; owner can update/delete
@@ -197,3 +197,30 @@ create policy "Owner delete"         on public.comments for delete using (auth.u
 -- Flight schools: managed_by owner can update
 create policy "Owner update" on public.flight_schools
   for update using (auth.uid() = managed_by);
+
+-- ============================================================
+-- Keep flight_schools.rating / review_count in sync with reviews
+-- ============================================================
+
+create or replace function public.refresh_school_rating()
+returns trigger language plpgsql security definer set search_path = public as $$
+declare
+  target_school text;
+begin
+  if tg_op = 'DELETE' then
+    target_school := old.school_id;
+  else
+    target_school := new.school_id;
+  end if;
+
+  update public.flight_schools fs
+  set rating       = coalesce((select round(avg(r.overall)::numeric, 2) from public.reviews r where r.school_id = target_school), 0),
+      review_count = (select count(*) from public.reviews r where r.school_id = target_school)
+  where fs.id = target_school;
+  return null;
+end;
+$$;
+
+create trigger on_review_change
+  after insert or update or delete on public.reviews
+  for each row execute function public.refresh_school_rating();
