@@ -150,6 +150,32 @@ export type Comment = {
   createdAt: string; // ISO date string
 };
 
+export type SubmissionStatus = "pending" | "approved" | "rejected";
+
+/** A raw "Add Your Flight School" form submission awaiting admin review */
+export type SchoolSubmission = {
+  id: string;
+  /** auth.users id of the submitter */
+  submittedBy: string;
+  status: SubmissionStatus;
+  name: string;
+  description: string;
+  website: string;
+  phone: string;
+  /** Free-text ICAO code as entered — resolved to an airport on approval */
+  airportCode: string;
+  /** Free-text city/state as entered — resolved to slugs on approval */
+  city: string;
+  state: string;
+  faaPart?: "61" | "141" | "both";
+  /** Program slugs from the programs catalog */
+  programs: string[];
+  estimatedPlanes?: FleetRange;
+  estimatedInstructors?: FleetRange;
+  contacts: ContactPerson[];
+  createdAt: string;
+};
+
 export type UserRole = "user" | "admin";
 
 export type User = {
