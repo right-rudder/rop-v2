@@ -1,7 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { useActionState } from "react";
+import { usePathname } from "next/navigation";
+import Link from "next/link";
 import { Star, CheckCircle } from "lucide-react";
+import { submitReview } from "@/app/actions/reviews";
 
 const SUBCATEGORIES = [
   { key: "customerService", label: "Customer Service" },
@@ -58,19 +62,19 @@ function StarPicker({
 }
 
 export default function ReviewForm({ schoolId }: { schoolId: string }) {
-  const [name, setName] = useState("");
+  const pathname = usePathname();
+  const [state, action, pending] = useActionState(submitReview, {});
   const [ratings, setRatings] = useState<Ratings>({
     overall: 0, customerService: 0, instructors: 0, aircraft: 0, availability: 0, facilities: 0,
   });
   const [hovered, setHovered] = useState<Ratings>({
     overall: 0, customerService: 0, instructors: 0, aircraft: 0, availability: 0, facilities: 0,
   });
-  const [body, setBody] = useState("");
-  const [error, setError] = useState("");
-  const [submitted, setSubmitted] = useState(false);
+  const [clientError, setClientError] = useState("");
 
   function setRating(key: keyof Ratings, val: number) {
     setRatings((prev) => ({ ...prev, [key]: val }));
+    setClientError("");
   }
   function setHover(key: keyof Ratings, val: number) {
     setHovered((prev) => ({ ...prev, [key]: val }));
@@ -79,51 +83,44 @@ export default function ReviewForm({ schoolId }: { schoolId: string }) {
     setHovered((prev) => ({ ...prev, [key]: 0 }));
   }
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!name.trim()) { setError("Please enter your name."); return; }
-    if (ratings.overall === 0) { setError("Please select an overall rating."); return; }
+  function validate(e: React.FormEvent) {
+    if (ratings.overall === 0) {
+      e.preventDefault();
+      setClientError("Please select an overall rating.");
+      return;
+    }
     const missing = SUBCATEGORIES.find(({ key }) => ratings[key] === 0);
-    if (missing) { setError(`Please rate ${missing.label}.`); return; }
-    if (!body.trim()) { setError("Please write your review."); return; }
-    void schoolId;
-    setSubmitted(true);
+    if (missing) {
+      e.preventDefault();
+      setClientError(`Please rate ${missing.label}.`);
+    }
   }
 
-  if (submitted) {
+  if (state.success) {
     return (
       <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-xl p-8 flex flex-col items-center gap-3 text-center">
         <CheckCircle size={40} className="text-green-600 dark:text-green-400" />
         <p className="font-semibold text-green-800 dark:text-green-300 text-lg">Thanks for your review!</p>
         <p className="text-green-700 dark:text-green-400 text-sm">
-          It will appear on this page after a quick approval by our team.
+          Your review is now live on this page.
         </p>
       </div>
     );
   }
 
+  const error = clientError || state.error;
+
   return (
     <form
-      onSubmit={handleSubmit}
+      action={action}
+      onSubmit={validate}
       className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-6 space-y-5"
     >
-      {/* Name */}
-      <div>
-        <label
-          htmlFor="reviewer-name"
-          className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1"
-        >
-          Your name
-        </label>
-        <input
-          id="reviewer-name"
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="e.g. John D."
-          className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-      </div>
+      <input type="hidden" name="schoolId" value={schoolId} />
+      <input type="hidden" name="path" value={pathname} />
+      {Object.entries(ratings).map(([key, value]) => (
+        <input key={key} type="hidden" name={key} value={value} />
+      ))}
 
       {/* Ratings */}
       <div>
@@ -164,23 +161,34 @@ export default function ReviewForm({ schoolId }: { schoolId: string }) {
         </label>
         <textarea
           id="review-body"
+          name="body"
           rows={4}
-          value={body}
-          onChange={(e) => setBody(e.target.value)}
+          required
           placeholder="Share your experience with this flight school…"
           className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
         />
       </div>
 
       {error && (
-        <p className="text-sm text-rose-600 dark:text-rose-400">{error}</p>
+        <p className="text-sm text-rose-600 dark:text-rose-400">
+          {error}
+          {error.includes("logged in") && (
+            <>
+              {" "}
+              <Link href="/login" className="font-semibold underline">
+                Log in
+              </Link>
+            </>
+          )}
+        </p>
       )}
 
       <button
         type="submit"
-        className="w-full sm:w-auto px-6 py-2.5 bg-rose-800 hover:bg-rose-700 text-white font-semibold rounded-lg text-sm transition"
+        disabled={pending}
+        className="w-full sm:w-auto px-6 py-2.5 bg-rose-800 hover:bg-rose-700 disabled:opacity-60 text-white font-semibold rounded-lg text-sm transition"
       >
-        Submit Review
+        {pending ? "Submitting…" : "Submit Review"}
       </button>
     </form>
   );
