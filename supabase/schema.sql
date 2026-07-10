@@ -143,6 +143,10 @@ create table public.reviews (
   created_at       timestamptz not null default now()
 );
 
+-- One review per user per school (delete + re-post to change)
+create unique index reviews_school_user_unique
+  on public.reviews (school_id, user_id);
+
 -- ── School Submissions ────────────────────────────────────────
 -- Raw "Add Your Flight School" form payloads. Reviewed by the team
 -- in the dashboard, then curated into flight_schools by hand.
@@ -216,12 +220,9 @@ revoke update on public.profiles from anon, authenticated;
 grant update (first_name, last_name, bio, pilot_certificates)
   on public.profiles to authenticated;
 
--- Reviews: authenticated insert; owner can update/delete
+-- Reviews: authenticated insert; owner can delete (reviews are
+-- immutable — delete and re-post to change)
 create policy "Authenticated insert" on public.reviews for insert with check (auth.uid() = user_id);
-create policy "Owner update"         on public.reviews
-  for update to authenticated
-  using ((select auth.uid()) = user_id)
-  with check ((select auth.uid()) = user_id);
 create policy "Owner delete"         on public.reviews for delete using (auth.uid() = user_id);
 
 -- Comments: authenticated insert; owner can update/delete
