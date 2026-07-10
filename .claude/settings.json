@@ -1,5 +1,7 @@
 {
   "enabledPlugins": {
-    "supabase@claude-plugins-official": true
+    "supabase@claude-plugins-official": true,
+    "feature-dev@claude-plugins-official": true,
+    "netlify-skills@claude-plugins-official": true
   }
 }
