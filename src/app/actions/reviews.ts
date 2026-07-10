@@ -51,7 +51,45 @@ export async function submitReview(
     body,
   });
 
+  if (error) {
+    if (error.code === "23505") {
+      return {
+        error:
+          "You've already reviewed this school. Delete your review to write a new one.",
+      };
+    }
+    return { error: error.message };
+  }
+
+  const path = formData.get("path") as string | null;
+  if (path) revalidatePath(path);
+  return { success: true };
+}
+
+export async function deleteReview(
+  _prevState: ReviewFormState,
+  formData: FormData,
+): Promise<ReviewFormState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "You must be logged in to delete your review." };
+
+  const reviewId = formData.get("reviewId") as string | null;
+  if (!reviewId) return { error: "Missing review." };
+
+  const { data, error } = await supabase
+    .from("reviews")
+    .delete()
+    .eq("id", reviewId)
+    .eq("user_id", user.id) // RLS "Owner delete" also enforces this
+    .select("id");
+
   if (error) return { error: error.message };
+  if (!data || data.length === 0) {
+    return { error: "Review not found, or it isn't yours to delete." };
+  }
 
   const path = formData.get("path") as string | null;
   if (path) revalidatePath(path);

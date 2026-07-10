@@ -4,9 +4,9 @@ import { useState } from "react";
 import { useActionState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Star, MessageSquare, CheckCircle } from "lucide-react";
+import { Star, MessageSquare, CheckCircle, Trash2 } from "lucide-react";
 import type { Review, Comment, User } from "@/lib/types";
-import { submitComment } from "@/app/actions/reviews";
+import { submitComment, deleteReview } from "@/app/actions/reviews";
 
 const SUBCATEGORIES: { key: keyof Review; label: string }[] = [
   { key: "customerService", label: "Customer Service" },
@@ -82,16 +82,65 @@ function CommentForm({ reviewId }: { reviewId: string }) {
   );
 }
 
+function DeleteReviewButton({ reviewId }: { reviewId: string }) {
+  const pathname = usePathname();
+  const [confirming, setConfirming] = useState(false);
+  const [state, action, pending] = useActionState(deleteReview, {});
+
+  if (!confirming) {
+    return (
+      <button
+        onClick={() => setConfirming(true)}
+        className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 transition"
+      >
+        <Trash2 size={13} />
+        Delete review
+      </button>
+    );
+  }
+
+  return (
+    <form action={action} className="flex flex-wrap items-center gap-2">
+      <input type="hidden" name="reviewId" value={reviewId} />
+      <input type="hidden" name="path" value={pathname} />
+      <span className="text-xs text-slate-600 dark:text-slate-300">
+        Delete your review? This can&apos;t be undone.
+      </span>
+      <button
+        type="submit"
+        disabled={pending}
+        className="text-xs font-semibold text-rose-600 dark:text-rose-400 hover:underline disabled:opacity-60"
+      >
+        {pending ? "Deleting…" : "Yes, delete"}
+      </button>
+      <button
+        type="button"
+        onClick={() => setConfirming(false)}
+        className="text-xs text-slate-500 dark:text-slate-400 hover:underline"
+      >
+        Cancel
+      </button>
+      {state.error && (
+        <span className="text-xs text-rose-600 dark:text-rose-400">
+          {state.error}
+        </span>
+      )}
+    </form>
+  );
+}
+
 function ReviewCard({
   review,
   comments,
   usersById,
   programShortNames,
+  currentUserId,
 }: {
   review: Review;
   comments: Comment[];
   usersById: Record<string, User>;
   programShortNames: Record<string, string>;
+  currentUserId?: string | null;
 }) {
   const [showForm, setShowForm] = useState(false);
 
@@ -180,18 +229,24 @@ function ReviewCard({
         </div>
       )}
 
-      {/* Leave a comment toggle */}
-      {!showForm ? (
-        <button
-          onClick={() => setShowForm(true)}
-          className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 hover:text-blue-700 dark:hover:text-blue-400 transition"
-        >
-          <MessageSquare size={13} />
-          Leave a comment
-        </button>
-      ) : (
-        <CommentForm reviewId={review.id} />
-      )}
+      {/* Leave a comment toggle + own-review delete */}
+      <div className="flex items-center justify-between gap-3">
+        {!showForm ? (
+          <button
+            onClick={() => setShowForm(true)}
+            className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 hover:text-blue-700 dark:hover:text-blue-400 transition"
+          >
+            <MessageSquare size={13} />
+            Leave a comment
+          </button>
+        ) : (
+          <span />
+        )}
+        {review.userId === currentUserId && (
+          <DeleteReviewButton reviewId={review.id} />
+        )}
+      </div>
+      {showForm && <CommentForm reviewId={review.id} />}
     </div>
   );
 }
@@ -201,11 +256,13 @@ export default function ReviewsSection({
   commentsByReview,
   usersById,
   programShortNames,
+  currentUserId,
 }: {
   reviews: Review[];
   commentsByReview: Record<string, Comment[]>;
   usersById: Record<string, User>;
   programShortNames: Record<string, string>;
+  currentUserId?: string | null;
 }) {
   if (reviews.length === 0) {
     return (
@@ -290,6 +347,7 @@ export default function ReviewsSection({
             comments={commentsByReview[review.id] ?? []}
             usersById={usersById}
             programShortNames={programShortNames}
+            currentUserId={currentUserId}
           />
         ))}
       </div>

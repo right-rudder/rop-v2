@@ -17,6 +17,7 @@ import {
   getLocationMaps,
   getAirports,
 } from "@/lib/data";
+import { getCurrentUser } from "@/lib/auth";
 import ReviewsSection from "@/components/ReviewsSection";
 import ReviewForm from "@/components/ReviewForm";
 
@@ -63,6 +64,7 @@ export default async function SchoolDetailPage({ params }: Props) {
     schoolAircraft,
     rawRelated,
     allPrograms,
+    viewer,
   ] = await Promise.all([
     getCityBySlug(school.citySlug),
     getStateBySlug(school.stateSlug),
@@ -72,7 +74,12 @@ export default async function SchoolDetailPage({ params }: Props) {
     getAircraftBySlugs(school.aircraftSlugs ?? []),
     getRelatedSchools(school),
     getPrograms(),
+    getCurrentUser(),
   ]);
+
+  const ownReview = viewer
+    ? schoolReviews.find((r) => r.userId === viewer.id)
+    : undefined;
 
   const commentsByReview = await getCommentsForReviews(
     schoolReviews.map((r) => r.id),
@@ -437,6 +444,7 @@ export default async function SchoolDetailPage({ params }: Props) {
               commentsByReview={commentsByReview}
               usersById={usersById}
               programShortNames={programShortNames}
+              currentUserId={viewer?.id ?? null}
             />
           </section>
 
@@ -445,7 +453,14 @@ export default async function SchoolDetailPage({ params }: Props) {
             <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-4">
               Write a Review
             </h2>
-            <ReviewForm schoolId={school.id} />
+            {ownReview ? (
+              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-6 text-sm text-slate-600 dark:text-slate-300">
+                You&apos;ve already reviewed this school. Delete your review to
+                write a new one.
+              </div>
+            ) : (
+              <ReviewForm schoolId={school.id} />
+            )}
           </section>
 
           {/* Other locations — sibling listings for the same brand */}
