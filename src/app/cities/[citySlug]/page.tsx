@@ -1,7 +1,5 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import Link from "next/link";
-import { Plane, MapPin, Building2, ChevronLeft } from "lucide-react";
 import {
   getCityBySlug,
   getCitiesBySlugs,
@@ -10,10 +8,14 @@ import {
   getStateBySlug,
 } from "@/lib/data";
 import { SchoolCard } from "@/components/SchoolCard";
+import { AirportCard } from "@/components/AirportCard";
 import { JsonLd } from "@/components/JsonLd";
+import { PageHero } from "@/components/PageHero";
+import { EmptyState } from "@/components/EmptyState";
+import { Chip } from "@/components/ui/Chip";
+import { Container } from "@/components/ui/Container";
 import { schoolHref } from "@/lib/utils";
 import { absoluteUrl } from "@/lib/site";
-import { EmptyState } from "@/components/EmptyState";
 
 type Props = { params: Promise<{ citySlug: string }> };
 
@@ -36,6 +38,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     twitter: { title, description },
   };
 }
+
+const h2 = "mb-5 font-display text-2xl font-bold tracking-tight text-ink";
 
 export default async function CityDetailPage({ params }: Props) {
   const { citySlug } = await params;
@@ -63,143 +67,112 @@ export default async function CityDetailPage({ params }: Props) {
     })),
   };
 
+  const meta = [
+    `${citySchools.length} ${citySchools.length === 1 ? "school" : "schools"}`,
+    `${cityAirports.length} ${cityAirports.length === 1 ? "airport" : "airports"}`,
+    nearbyCities.length > 0
+      ? `${nearbyCities.length} nearby ${nearbyCities.length === 1 ? "city" : "cities"}`
+      : null,
+  ].filter(Boolean) as string[];
+
   return (
     <>
       <JsonLd data={itemListJsonLd} />
-    <div className="pb-20">
-      {/* Hero */}
-      <section className="bg-linear-to-br from-slate-950 via-blue-950 to-indigo-900 text-white py-16 px-4">
-        <div className="max-w-5xl mx-auto">
-          <Link
-            href={state ? `/states/${state.slug}` : "/states"}
-            className="inline-flex items-center gap-1 text-slate-300 hover:text-white text-sm transition mb-4"
-          >
-            <ChevronLeft size={16} />
-            {state ? `${state.name} Flight Schools` : "All States"}
-          </Link>
-
-          <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-2">
-            Flight Schools in {city.name},{" "}
-            <span className="text-blue-300">{city.stateAbbreviation}</span>
-          </h1>
-
-          <div className="flex flex-wrap gap-6 text-base opacity-90 mt-4">
-            <span className="flex items-center gap-2">
-              <Plane size={18} />
-              {citySchools.length} {citySchools.length === 1 ? "school" : "schools"}
-            </span>
-            <span className="flex items-center gap-2">
-              <MapPin size={18} />
-              {cityAirports.length} {cityAirports.length === 1 ? "airport" : "airports"}
-            </span>
-            {nearbyCities.length > 0 && (
-              <span className="flex items-center gap-2">
-                <Building2 size={18} />
-                {nearbyCities.length} nearby{" "}
-                {nearbyCities.length === 1 ? "city" : "cities"}
-              </span>
-            )}
-          </div>
-        </div>
-      </section>
-
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-14">
-        {/* Nearby / metro cities */}
-        {nearbyCities.length > 0 && (
-          <section>
-            <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-1">
-              Also Serving Nearby Cities
-            </h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">
-              Schools in {city.name} may also serve pilots in the surrounding metro area.
-            </p>
-            <div className="flex flex-wrap gap-3">
-              {nearbyCities.map((nearby) => (
-                <Link
-                  key={nearby.id}
-                  href={`/cities/${nearby.slug}`}
-                  className="px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-300 hover:border-blue-400 hover:text-blue-700 dark:hover:text-blue-400 transition"
-                >
-                  {nearby.name},{" "}
-                  <span className="text-slate-400">{nearby.stateAbbreviation}</span>
-                </Link>
+      <div className="pb-20">
+        <PageHero
+          back={{
+            href: state ? `/states/${state.slug}` : "/states",
+            label: state ? `${state.name} flight schools` : "All states",
+          }}
+          eyebrow={
+            <>
+              <span className="font-semibold text-ink">{city.stateAbbreviation}</span>
+              {meta.map((m) => (
+                <span key={m} className="inline-flex items-center gap-2">
+                  <span className="text-line">/</span>
+                  {m}
+                </span>
               ))}
-            </div>
-          </section>
-        )}
+            </>
+          }
+          title={
+            <>
+              Flight schools in {city.name},{" "}
+              <span className="text-muted">{city.stateAbbreviation}</span>
+            </>
+          }
+        />
 
-        {/* Airports */}
-        {cityAirports.length > 0 && (
-          <section>
-            <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-5">
-              Airports in {city.name}
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {cityAirports.map((airport) => (
-                <Link
-                  key={airport.id}
-                  href={`/airports/${airport.icao.toLowerCase()}`}
-                  className="group bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-4 hover:shadow-md hover:border-blue-400 dark:hover:border-blue-500 transition"
-                >
-                  <div className="flex items-start justify-between mb-1">
-                    <span className="font-mono font-bold text-blue-700 dark:text-blue-400 group-hover:text-blue-600 text-lg">
-                      {airport.icao}
-                    </span>
-                    <div className="flex gap-1 text-xs text-slate-400">
-                      {airport.iata && (
-                        <span className="bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded">
-                          {airport.iata}
-                        </span>
-                      )}
-                      {airport.faaLid && airport.faaLid !== airport.iata && (
-                        <span className="bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded">
-                          {airport.faaLid}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                    {airport.name}
-                  </p>
-                </Link>
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* Schools */}
-        <section>
-          <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-5">
-            Flight Schools in {city.name}
-          </h2>
-
-          {citySchools.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {citySchools.map((school) => {
-                const locationLabel = state
-                  ? `${city.name}, ${state.abbreviation}`
-                  : city.name;
-                return (
-                  <SchoolCard
-                    key={school.id}
-                    name={school.name}
-                    location={locationLabel}
-                    rating={school.rating}
-                    reviewCount={school.reviewCount}
-                    href={schoolHref(school)}
-                  />
-                );
-              })}
-            </div>
-          ) : (
-            <EmptyState
-              title={`No listings yet for ${city.name}`}
-              hint="Know a flight school here?"
-            />
+        <Container size="default" className="space-y-14 py-12">
+          {/* Nearby / metro cities */}
+          {nearbyCities.length > 0 && (
+            <section>
+              <h2 className="mb-1 font-display text-2xl font-bold tracking-tight text-ink">
+                Also serving nearby cities
+              </h2>
+              <p className="mb-5 text-sm text-muted">
+                Schools in {city.name} may also serve pilots in the surrounding metro area.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {nearbyCities.map((nearby) => (
+                  <Chip key={nearby.id} href={`/cities/${nearby.slug}`}>
+                    {nearby.name}
+                    <span className="font-mono text-xs text-muted">{nearby.stateAbbreviation}</span>
+                  </Chip>
+                ))}
+              </div>
+            </section>
           )}
-        </section>
+
+          {/* Airports */}
+          {cityAirports.length > 0 && (
+            <section>
+              <h2 className={h2}>Airports in {city.name}</h2>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {cityAirports.map((airport) => (
+                  <AirportCard
+                    key={airport.id}
+                    icao={airport.icao}
+                    iata={airport.iata}
+                    faaLid={airport.faaLid}
+                    name={airport.name}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Schools */}
+          <section>
+            <h2 className={h2}>Flight schools in {city.name}</h2>
+            {citySchools.length > 0 ? (
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                {citySchools.map((school) => {
+                  const locationLabel = state
+                    ? `${city.name}, ${state.abbreviation}`
+                    : city.name;
+                  return (
+                    <SchoolCard
+                      key={school.id}
+                      name={school.name}
+                      location={locationLabel}
+                      airportCode={school.primaryAirportCode}
+                      rating={school.rating}
+                      reviewCount={school.reviewCount}
+                      href={schoolHref(school)}
+                    />
+                  );
+                })}
+              </div>
+            ) : (
+              <EmptyState
+                title={`No listings yet for ${city.name}`}
+                hint="Know a flight school here?"
+              />
+            )}
+          </section>
+        </Container>
       </div>
-    </div>
     </>
   );
 }

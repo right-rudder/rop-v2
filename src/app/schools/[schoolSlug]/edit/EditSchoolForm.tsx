@@ -2,16 +2,14 @@
 
 import { useActionState } from "react";
 import Link from "next/link";
-import { CheckCircle } from "lucide-react";
 import { FLEET_RANGES, LIMITS, type FlightSchool } from "@/lib/types";
 import { SchoolContactsField } from "@/components/SchoolContactsField";
 import { updateSchool } from "@/app/actions/schools";
-
-const inputClass =
-  "w-full px-4 py-3 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 disabled:opacity-60 disabled:cursor-not-allowed";
-
-const sectionClass =
-  "bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 space-y-5";
+import { Button } from "@/components/ui/Button";
+import { Field } from "@/components/ui/Field";
+import { FormSection, choiceClass } from "@/components/ui/FormSection";
+import { Input, Select, Textarea } from "@/components/ui/Input";
+import { Notice } from "@/components/ui/Notice";
 
 type Props = {
   school: FlightSchool;
@@ -33,305 +31,186 @@ export function EditSchoolForm({
   const [state, action, pending] = useActionState(updateSchool, {});
 
   return (
-    <form action={action} className="space-y-10">
+    <form action={action} className="space-y-8">
       <input type="hidden" name="schoolId" value={school.id} />
 
       {state.success && (
-        <div className="flex items-center justify-center gap-2 text-sm text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-lg px-4 py-3">
-          <CheckCircle size={16} />
-          <span>
-            Changes saved.{" "}
-            <Link href={backHref} className="font-semibold underline">
-              View listing
-            </Link>
-          </span>
-        </div>
+        <Notice tone="ok">
+          Changes saved.{" "}
+          <Link href={backHref} className="font-semibold underline underline-offset-2">
+            View listing
+          </Link>
+        </Notice>
       )}
 
       {/* Basic Info */}
-      <div className={sectionClass}>
-        <h2 className="text-lg font-bold text-slate-900 dark:text-white">
-          Basic Information
-        </h2>
-
-        <div>
-          <label
-            htmlFor="name"
-            className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1"
-          >
-            School Name <span className="text-rose-600">*</span>
-          </label>
-          <input
+      <FormSection title="Basic information">
+        <Field label="School name" htmlFor="name" required>
+          <Input
             id="name"
             name="name"
             type="text"
             required
             maxLength={LIMITS.schoolName}
             defaultValue={school.name}
-            className={inputClass}
           />
-        </div>
+        </Field>
 
-        <div>
-          <label
-            htmlFor="description"
-            className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1"
-          >
-            Description <span className="text-rose-600">*</span>
-          </label>
-          <textarea
+        <Field label="Description" htmlFor="description" required>
+          <Textarea
             id="description"
             name="description"
             rows={4}
             required
             maxLength={LIMITS.schoolDescription}
             defaultValue={school.description}
-            className={`${inputClass} resize-none`}
           />
-        </div>
+        </Field>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label
-              htmlFor="website"
-              className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1"
-            >
-              Website
-            </label>
-            <input
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Field label="Website" htmlFor="website">
+            <Input
               id="website"
               name="website"
               type="url"
               maxLength={LIMITS.website}
               defaultValue={school.website}
-              className={inputClass}
             />
-          </div>
-          <div>
-            <label
-              htmlFor="phone"
-              className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1"
-            >
-              Phone Number
-            </label>
-            <input
+          </Field>
+          <Field label="Phone number" htmlFor="phone">
+            <Input
               id="phone"
               name="phone"
               type="tel"
               maxLength={LIMITS.phone}
               defaultValue={school.phone}
-              className={inputClass}
             />
-          </div>
+          </Field>
         </div>
 
         {viewerIsAdmin && (
-          <div className="flex items-center gap-3">
+          <label className="flex cursor-pointer items-center gap-2.5 text-sm font-semibold text-ink">
             <input
               id="featured"
               name="featured"
               type="checkbox"
               defaultChecked={school.featured ?? false}
-              className="accent-blue-700 w-4 h-4"
+              className={choiceClass}
             />
-            <label
-              htmlFor="featured"
-              className="text-sm font-semibold text-slate-700 dark:text-slate-300 cursor-pointer"
-            >
-              Featured listing
-            </label>
-          </div>
+            Featured listing
+          </label>
         )}
-      </div>
+      </FormSection>
 
       {/* Location — read-only: changing it re-links catalog records */}
-      <div className={sectionClass}>
-        <div>
-          <h2 className="text-lg font-bold text-slate-900 dark:text-white">
-            Location
-          </h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Location changes re-link the listing to other records — contact the
-            site team to move a school.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div>
-            <label
-              htmlFor="airportCode"
-              className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1"
-            >
-              Airport Code (ICAO)
-            </label>
-            <input
+      <FormSection
+        title="Location"
+        description="Location changes re-link the listing to other records — contact the site team to move a school."
+      >
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <Field label="Airport code (ICAO)" htmlFor="airportCode">
+            <Input
               id="airportCode"
               type="text"
               disabled
               defaultValue={school.primaryAirportCode}
-              className={`${inputClass} uppercase`}
+              className="font-mono uppercase"
             />
-          </div>
-          <div>
-            <label
-              htmlFor="city"
-              className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1"
-            >
-              City
-            </label>
-            <input
-              id="city"
-              type="text"
-              disabled
-              defaultValue={cityName}
-              className={inputClass}
-            />
-          </div>
-          <div>
-            <label
-              htmlFor="state"
-              className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1"
-            >
-              State
-            </label>
-            <input
-              id="state"
-              type="text"
-              disabled
-              defaultValue={stateName}
-              className={inputClass}
-            />
-          </div>
+          </Field>
+          <Field label="City" htmlFor="city">
+            <Input id="city" type="text" disabled defaultValue={cityName} />
+          </Field>
+          <Field label="State" htmlFor="state">
+            <Input id="state" type="text" disabled defaultValue={stateName} />
+          </Field>
         </div>
-      </div>
+      </FormSection>
 
       {/* Training */}
-      <div className={sectionClass}>
-        <h2 className="text-lg font-bold text-slate-900 dark:text-white">
-          Training &amp; Certification
-        </h2>
-
-        <div>
-          <p className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
-            FAA Operating Authority
-          </p>
-          <div className="flex flex-wrap gap-4">
+      <FormSection title="Training &amp; certification">
+        <fieldset>
+          <legend className="mb-2 text-sm font-semibold text-ink">FAA operating authority</legend>
+          <div className="flex flex-wrap gap-5">
             {(["61", "141", "both"] as const).map((part) => (
-              <label
-                key={part}
-                className="flex items-center gap-2 cursor-pointer text-slate-700 dark:text-slate-300"
-              >
+              <label key={part} className="flex cursor-pointer items-center gap-2 text-sm text-ink">
                 <input
                   type="radio"
                   name="faaPart"
                   value={part}
                   defaultChecked={school.faaPart === part}
-                  className="accent-blue-700"
+                  className={choiceClass}
                 />
-                <span className="text-sm font-medium">
-                  {part === "both" ? "Both Part 61 & 141" : `Part ${part}`}
-                </span>
+                {part === "both" ? "Both Part 61 & 141" : `Part ${part}`}
               </label>
             ))}
           </div>
-        </div>
+        </fieldset>
 
-        <div>
-          <p className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
-            Programs Offered
-          </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <fieldset>
+          <legend className="mb-2 text-sm font-semibold text-ink">Programs offered</legend>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             {programs.map((program) => (
               <label
                 key={program.slug}
-                className="flex items-center gap-2 cursor-pointer text-slate-700 dark:text-slate-300"
+                className="flex cursor-pointer items-center gap-2.5 text-sm text-ink"
               >
                 <input
                   type="checkbox"
                   name="programs"
                   value={program.slug}
                   defaultChecked={school.programSlugs.includes(program.slug)}
-                  className="accent-blue-700 w-4 h-4"
+                  className={choiceClass}
                 />
-                <span className="text-sm">{program.shortName}</span>
+                {program.shortName}
               </label>
             ))}
           </div>
-        </div>
-      </div>
+        </fieldset>
+      </FormSection>
 
       {/* Fleet */}
-      <div className={sectionClass}>
-        <h2 className="text-lg font-bold text-slate-900 dark:text-white">
-          Fleet &amp; Instructors
-        </h2>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label
-              htmlFor="estimatedPlanes"
-              className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1"
-            >
-              Estimated Fleet Size
-            </label>
-            <select
+      <FormSection title="Fleet &amp; instructors">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Field label="Estimated fleet size" htmlFor="estimatedPlanes">
+            <Select
               id="estimatedPlanes"
               name="estimatedPlanes"
               defaultValue={school.estimatedPlanes ?? ""}
-              className={inputClass}
             >
               <option value="">Select range…</option>
               {FLEET_RANGES.map((r) => (
                 <option key={r} value={r}>{r} aircraft</option>
               ))}
-            </select>
-          </div>
-          <div>
-            <label
-              htmlFor="estimatedInstructors"
-              className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1"
-            >
-              Estimated Number of Instructors
-            </label>
-            <select
+            </Select>
+          </Field>
+          <Field label="Estimated number of instructors" htmlFor="estimatedInstructors">
+            <Select
               id="estimatedInstructors"
               name="estimatedInstructors"
               defaultValue={school.estimatedInstructors ?? ""}
-              className={inputClass}
             >
               <option value="">Select range…</option>
               {FLEET_RANGES.map((r) => (
                 <option key={r} value={r}>{r} instructors</option>
               ))}
-            </select>
-          </div>
+            </Select>
+          </Field>
         </div>
-      </div>
+      </FormSection>
 
       {/* Contacts */}
       <SchoolContactsField initialContacts={school.contacts} />
 
-      {state.error && (
-        <p className="text-sm text-rose-600 dark:text-rose-400 text-center">
-          {state.error}
-        </p>
-      )}
+      {state.error && <Notice tone="error">{state.error}</Notice>}
 
       {/* Actions */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <button
-          type="submit"
-          disabled={pending}
-          className="flex-1 py-4 bg-blue-700 hover:bg-blue-800 disabled:opacity-60 text-white font-bold text-lg rounded-xl transition"
-        >
-          {pending ? "Saving…" : "Save Changes"}
-        </button>
-        <Link
-          href={backHref}
-          className="flex-1 py-4 bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-800 dark:text-white font-bold text-lg rounded-xl transition text-center"
-        >
+      <div className="flex flex-col gap-3 sm:flex-row">
+        <Button type="submit" size="lg" disabled={pending} className="sm:flex-1">
+          {pending ? "Saving…" : "Save changes"}
+        </Button>
+        <Button href={backHref} variant="secondary" size="lg" className="sm:flex-1">
           Cancel
-        </Link>
+        </Button>
       </div>
     </form>
   );

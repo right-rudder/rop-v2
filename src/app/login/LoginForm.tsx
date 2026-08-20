@@ -3,6 +3,10 @@
 import Link from "next/link";
 import { useActionState } from "react";
 import { login } from "@/app/actions/auth";
+import { Button } from "@/components/ui/Button";
+import { Field } from "@/components/ui/Field";
+import { Input } from "@/components/ui/Input";
+import { Notice } from "@/components/ui/Notice";
 
 type Props = {
   /** Success notice from a previous step (e.g. password updated) */
@@ -19,70 +23,44 @@ export function LoginForm({ notice, errorNotice, next }: Props) {
 
   return (
     <form action={action} className="space-y-5">
-      {notice && !state.error && (
-        <p className="text-sm text-green-700 dark:text-green-400 text-center rounded-lg bg-green-50 dark:bg-green-950 px-4 py-2">
-          {notice}
-        </p>
-      )}
-      {error && (
-        <p className="text-sm text-red-600 dark:text-red-400 text-center rounded-lg bg-red-50 dark:bg-red-950 px-4 py-2">
-          {error}
-        </p>
-      )}
+      {notice && !state.error && <Notice tone="ok">{notice}</Notice>}
+      {error && <Notice tone="error">{error}</Notice>}
 
       {next && <input type="hidden" name="next" value={next} />}
 
-      <div>
-        <label
-          htmlFor="email"
-          className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1"
-        >
-          Email Address
-        </label>
-        <input
+      <Field label="Email address" htmlFor="email">
+        <Input
           id="email"
           name="email"
           type="email"
           autoComplete="email"
           required
           placeholder="you@example.com"
-          className="w-full px-4 py-3 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
         />
-      </div>
+      </Field>
 
-      <div>
-        <div className="flex items-center justify-between mb-1">
-          <label
-            htmlFor="password"
-            className="block text-sm font-semibold text-slate-700 dark:text-slate-300"
-          >
-            Password
-          </label>
-          <Link
-            href="/forgot-password"
-            className="text-sm text-blue-700 dark:text-blue-400 hover:underline"
-          >
+      <Field
+        label="Password"
+        htmlFor="password"
+        action={
+          <Link href="/forgot-password" className="text-sm text-accent-ink hover:underline">
             Forgot password?
           </Link>
-        </div>
-        <input
+        }
+      >
+        <Input
           id="password"
           name="password"
           type="password"
           autoComplete="current-password"
           required
           placeholder="••••••••"
-          className="w-full px-4 py-3 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
         />
-      </div>
+      </Field>
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="w-full py-3 bg-blue-700 hover:bg-blue-800 disabled:opacity-60 text-white font-semibold rounded-lg transition"
-      >
-        {pending ? "Logging in…" : "Log In"}
-      </button>
+      <Button type="submit" full size="lg" disabled={pending}>
+        {pending ? "Logging in…" : "Log in"}
+      </Button>
     </form>
   );
 }

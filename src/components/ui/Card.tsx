@@ -14,18 +14,18 @@ type AsLink = Common & Omit<ComponentProps<typeof Link>, "className" | "children
 
 /** Surface container. With `href` it becomes a whole-card link with hover lift. */
 export function Card(props: AsDiv | AsLink) {
-  const { className, children } = props;
-  if (props.href !== undefined) {
-    const { className: _c, children: _ch, interactive: _i, ...rest } = props;
+  const { className, children, interactive, ...rest } = props;
+  if (rest.href !== undefined) {
     return (
-      <Link className={cn(base, interactiveCls, className)} {...rest}>
+      <Link className={cn(base, interactiveCls, className)} {...(rest as Omit<AsLink, keyof Common>)}>
         {children}
       </Link>
     );
   }
-  const { className: _c, children: _ch, interactive, ...rest } = props;
+  const divRest = rest as Omit<AsDiv, keyof Common>;
+  delete (divRest as { href?: undefined }).href;
   return (
-    <div className={cn(base, interactive && interactiveCls, className)} {...rest}>
+    <div className={cn(base, interactive && interactiveCls, className)} {...divRest}>
       {children}
     </div>
   );

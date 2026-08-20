@@ -3,106 +3,66 @@
 import Link from "next/link";
 import { useActionState } from "react";
 import { signup } from "@/app/actions/auth";
+import { Button } from "@/components/ui/Button";
+import { Field } from "@/components/ui/Field";
+import { Input } from "@/components/ui/Input";
+import { Notice } from "@/components/ui/Notice";
 
 export function SignupForm() {
   const [state, action, pending] = useActionState(signup, {});
 
   if (state.message) {
     return (
-      <p className="text-sm text-green-700 dark:text-green-400 text-center rounded-lg bg-green-50 dark:bg-green-950 px-4 py-6">
+      <Notice tone="ok" className="py-5">
         {state.message}
-      </p>
+      </Notice>
     );
   }
 
   return (
     <form action={action} className="space-y-5">
-      {state.error && (
-        <p className="text-sm text-red-600 dark:text-red-400 text-center rounded-lg bg-red-50 dark:bg-red-950 px-4 py-2">
-          {state.error}
-        </p>
-      )}
+      {state.error && <Notice tone="error">{state.error}</Notice>}
 
       <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label
-            htmlFor="firstName"
-            className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1"
-          >
-            First Name
-          </label>
-          <input
+        <Field label="First name" htmlFor="firstName">
+          <Input
             id="firstName"
             name="firstName"
             type="text"
             autoComplete="given-name"
             required
             placeholder="Charles"
-            className="w-full px-4 py-3 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
           />
-        </div>
-        <div>
-          <label
-            htmlFor="lastName"
-            className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1"
-          >
-            Last Name
-          </label>
-          <input
+        </Field>
+        <Field label="Last name" htmlFor="lastName">
+          <Input
             id="lastName"
             name="lastName"
             type="text"
             autoComplete="family-name"
             required
             placeholder="Lindbergh"
-            className="w-full px-4 py-3 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
           />
-        </div>
+        </Field>
       </div>
 
-      <div>
-        <label
-          htmlFor="email"
-          className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1"
-        >
-          Email Address
-        </label>
-        <input
+      <Field label="Email address" htmlFor="email">
+        <Input
           id="email"
           name="email"
           type="email"
           autoComplete="email"
           required
           placeholder="you@example.com"
-          className="w-full px-4 py-3 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
         />
-      </div>
+      </Field>
 
-      <div>
-        <label
-          htmlFor="phone"
-          className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1"
-        >
-          Phone Number
-        </label>
-        <input
-          id="phone"
-          name="phone"
-          type="tel"
-          autoComplete="tel"
-          placeholder="(123) 456-6789"
-          className="w-full px-4 py-3 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
-        />
-      </div>
+      <Field label="Phone number" htmlFor="phone" hint="Optional">
+        <Input id="phone" name="phone" type="tel" autoComplete="tel" placeholder="(123) 456-6789" />
+      </Field>
 
-      <div>
-        <label
-          htmlFor="password"
-          className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1"
-        >
-          Password
-        </label>
-        <input
+      <Field label="Password" htmlFor="password">
+        <Input
           id="password"
           name="password"
           type="password"
@@ -110,18 +70,11 @@ export function SignupForm() {
           required
           minLength={8}
           placeholder="At least 8 characters"
-          className="w-full px-4 py-3 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
         />
-      </div>
+      </Field>
 
-      <div>
-        <label
-          htmlFor="confirmPassword"
-          className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1"
-        >
-          Confirm Password
-        </label>
-        <input
+      <Field label="Confirm password" htmlFor="confirmPassword">
+        <Input
           id="confirmPassword"
           name="confirmPassword"
           type="password"
@@ -129,35 +82,24 @@ export function SignupForm() {
           required
           minLength={8}
           placeholder="••••••••"
-          className="w-full px-4 py-3 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
         />
-      </div>
+      </Field>
 
-      <p className="text-xs text-slate-500 dark:text-slate-400">
+      <p className="text-xs leading-relaxed text-muted">
         By creating an account you agree to our{" "}
-        <Link
-          href="/terms-of-service"
-          className="text-blue-700 dark:text-blue-400 hover:underline"
-        >
+        <Link href="/terms-of-service" className="text-accent-ink hover:underline">
           Terms of Service
         </Link>{" "}
         and{" "}
-        <Link
-          href="/privacy-policy"
-          className="text-blue-700 dark:text-blue-400 hover:underline"
-        >
+        <Link href="/privacy-policy" className="text-accent-ink hover:underline">
           Privacy Policy
         </Link>
         .
       </p>
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="w-full py-3 bg-blue-700 hover:bg-blue-800 disabled:opacity-60 text-white font-semibold rounded-lg transition"
-      >
-        {pending ? "Creating account…" : "Create Account"}
-      </button>
+      <Button type="submit" full size="lg" disabled={pending}>
+        {pending ? "Creating account…" : "Create account"}
+      </Button>
     </form>
   );
 }

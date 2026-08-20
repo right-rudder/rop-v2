@@ -17,6 +17,7 @@ export function PageHero({
   meta,
   back,
   aside,
+  leading,
   size = "wide",
   align = "left",
   children,
@@ -28,8 +29,10 @@ export function PageHero({
   /** Row of stats / badges under the title */
   meta?: ReactNode;
   back?: { href: string; label: string };
-  /** Right column on lg (e.g. rating block, CTA) */
+  /** Right column on lg (e.g. actions) */
   aside?: ReactNode;
+  /** Element placed before the copy (e.g. an avatar) */
+  leading?: ReactNode;
   size?: "wide" | "default" | "narrow" | "prose";
   align?: "left" | "center";
   /** Slot below the copy — filter inputs, chips */
@@ -47,49 +50,49 @@ export function PageHero({
       </div>
 
       <Container size={size} className="relative py-12 md:py-16">
-        <div
-          className={cn(
-            "grid gap-8",
-            aside && "lg:grid-cols-[1fr_auto] lg:items-end",
-          )}
-        >
-          <div className={cn(centered && "mx-auto max-w-3xl text-center")}>
-            {back && (
-              <Link
-                href={back.href}
-                className="group mb-5 inline-flex items-center gap-1 text-sm font-medium text-muted transition-colors hover:text-ink"
-              >
-                <ChevronLeft
-                  size={16}
-                  className="transition-transform duration-200 group-hover:-translate-x-0.5"
-                />
-                {back.label}
-              </Link>
-            )}
-            {eyebrow && (
-              <Eyebrow accent className={cn("mb-4", centered && "justify-center")}>
-                {eyebrow}
-              </Eyebrow>
-            )}
-            <h1 className="text-4xl font-bold leading-[1.02] text-ink md:text-5xl lg:text-6xl">
-              {title}
-            </h1>
-            {description && (
-              <p className={cn("mt-4 max-w-2xl text-lg text-muted", centered && "mx-auto")}>
-                {description}
-              </p>
-            )}
-            {meta && (
-              <div
-                className={cn(
-                  "mt-6 flex flex-wrap items-center gap-x-6 gap-y-3 text-sm text-muted",
-                  centered && "justify-center",
-                )}
-              >
-                {meta}
-              </div>
-            )}
-            {children && <div className={cn("mt-8", centered && "mx-auto max-w-xl")}>{children}</div>}
+        <div className={cn("grid gap-8", aside && "lg:grid-cols-[1fr_auto] lg:items-end")}>
+          <div className={cn("flex gap-6", centered && "mx-auto max-w-3xl text-center")}>
+            {leading && <div className="shrink-0">{leading}</div>}
+            <div className="min-w-0 flex-1">
+              {back && (
+                <Link
+                  href={back.href}
+                  className="group mb-5 inline-flex items-center gap-1 text-sm font-medium text-muted transition-colors hover:text-ink"
+                >
+                  <ChevronLeft
+                    size={16}
+                    className="transition-transform duration-200 group-hover:-translate-x-0.5"
+                  />
+                  {back.label}
+                </Link>
+              )}
+              {eyebrow && (
+                <Eyebrow accent className={cn("mb-4", centered && "justify-center")}>
+                  {eyebrow}
+                </Eyebrow>
+              )}
+              <h1 className="text-4xl font-bold leading-[1.02] text-ink md:text-5xl lg:text-6xl">
+                {title}
+              </h1>
+              {description && (
+                <p className={cn("mt-4 max-w-2xl text-lg text-muted", centered && "mx-auto")}>
+                  {description}
+                </p>
+              )}
+              {meta && (
+                <div
+                  className={cn(
+                    "mt-6 flex flex-wrap items-center gap-x-6 gap-y-3 text-sm text-muted",
+                    centered && "justify-center",
+                  )}
+                >
+                  {meta}
+                </div>
+              )}
+              {children && (
+                <div className={cn("mt-8", centered && "mx-auto max-w-xl")}>{children}</div>
+              )}
+            </div>
           </div>
           {aside && <div className="lg:pb-1">{aside}</div>}
         </div>

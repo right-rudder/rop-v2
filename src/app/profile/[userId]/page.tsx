@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Star, MessageSquare, User as UserIcon, ShieldCheck, BookOpen, PlaneTakeoff } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 import {
   getUserById,
   getReviewsByUser,
@@ -13,6 +13,13 @@ import {
   getLocationMaps,
 } from "@/lib/data";
 import { schoolHref } from "@/lib/utils";
+import { PageHero } from "@/components/PageHero";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { Chip } from "@/components/ui/Chip";
+import { Container } from "@/components/ui/Container";
+import { Stars } from "@/components/ui/Stars";
 
 type Props = { params: Promise<{ userId: string }> };
 
@@ -26,6 +33,28 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     robots: { index: false },
   };
 }
+
+const SUB_LABELS = {
+  customerService: "Customer service",
+  instructors: "Instructors",
+  aircraft: "Aircraft",
+  availability: "Availability",
+  facilities: "Facilities",
+} as const;
+
+function SectionHeading({ title, count }: { title: string; count: number }) {
+  return (
+    <h2 className="mb-4 flex items-baseline gap-3 font-display text-2xl font-bold tracking-tight text-ink">
+      {title}
+      <span className="font-mono text-sm font-normal text-muted">{count}</span>
+    </h2>
+  );
+}
+
+const dateLong = (iso: string) =>
+  new Date(iso).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+const dateShort = (iso: string) =>
+  new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 
 export default async function ProfilePage({ params }: Props) {
   const { userId } = await params;
@@ -59,152 +88,90 @@ export default async function ProfilePage({ params }: Props) {
 
   return (
     <div className="pb-20">
-      {/* Hero */}
-      <section className="bg-linear-to-br from-slate-950 via-blue-950 to-indigo-900 text-white py-16 px-4">
-        <div className="max-w-3xl mx-auto flex flex-col sm:flex-row items-center sm:items-start gap-6">
-          {/* Avatar */}
-          <div className="w-20 h-20 rounded-full bg-blue-700 flex items-center justify-center text-2xl font-extrabold shrink-0">
+      <PageHero
+        size="default"
+        leading={
+          <div
+            aria-hidden
+            className="flex h-16 w-16 items-center justify-center rounded-2xl bg-accent-soft font-display text-2xl font-bold text-accent-ink md:h-20 md:w-20 md:text-3xl"
+          >
             {initials}
           </div>
-
-          <div className="text-center sm:text-left">
-            <div className="flex items-center justify-center sm:justify-start gap-3 mb-1">
-              <h1 className="text-3xl font-extrabold">
-                {user.firstName} {user.lastName}
-              </h1>
-              {user.role === "admin" && (
-                <span className="flex items-center gap-1 text-xs font-semibold bg-rose-700 px-2 py-1 rounded-full">
-                  <ShieldCheck className="w-3 h-3" />
-                  Admin
-                </span>
-              )}
-            </div>
-            <p className="text-blue-300 text-sm mb-3">Member since {joinedYear}</p>
-
-            {/* Pilot certificates — labels come from the programs catalog */}
-            {user.pilotCertificates && user.pilotCertificates.length > 0 && (
-              <div className="flex flex-wrap justify-center sm:justify-start gap-2">
-                {user.pilotCertificates.map((slug) => (
-                  <span
-                    key={slug}
-                    className="text-xs font-semibold bg-blue-800 border border-blue-600 px-2 py-1 rounded-full"
-                  >
-                    {programShortNames[slug] ?? slug}
-                  </span>
-                ))}
-              </div>
+        }
+        eyebrow={
+          <>
+            Member since {joinedYear}
+            {user.role === "admin" && (
+              <Badge tone="accent">
+                <ShieldCheck size={11} />
+                Admin
+              </Badge>
             )}
-          </div>
-        </div>
-      </section>
+          </>
+        }
+        title={`${user.firstName} ${user.lastName}`}
+        description={user.bio}
+        meta={
+          user.pilotCertificates && user.pilotCertificates.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {user.pilotCertificates.map((slug) => (
+                <Chip key={slug} href={`/programs/${slug}`} className="py-1 text-xs">
+                  {programShortNames[slug] ?? slug}
+                </Chip>
+              ))}
+            </div>
+          ) : undefined
+        }
+      />
 
-      <div className="max-w-3xl mx-auto px-4 py-10 space-y-12">
-        {/* Bio */}
-        {user.bio && (
-          <section>
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-2 flex items-center gap-2">
-              <UserIcon className="w-5 h-5 text-blue-700" />
-              About
-            </h2>
-            <p className="text-slate-600 dark:text-slate-300">{user.bio}</p>
-          </section>
-        )}
-
+      <Container size="default" className="space-y-14 py-12">
         {/* Reviews */}
         <section>
-          <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-            <BookOpen className="w-5 h-5 text-blue-700" />
-            Reviews Written
-            <span className="text-sm font-normal text-slate-500 dark:text-slate-400">
-              ({reviews.length})
-            </span>
-          </h2>
-
+          <SectionHeading title="Reviews written" count={reviews.length} />
           {reviews.length === 0 ? (
-            <p className="text-slate-500 dark:text-slate-400 text-sm">No reviews yet.</p>
+            <p className="text-sm text-muted">No reviews yet.</p>
           ) : (
             <div className="space-y-4">
               {reviews.map((review) => {
                 const school = schoolsById[review.schoolId];
-                const city = school
-                  ? { name: cityNameBySlug[school.citySlug] ?? school.citySlug }
-                  : null;
+                const city = school ? (cityNameBySlug[school.citySlug] ?? school.citySlug) : null;
                 const state = school ? stateBySlug[school.stateSlug] : null;
                 const href = school ? schoolHref(school) : null;
 
                 return (
-                  <div
-                    key={review.id}
-                    className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 p-5"
-                  >
-                    <div className="flex items-start justify-between gap-4 mb-2">
+                  <Card key={review.id} className="p-5 md:p-6">
+                    <div className="mb-3 flex items-start justify-between gap-4">
                       <div>
                         {href && school ? (
                           <Link
                             href={href}
-                            className="font-semibold text-slate-900 dark:text-white hover:text-blue-700 dark:hover:text-blue-400 transition"
+                            className="font-display text-lg font-bold tracking-tight text-ink transition-colors hover:text-accent-ink"
                           >
                             {school.name}
                           </Link>
                         ) : (
-                          <span className="font-semibold text-slate-900 dark:text-white">
-                            {review.schoolId}
-                          </span>
+                          <span className="font-semibold text-ink">{review.schoolId}</span>
                         )}
                         {city && state && (
-                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                            {city.name}, {state.abbreviation}
+                          <p className="mt-0.5 font-mono text-xs uppercase tracking-[0.12em] text-muted">
+                            {school && <span className="text-sky">{school.primaryAirportCode} · </span>}
+                            {city}, {state.abbreviation}
                           </p>
                         )}
                       </div>
-                      <div className="flex items-center gap-0.5 shrink-0">
-                        {Array.from({ length: 5 }).map((_, i) => (
-                          <Star
-                            key={i}
-                            className={`w-4 h-4 ${
-                              i < review.overall
-                                ? "fill-yellow-400 text-yellow-400"
-                                : "text-slate-300 dark:text-slate-600"
-                            }`}
-                          />
-                        ))}
-                      </div>
+                      <Stars value={review.overall} size={14} className="shrink-0" />
                     </div>
-                    {/* Subcategory scores */}
-                    <div className="grid grid-cols-2 gap-x-6 gap-y-1 mb-3 py-2.5 border-y border-slate-100 dark:border-slate-800">
-                      {(["customerService", "instructors", "aircraft", "availability", "facilities"] as const).map((key) => {
-                        const labels: Record<string, string> = {
-                          customerService: "Customer Service",
-                          instructors: "Instructors",
-                          aircraft: "Aircraft",
-                          availability: "Availability",
-                          facilities: "Facilities",
-                        };
-                        return (
-                          <div key={key} className="flex items-center justify-between gap-2">
-                            <span className="text-xs text-slate-500 dark:text-slate-400">{labels[key]}</span>
-                            <div className="flex items-center gap-0.5">
-                              {Array.from({ length: 5 }).map((_, i) => (
-                                <Star
-                                  key={i}
-                                  size={11}
-                                  className={i < review[key] ? "fill-amber-400 text-amber-400" : "text-slate-300 dark:text-slate-600"}
-                                />
-                              ))}
-                            </div>
-                          </div>
-                        );
-                      })}
+                    <div className="mb-4 grid grid-cols-2 gap-x-6 gap-y-1 border-y border-line py-3 sm:grid-cols-3">
+                      {(Object.keys(SUB_LABELS) as Array<keyof typeof SUB_LABELS>).map((key) => (
+                        <div key={key} className="flex items-center justify-between gap-2">
+                          <span className="text-xs text-muted">{SUB_LABELS[key]}</span>
+                          <Stars value={review[key]} size={11} showValue={false} />
+                        </div>
+                      ))}
                     </div>
-                    <p className="text-slate-600 dark:text-slate-300 text-sm">{review.body}</p>
-                    <p className="text-xs text-slate-400 dark:text-slate-500 mt-2">
-                      {new Date(review.createdAt).toLocaleDateString("en-US", {
-                        month: "long",
-                        day: "numeric",
-                        year: "numeric",
-                      })}
-                    </p>
-                  </div>
+                    <p className="text-sm leading-relaxed text-ink/90">{review.body}</p>
+                    <p className="mt-3 font-mono text-xs text-muted">{dateLong(review.createdAt)}</p>
+                  </Card>
                 );
               })}
             </div>
@@ -213,16 +180,9 @@ export default async function ProfilePage({ params }: Props) {
 
         {/* Comments */}
         <section>
-          <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-            <MessageSquare className="w-5 h-5 text-blue-700" />
-            Comments
-            <span className="text-sm font-normal text-slate-500 dark:text-slate-400">
-              ({userComments.length})
-            </span>
-          </h2>
-
+          <SectionHeading title="Comments" count={userComments.length} />
           {userComments.length === 0 ? (
-            <p className="text-slate-500 dark:text-slate-400 text-sm">No comments yet.</p>
+            <p className="text-sm text-muted">No comments yet.</p>
           ) : (
             <div className="space-y-3">
               {userComments.map((comment) => {
@@ -230,38 +190,27 @@ export default async function ProfilePage({ params }: Props) {
                 const school = review ? schoolsById[review.schoolId] : null;
                 const href = school ? schoolHref(school) : null;
                 return (
-                  <div
-                    key={comment.id}
-                    className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 p-4"
-                  >
-                    <div className="flex items-start justify-between gap-4 mb-1.5">
+                  <Card key={comment.id} className="p-5">
+                    <div className="mb-2 flex items-start justify-between gap-4">
                       <div>
                         {href && school ? (
                           <Link
                             href={href}
-                            className="text-sm font-semibold text-slate-900 dark:text-white hover:text-blue-700 dark:hover:text-blue-400 transition"
+                            className="text-sm font-semibold text-ink transition-colors hover:text-accent-ink"
                           >
                             {school.name}
                           </Link>
                         ) : (
-                          <span className="text-sm font-semibold text-slate-900 dark:text-white">
-                            Review
-                          </span>
+                          <span className="text-sm font-semibold text-ink">Review</span>
                         )}
-                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                          Comment on a review
-                        </p>
+                        <p className="mt-0.5 text-xs text-muted">Comment on a review</p>
                       </div>
-                      <span className="text-xs text-slate-400 dark:text-slate-500 shrink-0">
-                        {new Date(comment.createdAt).toLocaleDateString("en-US", {
-                          month: "short",
-                          day: "numeric",
-                          year: "numeric",
-                        })}
+                      <span className="shrink-0 font-mono text-xs text-muted">
+                        {dateShort(comment.createdAt)}
                       </span>
                     </div>
-                    <p className="text-sm text-slate-600 dark:text-slate-300">{comment.body}</p>
-                  </div>
+                    <p className="text-sm leading-relaxed text-ink/90">{comment.body}</p>
+                  </Card>
                 );
               })}
             </div>
@@ -270,54 +219,40 @@ export default async function ProfilePage({ params }: Props) {
 
         {/* Managed Schools */}
         <section>
-          <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-            <PlaneTakeoff className="w-5 h-5 text-blue-700" />
-            Schools Managed
-            <span className="text-sm font-normal text-slate-500 dark:text-slate-400">
-              ({managedSchools.length})
-            </span>
-          </h2>
-
+          <SectionHeading title="Schools managed" count={managedSchools.length} />
           {managedSchools.length === 0 ? (
-            <p className="text-slate-500 dark:text-slate-400 text-sm">No managed schools.</p>
+            <p className="text-sm text-muted">No managed schools.</p>
           ) : (
             <div className="space-y-3">
               {managedSchools.map((school) => {
-                const city = cityNameBySlug[school.citySlug]
-                  ? { name: cityNameBySlug[school.citySlug] }
-                  : null;
+                const city = cityNameBySlug[school.citySlug];
                 const state = stateBySlug[school.stateSlug];
                 return (
-                  <div
-                    key={school.id}
-                    className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 p-5 flex items-center justify-between gap-4"
-                  >
-                    <div>
+                  <Card key={school.id} className="flex items-center justify-between gap-4 p-5">
+                    <div className="min-w-0">
                       <Link
                         href={schoolHref(school)}
-                        className="font-semibold text-slate-900 dark:text-white hover:text-blue-700 dark:hover:text-blue-400 transition"
+                        className="font-display text-lg font-bold tracking-tight text-ink transition-colors hover:text-accent-ink"
                       >
                         {school.name}
                       </Link>
                       {city && state && (
-                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                          {city.name}, {state.abbreviation} · {school.primaryAirportCode}
+                        <p className="mt-0.5 font-mono text-xs uppercase tracking-[0.12em] text-muted">
+                          <span className="text-sky">{school.primaryAirportCode}</span> · {city},{" "}
+                          {state.abbreviation}
                         </p>
                       )}
                     </div>
-                    <Link
-                      href={`/schools/${school.slug}/edit`}
-                      className="text-sm font-semibold text-blue-700 dark:text-blue-400 hover:underline shrink-0"
-                    >
-                      Edit
-                    </Link>
-                  </div>
+                    <Button href={`/schools/${school.slug}/edit`} variant="secondary" size="sm">
+                      Edit listing
+                    </Button>
+                  </Card>
                 );
               })}
             </div>
           )}
         </section>
-      </div>
+      </Container>
     </div>
   );
 }

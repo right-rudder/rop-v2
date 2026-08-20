@@ -15,19 +15,19 @@ type AsLink = Common & Omit<ComponentProps<typeof Link>, "className" | "children
 
 /** Pill for filters, tags and program links. */
 export function Chip(props: AsButton | AsLink) {
-  const { active, className, children } = props;
+  const { active, className, children, ...rest } = props;
   const cls = cn(base, active ? activeCls : idle, className);
-  if (props.href !== undefined) {
-    const { active: _a, className: _c, children: _ch, ...rest } = props;
+  if (rest.href !== undefined) {
     return (
-      <Link className={cls} {...rest}>
+      <Link className={cls} {...(rest as Omit<AsLink, keyof Common>)}>
         {children}
       </Link>
     );
   }
-  const { active: _a, className: _c, children: _ch, type, ...rest } = props;
+  const { type, ...buttonRest } = rest as Omit<AsButton, keyof Common>;
+  delete (buttonRest as { href?: undefined }).href;
   return (
-    <button type={type ?? "button"} aria-pressed={active} className={cls} {...rest}>
+    <button type={type ?? "button"} aria-pressed={active} className={cls} {...buttonRest}>
       {children}
     </button>
   );

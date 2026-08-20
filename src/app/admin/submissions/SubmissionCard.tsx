@@ -5,6 +5,10 @@ import Link from "next/link";
 import { MapPin, Phone, Globe, Users, Plane, Check, X } from "lucide-react";
 import type { SchoolSubmission } from "@/lib/types";
 import { approveSubmission, rejectSubmission } from "@/app/actions/admin";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { Notice } from "@/components/ui/Notice";
 
 export function SubmissionCard({
   submission,
@@ -30,38 +34,35 @@ export function SubmissionCard({
   });
 
   return (
-    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-6 space-y-4">
+    <Card className="space-y-4 p-6">
       {/* Header */}
       <div className="flex items-start justify-between gap-3">
-        <div>
-          <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+        <div className="min-w-0">
+          <p className="mb-1 font-mono text-xs uppercase tracking-[0.12em] text-muted">
+            <span className="font-semibold text-sky">{submission.airportCode.toUpperCase()}</span>
+            {" · "}
+            <MapPin size={11} className="inline -mt-0.5" aria-hidden /> {submission.city},{" "}
+            {submission.state}
+          </p>
+          <h3 className="font-display text-xl font-bold tracking-tight text-ink">
             {submission.name}
           </h3>
-          <p className="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mt-0.5">
-            <MapPin size={13} />
-            {submission.city}, {submission.state}
-            <span className="font-mono text-blue-700 dark:text-blue-400 ml-1">
-              {submission.airportCode.toUpperCase()}
-            </span>
-          </p>
         </div>
-        <div className="text-right shrink-0">
-          <span className="text-xs text-slate-400 dark:text-slate-500 block">{date}</span>
+        <div className="flex shrink-0 flex-col items-end gap-1.5">
+          <time className="font-mono text-xs text-muted" dateTime={submission.createdAt}>
+            {date}
+          </time>
           {submission.faaPart && (
-            <span className="inline-block mt-1 text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-full px-2 py-0.5">
-              Part {submission.faaPart === "both" ? "61 / 141" : submission.faaPart}
-            </span>
+            <Badge>Part {submission.faaPart === "both" ? "61 / 141" : submission.faaPart}</Badge>
           )}
         </div>
       </div>
 
       {/* Description */}
-      <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-        {submission.description}
-      </p>
+      <p className="text-sm leading-relaxed text-ink/90">{submission.description}</p>
 
       {/* Details */}
-      <div className="flex flex-wrap gap-x-5 gap-y-1.5 text-xs text-slate-500 dark:text-slate-400">
+      <div className="flex flex-wrap gap-x-5 gap-y-1.5 text-xs text-muted">
         {submission.website && (
           <span className="flex items-center gap-1">
             <Globe size={12} />
@@ -69,7 +70,7 @@ export function SubmissionCard({
               href={submission.website}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-blue-700 dark:text-blue-400 hover:underline"
+              className="text-accent-ink hover:underline"
             >
               {submission.website.replace(/^https?:\/\//, "")}
             </a>
@@ -93,10 +94,7 @@ export function SubmissionCard({
             {submission.estimatedInstructors} instructors
           </span>
         )}
-        <Link
-          href={`/profile/${submission.submittedBy}`}
-          className="text-blue-700 dark:text-blue-400 hover:underline"
-        >
+        <Link href={`/profile/${submission.submittedBy}`} className="text-accent-ink hover:underline">
           Submitter profile
         </Link>
       </div>
@@ -107,7 +105,7 @@ export function SubmissionCard({
           {submission.programs.map((slug) => (
             <span
               key={slug}
-              className="text-xs bg-blue-50 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-700 rounded-full px-2 py-0.5"
+              className="rounded-full border border-line bg-surface-2 px-2.5 py-0.5 text-xs text-ink"
             >
               {programShortNames[slug] ?? slug}
             </span>
@@ -117,7 +115,7 @@ export function SubmissionCard({
 
       {/* Contacts */}
       {submission.contacts.length > 0 && (
-        <div className="text-xs text-slate-500 dark:text-slate-400">
+        <div className="space-y-0.5 text-xs text-muted">
           {submission.contacts.map((c, i) => (
             <p key={`${i}-${c.email}`}>
               {[c.name, c.title, c.phone, c.email].filter(Boolean).join(" · ")}
@@ -127,15 +125,7 @@ export function SubmissionCard({
       )}
 
       {(error || message) && (
-        <p
-          className={`text-sm ${
-            error
-              ? "text-rose-600 dark:text-rose-400"
-              : "text-green-700 dark:text-green-400"
-          }`}
-        >
-          {error ?? message}
-        </p>
+        <Notice tone={error ? "error" : "ok"}>{error ?? message}</Notice>
       )}
 
       {/* Actions */}
@@ -143,38 +133,24 @@ export function SubmissionCard({
         <div className="flex gap-3 pt-1">
           <form action={approveAction} className="flex-1">
             <input type="hidden" name="submissionId" value={submission.id} />
-            <button
-              type="submit"
-              disabled={busy}
-              className="w-full flex items-center justify-center gap-1.5 py-2.5 bg-green-700 hover:bg-green-800 disabled:opacity-60 text-white font-semibold rounded-lg text-sm transition"
-            >
+            <Button type="submit" full disabled={busy}>
               <Check size={15} />
               {approvePending ? "Approving…" : "Approve & publish"}
-            </button>
+            </Button>
           </form>
           <form action={rejectAction} className="flex-1">
             <input type="hidden" name="submissionId" value={submission.id} />
-            <button
-              type="submit"
-              disabled={busy}
-              className="w-full flex items-center justify-center gap-1.5 py-2.5 bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 disabled:opacity-60 text-slate-800 dark:text-white font-semibold rounded-lg text-sm transition"
-            >
+            <Button type="submit" variant="secondary" full disabled={busy}>
               <X size={15} />
               {rejectPending ? "Rejecting…" : "Reject"}
-            </button>
+            </Button>
           </form>
         </div>
       ) : (
-        <p
-          className={`text-sm font-semibold ${
-            submission.status === "approved"
-              ? "text-green-700 dark:text-green-400"
-              : "text-slate-500 dark:text-slate-400"
-          }`}
-        >
+        <Badge tone={submission.status === "approved" ? "ok" : "neutral"}>
           {submission.status === "approved" ? "Approved" : "Rejected"}
-        </p>
+        </Badge>
       )}
-    </div>
+    </Card>
   );
 }
