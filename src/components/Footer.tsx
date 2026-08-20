@@ -22,7 +22,7 @@ const linkCls = "transition-colors hover:text-white";
 
 export function Footer() {
   return (
-    <footer className="relative overflow-hidden bg-night text-night-fg">
+    <footer className="relative overflow-hidden border-t border-night-line bg-night text-night-fg">
       <SectionalMotif
         animate={false}
         className="pointer-events-none absolute -bottom-64 -left-40 h-[32rem] w-[32rem] opacity-[0.12]"

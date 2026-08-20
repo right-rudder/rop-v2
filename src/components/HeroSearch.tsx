@@ -150,9 +150,10 @@ export function HeroSearch({
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
       setActiveIndex((i) => Math.max(i - 1, -1));
-    } else if (e.key === "Enter" && activeIndex >= 0) {
+    } else if (e.key === "Enter") {
+      // Enter takes the highlighted result, or the top match when nothing is highlighted
       e.preventDefault();
-      navigate(results[activeIndex].href);
+      navigate(results[Math.max(activeIndex, 0)].href);
     } else if (e.key === "Escape") {
       setOpen(false);
     }

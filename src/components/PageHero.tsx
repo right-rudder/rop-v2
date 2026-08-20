@@ -57,7 +57,7 @@ export function PageHero({
               {back && (
                 <Link
                   href={back.href}
-                  className="group mb-5 inline-flex items-center gap-1 text-sm font-medium text-muted transition-colors hover:text-ink"
+                  className="group mb-5 flex w-fit items-center gap-1 text-sm font-medium text-muted transition-colors hover:text-ink"
                 >
                   <ChevronLeft
                     size={16}
