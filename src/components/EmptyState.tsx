@@ -1,6 +1,6 @@
-import Link from "next/link";
+import { Button } from "@/components/ui/Button";
 
-/** Shared "nothing here yet" box for listing sections */
+/** Shared "nothing here yet" box for listing sections — an invitation to act. */
 export function EmptyState({
   title,
   hint,
@@ -13,17 +13,12 @@ export function EmptyState({
   actionHref?: string;
 }) {
   return (
-    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-10 text-center text-slate-500 dark:text-slate-400">
-      <p className="text-lg font-medium mb-1">{title}</p>
-      <p className="text-sm">
-        {hint}{" "}
-        <Link
-          href={actionHref}
-          className="text-blue-600 dark:text-blue-400 hover:underline"
-        >
-          {actionLabel}
-        </Link>
-      </p>
+    <div className="rounded-2xl border border-dashed border-line bg-surface/60 px-6 py-12 text-center">
+      <p className="font-display text-xl font-bold tracking-tight text-ink">{title}</p>
+      <p className="mx-auto mt-1.5 max-w-sm text-sm text-muted">{hint}</p>
+      <Button href={actionHref} variant="secondary" size="sm" className="mt-6">
+        {actionLabel}
+      </Button>
     </div>
   );
 }

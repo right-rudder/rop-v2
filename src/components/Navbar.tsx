@@ -1,47 +1,53 @@
 "use client";
 
 import { useState } from "react";
-import { Menu, X, ChevronDown } from "lucide-react";
+import { usePathname } from "next/navigation";
 import Link from "next/link";
+import { Menu, X, ChevronDown } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { AuthButton } from "@/components/AuthButton";
+import { Logo } from "@/components/ui/Logo";
+import { Container } from "@/components/ui/Container";
 import { navLinks } from "@/lib/nav-links";
+import { cn } from "@/lib/cn";
+
+const linkBase =
+  "relative inline-flex items-center gap-1 rounded-md py-1 text-sm font-medium transition-colors " +
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-paper";
+const linkIdle = "text-muted hover:text-ink";
+// Active route: magenta rule under the label, like a chart annotation
+const linkActive =
+  "text-ink after:absolute after:inset-x-0 after:-bottom-1.5 after:h-0.5 after:rounded-full after:bg-accent";
 
 export function Navbar() {
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
   // Desktop dropdown opened by click / keyboard (hover still works via CSS)
   const [openMenu, setOpenMenu] = useState<string | null>(null);
 
+  const isActive = (href: string) =>
+    href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
+
   // Flatten nav links for mobile: top-level links stay as-is, children get promoted with mobileLabel
   const mobileLinks = navLinks.flatMap((link) =>
     link.children
-      ? link.children.map((child) => ({
-          label: child.mobileLabel,
-          href: child.href,
-        }))
+      ? link.children.map((child) => ({ label: child.mobileLabel, href: child.href }))
       : [{ label: link.label, href: link.href as string }],
   );
 
   return (
-    <header className="bg-white/95 dark:bg-slate-950/95 backdrop-blur-sm border-b border-slate-200 dark:border-slate-800 sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
-          {/* Logo */}
-          <Link
-            href="/"
-            className="text-2xl font-bold text-rose-800 dark:text-rose-700"
-          >
-            Flight School Finder
-          </Link>
+    <header className="sticky top-0 z-50 border-b border-line bg-paper/85 backdrop-blur-md">
+      <Container>
+        <div className="flex h-16 items-center justify-between">
+          <Logo />
 
           {/* Desktop nav */}
-          <nav className="hidden md:flex items-center space-x-6 text-sm font-medium">
+          <nav className="hidden items-center gap-7 md:flex" aria-label="Primary">
             {navLinks.map((link) =>
               link.children ? (
-                // Dropdown item
                 <div
                   key={link.label}
-                  className="relative group"
+                  className="group relative"
                   onMouseLeave={() => setOpenMenu(null)}
                 >
                   <button
@@ -49,35 +55,43 @@ export function Navbar() {
                     aria-haspopup="menu"
                     aria-expanded={openMenu === link.label}
                     onClick={() =>
-                      setOpenMenu((current) =>
-                        current === link.label ? null : link.label,
-                      )
+                      setOpenMenu((current) => (current === link.label ? null : link.label))
                     }
-                    className="flex items-center gap-1 text-slate-700 dark:text-slate-300 hover:text-rose-900 dark:hover:text-rose-400"
+                    className={cn(
+                      linkBase,
+                      link.children.some((c) => isActive(c.href)) ? linkActive : linkIdle,
+                    )}
                   >
                     {link.label}
                     <ChevronDown
                       size={14}
-                      className={`transition-transform group-hover:rotate-180 ${
-                        openMenu === link.label ? "rotate-180" : ""
-                      }`}
+                      className={cn(
+                        "transition-transform duration-200 group-hover:rotate-180",
+                        openMenu === link.label && "rotate-180",
+                      )}
                     />
                   </button>
                   {/* Transparent bridge fills the gap so hover stays active */}
                   <div
-                    className={`absolute top-full left-0 pt-2 min-w-40 ${
+                    className={cn(
+                      "absolute left-1/2 top-full min-w-48 -translate-x-1/2 pt-3",
                       openMenu === link.label
                         ? "block"
-                        : "hidden group-hover:block group-focus-within:block"
-                    }`}
+                        : "hidden group-hover:block group-focus-within:block",
+                    )}
                   >
-                    <div className="bg-white dark:bg-slate-900 border dark:border-slate-700 rounded-lg shadow-lg overflow-hidden flex flex-col">
+                    <div className="flex animate-scale-in flex-col overflow-hidden rounded-xl border border-line bg-surface p-1.5 shadow-card">
                       {link.children.map((child) => (
                         <Link
                           key={child.label}
                           href={child.href}
                           onClick={() => setOpenMenu(null)}
-                          className="px-4 py-2.5 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                          className={cn(
+                            "rounded-lg px-3 py-2 text-sm transition-colors hover:bg-surface-2",
+                            isActive(child.href)
+                              ? "font-semibold text-accent-ink"
+                              : "text-ink",
+                          )}
                         >
                           {child.label}
                         </Link>
@@ -89,55 +103,61 @@ export function Navbar() {
                 <Link
                   key={link.label}
                   href={link.href}
-                  className="text-slate-700 dark:text-slate-300 hover:text-rose-900 dark:hover:text-rose-400"
+                  className={cn(linkBase, isActive(link.href) ? linkActive : linkIdle)}
                 >
                   {link.label}
                 </Link>
               ),
             )}
-            <AuthButton />
-            <ThemeToggle />
+            <div className="ml-1 flex items-center gap-2 border-l border-line pl-5">
+              <AuthButton />
+              <ThemeToggle />
+            </div>
           </nav>
 
           {/* Mobile: theme toggle + hamburger */}
-          <div className="flex md:hidden items-center gap-3">
+          <div className="flex items-center gap-1 md:hidden">
             <ThemeToggle />
             <button
+              type="button"
               onClick={() => setOpen((prev) => !prev)}
-              aria-label="Toggle menu"
+              aria-label={open ? "Close menu" : "Open menu"}
               aria-expanded={open}
-              className="text-slate-700 dark:text-slate-300"
+              aria-controls="mobile-nav"
+              className="rounded-lg p-2 text-ink transition-colors hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
             >
-              {open ? <X size={24} /> : <Menu size={24} />}
+              {open ? <X size={22} /> : <Menu size={22} />}
             </button>
           </div>
         </div>
-      </div>
+      </Container>
 
-      {/* Mobile dropdown — expands from top-right */}
-      <div
-        className={`
-          md:hidden fixed inset-0 bg-white/98 dark:bg-slate-950/98 backdrop-blur-sm
-          transition-all duration-200 mt-16
-          ${open ? "opacity-100" : "opacity-0 pointer-events-none"}
-        `}
-      >
-        <nav className="flex flex-col py-2 min-w-44">
-          {mobileLinks.map((link) => (
-            <Link
-              key={link.label}
-              href={link.href}
-              onClick={() => setOpen(false)}
-              className="px-5 py-3 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
-            >
-              {link.label}
-            </Link>
-          ))}
-          <div className="px-5 py-3">
-            <AuthButton mobile />
-          </div>
-        </nav>
-      </div>
+      {/* Mobile panel — slides down under the bar */}
+      {open && (
+        <div
+          id="mobile-nav"
+          className="animate-slide-down border-t border-line bg-paper md:hidden"
+        >
+          <nav className="flex flex-col px-3 py-3" aria-label="Primary mobile">
+            {mobileLinks.map((link) => (
+              <Link
+                key={link.label}
+                href={link.href}
+                onClick={() => setOpen(false)}
+                className={cn(
+                  "rounded-lg px-3 py-3 text-base font-medium transition-colors hover:bg-surface-2",
+                  isActive(link.href) ? "text-accent-ink" : "text-ink",
+                )}
+              >
+                {link.label}
+              </Link>
+            ))}
+            <div className="mt-2 border-t border-line px-1 pt-4">
+              <AuthButton mobile />
+            </div>
+          </nav>
+        </div>
+      )}
     </header>
   );
 }

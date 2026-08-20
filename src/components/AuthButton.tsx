@@ -6,8 +6,10 @@ import { ShieldCheck } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import { logout } from "@/app/actions/auth";
+import { Button } from "@/components/ui/Button";
+import { cn } from "@/lib/cn";
 
-/** Admin-only navigation destinations shown as pills next to the auth controls */
+/** Admin-only navigation destinations shown next to the auth controls */
 const adminLinks = [{ label: "Submissions", href: "/admin/submissions" }];
 
 /**
@@ -53,52 +55,41 @@ export function AuthButton({ mobile = false }: { mobile?: boolean }) {
 
   if (!user) {
     return (
-      <Link
-        href="/login"
-        className={`${
-          mobile ? "block w-full text-center text-sm" : ""
-        } bg-rose-700 text-white px-4 py-2 rounded-lg font-medium hover:bg-rose-600 transition-colors shadow-sm`}
-      >
-        Log In
-      </Link>
+      <Button href="/login" size="sm" full={mobile}>
+        Log in
+      </Button>
     );
   }
 
   return (
-    <div
-      className={`flex items-center gap-4 ${mobile ? "w-full flex-wrap" : ""}`}
-    >
+    <div className={cn("flex items-center gap-2", mobile && "w-full flex-wrap gap-3")}>
       {isAdmin &&
         adminLinks.map((link) => (
           <Link
             key={link.href}
             href={link.href}
             title={`Admin: ${link.label}`}
-            className={`${
-              mobile ? "flex-1 justify-center" : ""
-            } flex items-center gap-1.5 bg-rose-100 dark:bg-rose-950 text-rose-800 dark:text-rose-300 border border-rose-300 dark:border-rose-800 px-3 py-1.5 rounded-full text-xs font-semibold hover:bg-rose-200 dark:hover:bg-rose-900 transition-colors`}
+            className={cn(
+              "inline-flex items-center gap-1.5 rounded-full border border-accent/30 bg-accent-soft px-3 py-1.5 text-xs font-semibold text-accent-ink transition-colors hover:border-accent/60",
+              mobile && "flex-1 justify-center",
+            )}
           >
             <ShieldCheck size={14} />
             {link.label}
           </Link>
         ))}
-      <Link
+      <Button
         href={`/profile/${user.id}`}
-        className={`${
-          mobile ? "flex-1 text-center text-sm" : ""
-        } text-slate-700 dark:text-slate-300 hover:text-rose-900 dark:hover:text-rose-400 font-medium`}
+        variant="ghost"
+        size="sm"
+        className={cn(mobile && "flex-1")}
       >
-        My Profile
-      </Link>
-      <form action={logout} className={mobile ? "flex-1" : ""}>
-        <button
-          type="submit"
-          className={`${
-            mobile ? "block w-full text-sm" : ""
-          } bg-rose-700 text-white px-4 py-2 rounded-lg font-medium hover:bg-rose-600 transition-colors shadow-sm`}
-        >
-          Log Out
-        </button>
+        My profile
+      </Button>
+      <form action={logout} className={cn(mobile && "flex-1")}>
+        <Button type="submit" variant="secondary" size="sm" full={mobile}>
+          Log out
+        </Button>
       </form>
     </div>
   );
