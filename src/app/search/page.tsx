@@ -11,7 +11,7 @@ import { schoolHref, slugToTitle } from "@/lib/utils";
 import { AdvancedSearchExplorer } from "@/components/AdvancedSearchExplorer";
 
 export const metadata: Metadata = {
-  title: "Search Flight Schools | Flight School Finder",
+  title: "Search Flight Schools",
   description:
     "Filter USA flight schools by state, airport code, aircraft fleet, programs offered, and FAA Part 61 or Part 141 certification to find the perfect fit for your training goals.",
   openGraph: {

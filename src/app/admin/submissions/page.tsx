@@ -6,7 +6,7 @@ import { getSchoolSubmissions, getPrograms } from "@/lib/data";
 import { SubmissionCard } from "./SubmissionCard";
 
 export const metadata: Metadata = {
-  title: "School Submissions – Admin – Flight School Finder",
+  title: "School Submissions – Admin",
   robots: { index: false },
 };
 

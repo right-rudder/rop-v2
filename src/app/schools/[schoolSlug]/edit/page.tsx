@@ -18,8 +18,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const school = await getSchoolBySlug(schoolSlug);
   return {
     title: school
-      ? `Edit ${school.name} – Flight School Finder`
-      : "Edit School – Flight School Finder",
+      ? `Edit ${school.name}`
+      : "Edit School",
     robots: { index: false },
   };
 }

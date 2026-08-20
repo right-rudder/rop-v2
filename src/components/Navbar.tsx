@@ -9,6 +9,8 @@ import { navLinks } from "@/lib/nav-links";
 
 export function Navbar() {
   const [open, setOpen] = useState(false);
+  // Desktop dropdown opened by click / keyboard (hover still works via CSS)
+  const [openMenu, setOpenMenu] = useState<string | null>(null);
 
   // Flatten nav links for mobile: top-level links stay as-is, children get promoted with mobileLabel
   const mobileLinks = navLinks.flatMap((link) =>
@@ -37,37 +39,60 @@ export function Navbar() {
             {navLinks.map((link) =>
               link.children ? (
                 // Dropdown item
-                <div key={link.label} className="relative group">
-                  <button className="flex items-center gap-1 text-slate-700 dark:text-slate-300 hover:text-rose-900 dark:hover:text-rose-400">
+                <div
+                  key={link.label}
+                  className="relative group"
+                  onMouseLeave={() => setOpenMenu(null)}
+                >
+                  <button
+                    type="button"
+                    aria-haspopup="menu"
+                    aria-expanded={openMenu === link.label}
+                    onClick={() =>
+                      setOpenMenu((current) =>
+                        current === link.label ? null : link.label,
+                      )
+                    }
+                    className="flex items-center gap-1 text-slate-700 dark:text-slate-300 hover:text-rose-900 dark:hover:text-rose-400"
+                  >
                     {link.label}
                     <ChevronDown
                       size={14}
-                      className="transition-transform group-hover:rotate-180"
+                      className={`transition-transform group-hover:rotate-180 ${
+                        openMenu === link.label ? "rotate-180" : ""
+                      }`}
                     />
                   </button>
                   {/* Transparent bridge fills the gap so hover stays active */}
-                  <div className="absolute top-full left-0 hidden group-hover:block pt-2 min-w-40">
+                  <div
+                    className={`absolute top-full left-0 pt-2 min-w-40 ${
+                      openMenu === link.label
+                        ? "block"
+                        : "hidden group-hover:block group-focus-within:block"
+                    }`}
+                  >
                     <div className="bg-white dark:bg-slate-900 border dark:border-slate-700 rounded-lg shadow-lg overflow-hidden flex flex-col">
                       {link.children.map((child) => (
-                        <a
+                        <Link
                           key={child.label}
                           href={child.href}
+                          onClick={() => setOpenMenu(null)}
                           className="px-4 py-2.5 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
                         >
                           {child.label}
-                        </a>
+                        </Link>
                       ))}
                     </div>
                   </div>
                 </div>
               ) : (
-                <a
+                <Link
                   key={link.label}
                   href={link.href}
                   className="text-slate-700 dark:text-slate-300 hover:text-rose-900 dark:hover:text-rose-400"
                 >
                   {link.label}
-                </a>
+                </Link>
               ),
             )}
             <AuthButton />
@@ -80,6 +105,7 @@ export function Navbar() {
             <button
               onClick={() => setOpen((prev) => !prev)}
               aria-label="Toggle menu"
+              aria-expanded={open}
               className="text-slate-700 dark:text-slate-300"
             >
               {open ? <X size={24} /> : <Menu size={24} />}
@@ -98,14 +124,14 @@ export function Navbar() {
       >
         <nav className="flex flex-col py-2 min-w-44">
           {mobileLinks.map((link) => (
-            <a
+            <Link
               key={link.label}
               href={link.href}
               onClick={() => setOpen(false)}
               className="px-5 py-3 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
             >
               {link.label}
-            </a>
+            </Link>
           ))}
           <div className="px-5 py-3">
             <AuthButton mobile />

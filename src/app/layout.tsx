@@ -4,20 +4,15 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { Navbar } from "@/components/Navbar";
 import Link from "next/link";
+import { BASE_URL } from "@/lib/site";
 
 const inter = Inter({ subsets: ["latin"] });
-
-const BASE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL ??
-  (process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}`
-    : "http://localhost:3000");
 
 // Better shared defaults (will be overridden by pages when needed)
 export const metadata: Metadata = {
   title: {
     default:
-      "Flight School Finder - Find Pilot Training Centers Across the USA",
+      "Flight School Finder – Find Pilot Training Schools Across the USA",
     template: "%s | Flight School Finder",
   },
   description: "Find flight schools by city, state, airport or name.",

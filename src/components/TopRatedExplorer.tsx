@@ -3,12 +3,21 @@
 import { useState, useEffect } from "react";
 import { ArrowUp } from "lucide-react";
 import { SchoolCard } from "@/components/SchoolCard";
-import type { FlightSchool } from "@/lib/types";
 
 const PAGE_SIZE = 6;
 
+/** Just the fields the cards render — keep the client payload small */
+export type TopRatedItem = {
+  id: string;
+  name: string;
+  location: string;
+  href: string;
+  rating: number;
+  reviewCount: number;
+};
+
 type Props = {
-  schools: Array<FlightSchool & { location: string; href: string }>;
+  schools: TopRatedItem[];
 };
 
 export function TopRatedExplorer({ schools }: Props) {

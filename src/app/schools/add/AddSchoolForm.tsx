@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import Link from "next/link";
 import { CheckCircle } from "lucide-react";
+import { FLEET_RANGES, LIMITS } from "@/lib/types";
 import { SchoolContactsField } from "@/components/SchoolContactsField";
 import { submitSchool } from "@/app/actions/schools";
 
@@ -54,6 +55,7 @@ export function AddSchoolForm({
             name="name"
             type="text"
             required
+            maxLength={LIMITS.schoolName}
             placeholder="e.g. Skyline Aviation Academy"
             className={inputClass}
           />
@@ -71,6 +73,7 @@ export function AddSchoolForm({
             name="description"
             rows={4}
             required
+            maxLength={LIMITS.schoolDescription}
             placeholder="Describe your school, training philosophy, and what makes you stand out…"
             className={`${inputClass} resize-none`}
           />
@@ -88,6 +91,7 @@ export function AddSchoolForm({
               id="website"
               name="website"
               type="url"
+              maxLength={LIMITS.website}
               placeholder="https://yourschool.com"
               className={inputClass}
             />
@@ -103,6 +107,7 @@ export function AddSchoolForm({
               id="phone"
               name="phone"
               type="tel"
+              maxLength={LIMITS.phone}
               placeholder="(555) 000-0000"
               className={inputClass}
             />
@@ -243,7 +248,7 @@ export function AddSchoolForm({
             </label>
             <select id="estimatedPlanes" name="estimatedPlanes" className={inputClass}>
               <option value="">Select range…</option>
-              {["1-3", "3-6", "6-9", "10-20", "20-30", "30-40", "40-50", "50+"].map((r) => (
+              {FLEET_RANGES.map((r) => (
                 <option key={r} value={r}>{r} aircraft</option>
               ))}
             </select>
@@ -261,7 +266,7 @@ export function AddSchoolForm({
               className={inputClass}
             >
               <option value="">Select range…</option>
-              {["1-3", "3-6", "6-9", "10-20", "20-30", "30-40", "40-50", "50+"].map((r) => (
+              {FLEET_RANGES.map((r) => (
                 <option key={r} value={r}>{r} instructors</option>
               ))}
             </select>
@@ -284,7 +289,7 @@ export function AddSchoolForm({
           {state.error.includes("logged in") && (
             <>
               {" "}
-              <Link href="/login" className="font-semibold underline">
+              <Link href="/login?next=/schools/add" className="font-semibold underline">
                 Log in
               </Link>
             </>

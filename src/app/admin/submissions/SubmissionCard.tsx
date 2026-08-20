@@ -118,8 +118,8 @@ export function SubmissionCard({
       {/* Contacts */}
       {submission.contacts.length > 0 && (
         <div className="text-xs text-slate-500 dark:text-slate-400">
-          {submission.contacts.map((c) => (
-            <p key={c.email || c.name}>
+          {submission.contacts.map((c, i) => (
+            <p key={`${i}-${c.email}`}>
               {[c.name, c.title, c.phone, c.email].filter(Boolean).join(" · ")}
             </p>
           ))}

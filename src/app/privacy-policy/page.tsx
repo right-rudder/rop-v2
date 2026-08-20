@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy – Flight School Finder",
+  title: "Privacy Policy",
   description: "Read the Privacy Policy for Flight School Finder.",
 };
 

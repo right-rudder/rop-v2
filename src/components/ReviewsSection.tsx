@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 import { Star, MessageSquare, CheckCircle, Trash2 } from "lucide-react";
 import type { Review, Comment, User } from "@/lib/types";
 import { submitComment, deleteReview } from "@/app/actions/reviews";
+import { LIMITS } from "@/lib/types";
 
 const SUBCATEGORIES: { key: keyof Review; label: string }[] = [
   { key: "customerService", label: "Customer Service" },
@@ -53,6 +54,7 @@ function CommentForm({ reviewId }: { reviewId: string }) {
         rows={3}
         name="body"
         required
+        maxLength={LIMITS.commentBody}
         placeholder="Add a comment…"
         className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
       />
@@ -62,7 +64,7 @@ function CommentForm({ reviewId }: { reviewId: string }) {
           {state.error.includes("logged in") && (
             <>
               {" "}
-              <Link href="/login" className="font-semibold underline">
+              <Link href={`/login?next=${encodeURIComponent(pathname)}`} className="font-semibold underline">
                 Log in
               </Link>
             </>

@@ -21,7 +21,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const user = await getUserById(userId);
   if (!user) return { title: "User Not Found" };
   return {
-    title: `${user.firstName} ${user.lastName} – Flight School Finder`,
+    title: `${user.firstName} ${user.lastName}`,
     description: user.bio ?? `${user.firstName} ${user.lastName}'s profile on Flight School Finder.`,
     robots: { index: false },
   };

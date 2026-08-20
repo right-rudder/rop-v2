@@ -10,6 +10,9 @@ import {
   getLocationMaps,
 } from "@/lib/data";
 import { SchoolCard } from "@/components/SchoolCard";
+import { JsonLd } from "@/components/JsonLd";
+import { schoolHref } from "@/lib/utils";
+import { absoluteUrl } from "@/lib/site";
 import { EmptyState } from "@/components/EmptyState";
 
 type Props = { params: Promise<{ airportCode: string }> };
@@ -59,16 +62,13 @@ export default async function AirportDetailPage({ params }: Props) {
       "@type": "ListItem",
       position: i + 1,
       name: school.name,
-      url: `/${school.stateSlug}/${school.citySlug}/${school.primaryAirportCode.toLowerCase()}/${school.slug}`,
+      url: absoluteUrl(schoolHref(school)),
     })),
   };
 
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }}
-      />
+      <JsonLd data={itemListJsonLd} />
     <div className="pb-20">
       {/* Hero */}
       <section className="bg-linear-to-br from-slate-950 via-blue-950 to-indigo-900 text-white py-16 px-4">
@@ -157,7 +157,7 @@ export default async function AirportDetailPage({ params }: Props) {
                     }
                     rating={school.rating}
                     reviewCount={school.reviewCount}
-                    href={`/${school.stateSlug}/${school.citySlug}/${school.primaryAirportCode.toLowerCase()}/${school.slug}`}
+                    href={schoolHref(school)}
                   />
                 );
               })}

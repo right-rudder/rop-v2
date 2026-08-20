@@ -3,7 +3,7 @@ import Link from "next/link";
 import { SignupForm } from "./SignupForm";
 
 export const metadata: Metadata = {
-  title: "Sign Up – Flight School Finder",
+  title: "Sign Up",
   description:
     "Create a free Flight School Finder account to add or manage flight school listings, respond to reviews, and connect with students.",
 };

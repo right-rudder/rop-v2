@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Terms of Service – Flight School Finder",
+  title: "Terms of Service",
   description: "Read the Terms of Service for Flight School Finder.",
 };
 

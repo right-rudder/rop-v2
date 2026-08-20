@@ -3,7 +3,7 @@
 import { useActionState } from "react";
 import Link from "next/link";
 import { CheckCircle } from "lucide-react";
-import type { FlightSchool } from "@/lib/types";
+import { FLEET_RANGES, LIMITS, type FlightSchool } from "@/lib/types";
 import { SchoolContactsField } from "@/components/SchoolContactsField";
 import { updateSchool } from "@/app/actions/schools";
 
@@ -12,8 +12,6 @@ const inputClass =
 
 const sectionClass =
   "bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 space-y-5";
-
-const fleetRanges = ["1-3", "3-6", "6-9", "10-20", "20-30", "30-40", "40-50", "50+"] as const;
 
 type Props = {
   school: FlightSchool;
@@ -68,6 +66,7 @@ export function EditSchoolForm({
             name="name"
             type="text"
             required
+            maxLength={LIMITS.schoolName}
             defaultValue={school.name}
             className={inputClass}
           />
@@ -85,6 +84,7 @@ export function EditSchoolForm({
             name="description"
             rows={4}
             required
+            maxLength={LIMITS.schoolDescription}
             defaultValue={school.description}
             className={`${inputClass} resize-none`}
           />
@@ -102,6 +102,7 @@ export function EditSchoolForm({
               id="website"
               name="website"
               type="url"
+              maxLength={LIMITS.website}
               defaultValue={school.website}
               className={inputClass}
             />
@@ -117,6 +118,7 @@ export function EditSchoolForm({
               id="phone"
               name="phone"
               type="tel"
+              maxLength={LIMITS.phone}
               defaultValue={school.phone}
               className={inputClass}
             />
@@ -279,7 +281,7 @@ export function EditSchoolForm({
               className={inputClass}
             >
               <option value="">Select range…</option>
-              {fleetRanges.map((r) => (
+              {FLEET_RANGES.map((r) => (
                 <option key={r} value={r}>{r} aircraft</option>
               ))}
             </select>
@@ -298,7 +300,7 @@ export function EditSchoolForm({
               className={inputClass}
             >
               <option value="">Select range…</option>
-              {fleetRanges.map((r) => (
+              {FLEET_RANGES.map((r) => (
                 <option key={r} value={r}>{r} instructors</option>
               ))}
             </select>

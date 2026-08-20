@@ -1,8 +1,8 @@
 /**
  * Data-access layer backed by Supabase.
  *
- * Mirrors the helper API that src/lib/mock-data.ts exposed, but async and
- * reading from the database. Server Components, Server Actions, and Route
+ * Async getters reading from the database (src/lib/mock-data.ts now only
+ * feeds the seed script). Server Components, Server Actions, and Route
  * Handlers should import from here; pass plain data down to Client
  * Components as props.
  *
@@ -36,7 +36,7 @@ import type {
   SchoolSearchItem,
   AirportSearchItem,
 } from "@/components/HeroSearch";
-import { schoolHref } from "@/lib/utils";
+import { schoolHref, isAirportCode } from "@/lib/utils";
 
 type FaaPart = "61" | "141" | "both";
 
@@ -296,18 +296,32 @@ export async function getAirportsWithSchoolCounts(): Promise<
   }));
 }
 
-/** Look up airport by any of its three identifiers (case-insensitive) */
+/**
+ * Look up airport by any of its three identifiers (case-insensitive).
+ *
+ * `code` usually comes straight from the URL, so it is validated before it
+ * goes anywhere near a filter. ICAO (the canonical slug) wins over IATA /
+ * FAA LID, and an ambiguous alternate identifier returns the first match
+ * instead of throwing.
+ */
 export const getAirportByCode = cache(
   async (code: string): Promise<Airport | undefined> => {
-    const upper = code.toUpperCase();
+    const upper = code.trim().toUpperCase();
+    if (!isAirportCode(upper)) return undefined;
     const supabase = await createClient();
-    const res = await supabase
-      .from("airports")
-      .select("*")
-      .or(`icao.eq.${upper},iata.eq.${upper},faa_lid.eq.${upper}`)
-      .maybeSingle();
-    const row = orThrow(res);
-    return row ? toAirport(row) : undefined;
+    const byIcao = orThrow(
+      await supabase.from("airports").select("*").eq("icao", upper).maybeSingle(),
+    );
+    if (byIcao) return toAirport(byIcao);
+    const alternates = orThrow(
+      await supabase
+        .from("airports")
+        .select("*")
+        .or(`iata.eq.${upper},faa_lid.eq.${upper}`)
+        .order("icao")
+        .limit(1),
+    );
+    return alternates[0] ? toAirport(alternates[0]) : undefined;
   },
 );
 

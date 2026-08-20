@@ -10,7 +10,8 @@ import { schoolHref } from "@/lib/utils";
 import { HeroSearch } from "@/components/HeroSearch";
 
 export const metadata: Metadata = {
-  title: "Flight School Finder – Find Pilot Training Schools Across the USA",
+  // The home page is the brand — don't let the layout template append it again
+  title: { absolute: "Flight School Finder – Find Pilot Training Schools Across the USA" },
   description:
     "Find flight schools by city, state, airport, or school name. Compare ratings, programs, and contact info for pilot training across the USA.",
   alternates: { canonical: "/" },

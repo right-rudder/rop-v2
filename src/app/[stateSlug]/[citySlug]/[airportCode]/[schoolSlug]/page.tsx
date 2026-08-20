@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ChevronLeft, MapPin, Phone, Globe, Star, Plane, Users, Mail } from "lucide-react";
@@ -18,6 +18,9 @@ import {
   getAirports,
 } from "@/lib/data";
 import { getCurrentUser } from "@/lib/auth";
+import { schoolHref } from "@/lib/utils";
+import { absoluteUrl } from "@/lib/site";
+import { JsonLd } from "@/components/JsonLd";
 import ReviewsSection from "@/components/ReviewsSection";
 import ReviewForm from "@/components/ReviewForm";
 
@@ -31,7 +34,7 @@ type Props = {
 };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { schoolSlug, stateSlug, citySlug, airportCode } = await params;
+  const { schoolSlug } = await params;
   const school = await getSchoolBySlug(schoolSlug);
   if (!school) return { title: "School Not Found" };
   const [city, state] = await Promise.all([
@@ -40,7 +43,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   ]);
   const title = `${school.name} – Flight School in ${city?.name ?? ""}, ${state?.abbreviation ?? ""}`;
   const description = school.description.slice(0, 160);
-  const canonical = `/${stateSlug}/${citySlug}/${airportCode}/${schoolSlug}`;
+  const canonical = schoolHref(school);
   return {
     title,
     description,
@@ -51,9 +54,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function SchoolDetailPage({ params }: Props) {
-  const { schoolSlug } = await params;
+  const { stateSlug, citySlug, airportCode, schoolSlug } = await params;
   const school = await getSchoolBySlug(schoolSlug);
   if (!school) notFound();
+
+  // Only the slug identifies the school; the other segments exist for SEO.
+  // Send mis-typed or stale URLs to the single canonical address instead of
+  // serving the same page (and a wrong canonical tag) under any path.
+  const canonicalPath = schoolHref(school);
+  if (`/${stateSlug}/${citySlug}/${airportCode}/${schoolSlug}` !== canonicalPath) {
+    permanentRedirect(canonicalPath);
+  }
 
   const [
     city,
@@ -122,26 +133,26 @@ export default async function SchoolDetailPage({ params }: Props) {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     itemListElement: [
-      { "@type": "ListItem", position: 1, name: "Home", item: "/" },
+      { "@type": "ListItem", position: 1, name: "Home", item: absoluteUrl("/") },
       {
         "@type": "ListItem",
         position: 2,
         name: `${state?.name ?? school.stateSlug} Flight Schools`,
-        item: `/states/${school.stateSlug}`,
+        item: absoluteUrl(`/states/${school.stateSlug}`),
       },
       {
         "@type": "ListItem",
         position: 3,
         name: `${city?.name ?? school.citySlug} Flight Schools`,
-        item: `/cities/${school.citySlug}`,
+        item: absoluteUrl(`/cities/${school.citySlug}`),
       },
       {
         "@type": "ListItem",
         position: 4,
         name: `${primaryAirport?.icao ?? school.primaryAirportCode} Flight Schools`,
-        item: `/airports/${school.primaryAirportCode.toLowerCase()}`,
+        item: absoluteUrl(`/airports/${school.primaryAirportCode.toLowerCase()}`),
       },
-      { "@type": "ListItem", position: 5, name: school.name },
+      { "@type": "ListItem", position: 5, name: school.name, item: absoluteUrl(canonicalPath) },
     ],
   };
 
@@ -151,31 +162,32 @@ export default async function SchoolDetailPage({ params }: Props) {
     "@type": "LocalBusiness",
     name: school.name,
     description: school.description,
-    telephone: school.phone,
-    url: school.website,
+    telephone: school.phone || undefined,
+    url: school.website || undefined,
     address: {
       "@type": "PostalAddress",
       addressLocality: city?.name ?? school.citySlug,
       addressRegion: state?.abbreviation ?? school.stateSlug,
       addressCountry: "US",
     },
-    aggregateRating: {
-      "@type": "AggregateRating",
-      ratingValue: school.rating.toFixed(1),
-      reviewCount: school.reviewCount,
-    },
+    // Google rejects AggregateRating with zero reviews — omit it until there are some
+    ...(school.reviewCount > 0
+      ? {
+          aggregateRating: {
+            "@type": "AggregateRating",
+            ratingValue: school.rating.toFixed(1),
+            reviewCount: school.reviewCount,
+            bestRating: 5,
+            worstRating: 1,
+          },
+        }
+      : {}),
   };
 
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
-      />
+      <JsonLd data={jsonLd} />
+      <JsonLd data={breadcrumbJsonLd} />
 
       <div className="pb-20">
         {/* Hero */}
@@ -305,6 +317,7 @@ export default async function SchoolDetailPage({ params }: Props) {
               </div>
 
               {/* Phone */}
+              {school.phone && (
               <div className="flex items-center gap-3">
                 <Phone size={18} className="text-slate-400 shrink-0" />
                 <div>
@@ -319,8 +332,10 @@ export default async function SchoolDetailPage({ params }: Props) {
                   </a>
                 </div>
               </div>
+              )}
 
               {/* Website */}
+              {school.website && (
               <div className="flex items-center gap-3">
                 <Globe size={18} className="text-slate-400 shrink-0" />
                 <div>
@@ -337,6 +352,7 @@ export default async function SchoolDetailPage({ params }: Props) {
                   </a>
                 </div>
               </div>
+              )}
             </div>
           </section>
 
@@ -405,14 +421,15 @@ export default async function SchoolDetailPage({ params }: Props) {
                 Key Contacts
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {school.contacts.map((contact) => (
+                {school.contacts.map((contact, i) => (
                   <div
-                    key={contact.email}
+                    key={`${i}-${contact.email}`}
                     className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-5 space-y-2"
                   >
                     <p className="font-semibold text-slate-800 dark:text-slate-100">{contact.name}</p>
                     <p className="text-sm text-slate-500 dark:text-slate-400">{contact.title}</p>
                     <div className="pt-1 space-y-1.5">
+                      {contact.phone && (
                       <a
                         href={`tel:${contact.phone.replace(/\D/g, "")}`}
                         className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300 hover:text-blue-700 dark:hover:text-blue-400 transition"
@@ -420,6 +437,8 @@ export default async function SchoolDetailPage({ params }: Props) {
                         <Phone size={14} className="text-slate-400 shrink-0" />
                         {contact.phone}
                       </a>
+                      )}
+                      {contact.email && (
                       <a
                         href={`mailto:${contact.email}`}
                         className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300 hover:text-blue-700 dark:hover:text-blue-400 transition"
@@ -427,6 +446,7 @@ export default async function SchoolDetailPage({ params }: Props) {
                         <Mail size={14} className="text-slate-400 shrink-0" />
                         {contact.email}
                       </a>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -473,7 +493,7 @@ export default async function SchoolDetailPage({ params }: Props) {
                 {relatedSchools.map((sibling) => (
                   <Link
                     key={sibling.id}
-                    href={`/${sibling.stateSlug}/${sibling.citySlug}/${sibling.primaryAirportCode.toLowerCase()}/${sibling.slug}`}
+                    href={schoolHref(sibling)}
                     className="group bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-4 hover:shadow-md hover:border-blue-400 dark:hover:border-blue-500 transition"
                   >
                     <p className="font-semibold text-slate-800 dark:text-slate-100 group-hover:text-blue-700 dark:group-hover:text-blue-400 transition mb-1">

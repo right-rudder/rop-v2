@@ -2,11 +2,12 @@
 -- Flight School Finder — reset app tables
 --
 -- ⚠ Drops every app table in the public schema (catalog data,
--- profiles, reviews, comments). Does NOT touch auth.users.
+-- profiles, reviews, comments, submissions). Does NOT touch auth.users.
 -- Only run this when realigning the database with schema.sql;
 -- afterwards run schema.sql, then seed.sql.
 -- ============================================================
 
+drop table if exists public.school_submissions cascade;
 drop table if exists public.comments        cascade;
 drop table if exists public.reviews         cascade;
 drop table if exists public.school_aircraft cascade;
@@ -20,5 +21,8 @@ drop table if exists public.states          cascade;
 drop table if exists public.profiles        cascade;
 
 drop trigger  if exists on_auth_user_created on auth.users;
-drop function if exists public.handle_new_user()       cascade;
-drop function if exists public.refresh_school_rating() cascade;
+drop function if exists public.handle_new_user()               cascade;
+drop function if exists public.refresh_school_rating()         cascade;
+drop function if exists public.recompute_school_rating(text)   cascade;
+drop function if exists public.protect_flight_school_columns() cascade;
+drop function if exists public.is_admin()                      cascade;

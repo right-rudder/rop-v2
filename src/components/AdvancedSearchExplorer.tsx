@@ -213,7 +213,7 @@ export function AdvancedSearchExplorer({ schools, programs, aircraft, states, ci
     if (sortDir !== "desc") params.set("dir", sortDir);
     const qs = params.toString();
     router.replace(qs ? `/search?${qs}` : "/search", { scroll: false });
-  }, [query, selectedStates, selectedCities, airportQuery, faaPart, selectedPrograms, selectedAircraft, minRating, sortBy, sortDir]);
+  }, [router, query, selectedStates, selectedCities, airportQuery, faaPart, selectedPrograms, selectedAircraft, minRating, sortBy, sortDir]);
 
   // ── State typeahead helpers ──────────────────────────────────────────────────
   const stateSuggestions = useMemo(() => {

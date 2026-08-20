@@ -4,55 +4,70 @@ import {
   getCities,
   getAirports,
   getFlightSchools,
+  getPrograms,
+  getTrainerAircraft,
 } from "@/lib/data";
 import { schoolHref } from "@/lib/utils";
-
-const BASE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL ??
-  (process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}`
-    : "http://localhost:3000");
+import { absoluteUrl } from "@/lib/site";
 
 // Rendered per request — the sitemap reads live rows from Supabase
 export const dynamic = "force-dynamic";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [states, cities, airports, flightSchools] = await Promise.all([
-    getStates(),
-    getCities(),
-    getAirports(),
-    getFlightSchools(),
-  ]);
+  const [states, cities, airports, flightSchools, programs, aircraft] =
+    await Promise.all([
+      getStates(),
+      getCities(),
+      getAirports(),
+      getFlightSchools(),
+      getPrograms(),
+      getTrainerAircraft(),
+    ]);
 
   const staticRoutes: MetadataRoute.Sitemap = [
-    { url: BASE_URL, changeFrequency: "weekly", priority: 1 },
-    { url: `${BASE_URL}/states`, changeFrequency: "monthly", priority: 0.8 },
-    { url: `${BASE_URL}/cities`, changeFrequency: "monthly", priority: 0.8 },
-    { url: `${BASE_URL}/airports`, changeFrequency: "monthly", priority: 0.8 },
-    { url: `${BASE_URL}/top-rated`, changeFrequency: "weekly", priority: 0.9 },
-    { url: `${BASE_URL}/featured`, changeFrequency: "weekly", priority: 0.9 },
+    { url: absoluteUrl("/"), changeFrequency: "weekly", priority: 1 },
+    { url: absoluteUrl("/search"), changeFrequency: "weekly", priority: 0.8 },
+    { url: absoluteUrl("/states"), changeFrequency: "monthly", priority: 0.8 },
+    { url: absoluteUrl("/cities"), changeFrequency: "monthly", priority: 0.8 },
+    { url: absoluteUrl("/airports"), changeFrequency: "monthly", priority: 0.8 },
+    { url: absoluteUrl("/programs"), changeFrequency: "monthly", priority: 0.8 },
+    { url: absoluteUrl("/aircraft"), changeFrequency: "monthly", priority: 0.8 },
+    { url: absoluteUrl("/top-rated"), changeFrequency: "weekly", priority: 0.9 },
+    { url: absoluteUrl("/featured"), changeFrequency: "weekly", priority: 0.9 },
   ];
 
   const stateRoutes: MetadataRoute.Sitemap = states.map((s) => ({
-    url: `${BASE_URL}/states/${s.slug}`,
+    url: absoluteUrl(`/states/${s.slug}`),
     changeFrequency: "monthly",
     priority: 0.7,
   }));
 
   const cityRoutes: MetadataRoute.Sitemap = cities.map((c) => ({
-    url: `${BASE_URL}/cities/${c.slug}`,
+    url: absoluteUrl(`/cities/${c.slug}`),
     changeFrequency: "monthly",
     priority: 0.7,
   }));
 
   const airportRoutes: MetadataRoute.Sitemap = airports.map((a) => ({
-    url: `${BASE_URL}/airports/${a.icao.toLowerCase()}`,
+    url: absoluteUrl(`/airports/${a.icao.toLowerCase()}`),
     changeFrequency: "monthly",
     priority: 0.7,
   }));
 
+  const programRoutes: MetadataRoute.Sitemap = programs.map((p) => ({
+    url: absoluteUrl(`/programs/${p.slug}`),
+    changeFrequency: "monthly",
+    priority: 0.6,
+  }));
+
+  const aircraftRoutes: MetadataRoute.Sitemap = aircraft.map((a) => ({
+    url: absoluteUrl(`/aircraft/${a.slug}`),
+    changeFrequency: "monthly",
+    priority: 0.6,
+  }));
+
   const schoolRoutes: MetadataRoute.Sitemap = flightSchools.map((s) => ({
-    url: `${BASE_URL}${schoolHref(s)}`,
+    url: absoluteUrl(schoolHref(s)),
     changeFrequency: "weekly",
     priority: 0.8,
   }));
@@ -62,6 +77,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...stateRoutes,
     ...cityRoutes,
     ...airportRoutes,
+    ...programRoutes,
+    ...aircraftRoutes,
     ...schoolRoutes,
   ];
 }

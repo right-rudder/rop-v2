@@ -162,7 +162,9 @@ async function createSchoolFromSubmission(
   if (links.length > 0) {
     const { error } = await supabase
       .from("school_programs")
-      .upsert(links, { onConflict: "school_id,program_slug" });
+      // ignoreDuplicates → ON CONFLICT DO NOTHING: the join table has no UPDATE
+      // policy, so a plain upsert would fail when re-approving after a partial run
+      .upsert(links, { onConflict: "school_id,program_slug", ignoreDuplicates: true });
     if (error) throw new Error(`Could not link programs: ${error.message}`);
   }
 
@@ -183,19 +185,31 @@ export async function approveSubmission(
     return { error: "This submission has already been processed." };
   }
 
+  // Claim the row first so two admins can't both approve it: the conditional
+  // update succeeds for exactly one of them.
+  const supabase = await createClient();
+  const { data: claimed, error: claimError } = await supabase
+    .from("school_submissions")
+    .update({ status: "approved" })
+    .eq("id", id)
+    .eq("status", "pending")
+    .select("id");
+  if (claimError) return { error: claimError.message };
+  if (!claimed || claimed.length === 0) {
+    return { error: "This submission has already been processed." };
+  }
+
   let schoolId: string;
   try {
     schoolId = await createSchoolFromSubmission(submission);
   } catch (e) {
+    // Release the claim so the admin can fix the data and retry
+    await supabase
+      .from("school_submissions")
+      .update({ status: "pending" })
+      .eq("id", id);
     return { error: e instanceof Error ? e.message : "Approval failed." };
   }
-
-  const supabase = await createClient();
-  const { error } = await supabase
-    .from("school_submissions")
-    .update({ status: "approved" })
-    .eq("id", id);
-  if (error) return { error: error.message };
 
   revalidatePath("/admin/submissions");
   return { message: `Approved — listing "${schoolId}" is live.` };
@@ -210,12 +224,16 @@ export async function rejectSubmission(
 
   const id = formData.get("submissionId") as string;
   const supabase = await createClient();
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("school_submissions")
     .update({ status: "rejected" })
     .eq("id", id)
-    .eq("status", "pending");
+    .eq("status", "pending")
+    .select("id");
   if (error) return { error: error.message };
+  if (!data || data.length === 0) {
+    return { error: "This submission has already been processed." };
+  }
 
   revalidatePath("/admin/submissions");
   return { message: "Submission rejected." };

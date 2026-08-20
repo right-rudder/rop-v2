@@ -4,16 +4,33 @@ import Link from "next/link";
 import { useActionState } from "react";
 import { login } from "@/app/actions/auth";
 
-export function LoginForm() {
+type Props = {
+  /** Success notice from a previous step (e.g. password updated) */
+  notice?: string;
+  /** Error notice from a previous step (e.g. expired confirm link) */
+  errorNotice?: string;
+  /** Same-site path to return to after login (already validated by the page) */
+  next?: string;
+};
+
+export function LoginForm({ notice, errorNotice, next }: Props) {
   const [state, action, pending] = useActionState(login, {});
+  const error = state.error ?? errorNotice;
 
   return (
     <form action={action} className="space-y-5">
-      {state.error && (
-        <p className="text-sm text-red-600 dark:text-red-400 text-center rounded-lg bg-red-50 dark:bg-red-950 px-4 py-2">
-          {state.error}
+      {notice && !state.error && (
+        <p className="text-sm text-green-700 dark:text-green-400 text-center rounded-lg bg-green-50 dark:bg-green-950 px-4 py-2">
+          {notice}
         </p>
       )}
+      {error && (
+        <p className="text-sm text-red-600 dark:text-red-400 text-center rounded-lg bg-red-50 dark:bg-red-950 px-4 py-2">
+          {error}
+        </p>
+      )}
+
+      {next && <input type="hidden" name="next" value={next} />}
 
       <div>
         <label

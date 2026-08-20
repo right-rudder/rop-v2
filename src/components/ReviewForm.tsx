@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { Star, CheckCircle } from "lucide-react";
 import { submitReview } from "@/app/actions/reviews";
+import { LIMITS } from "@/lib/types";
 
 const SUBCATEGORIES = [
   { key: "customerService", label: "Customer Service" },
@@ -164,6 +165,7 @@ export default function ReviewForm({ schoolId }: { schoolId: string }) {
           name="body"
           rows={4}
           required
+          maxLength={LIMITS.reviewBody}
           placeholder="Share your experience with this flight school…"
           className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
         />
@@ -175,7 +177,7 @@ export default function ReviewForm({ schoolId }: { schoolId: string }) {
           {error.includes("logged in") && (
             <>
               {" "}
-              <Link href="/login" className="font-semibold underline">
+              <Link href={`/login?next=${encodeURIComponent(pathname)}`} className="font-semibold underline">
                 Log in
               </Link>
             </>

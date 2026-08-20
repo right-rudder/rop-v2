@@ -6,7 +6,9 @@
  * Only catalog tables are seeded (states, cities, airports, programs,
  * trainer_aircraft, flight_schools + join tables). Users, reviews, and
  * comments are NOT seeded — those reference auth.users rows that only
- * exist once real people sign up. managed_by is likewise left null.
+ * exist once real people sign up. managed_by is likewise left null, and
+ * rating / review_count start at 0: the refresh_school_rating trigger owns
+ * them and only real reviews move them.
  */
 import { writeFileSync } from "node:fs";
 import { join, dirname } from "node:path";
@@ -137,8 +139,8 @@ chunks.push(
       lit(s.citySlug),
       lit(s.stateSlug),
       lit(s.organizationId ?? null),
-      lit(s.rating),
-      lit(s.reviewCount),
+      0, // rating — maintained by the refresh_school_rating trigger
+      0, // review_count — no reviews are seeded
       lit(s.website),
       lit(s.phone),
       lit(s.featured ?? false),

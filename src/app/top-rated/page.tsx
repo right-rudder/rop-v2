@@ -2,22 +2,22 @@ import type { Metadata } from "next";
 import { Star } from "lucide-react";
 import { getTopRatedSchools, getLocationMaps } from "@/lib/data";
 import { schoolHref } from "@/lib/utils";
-import { TopRatedExplorer } from "@/components/TopRatedExplorer";
+import { TopRatedExplorer, type TopRatedItem } from "@/components/TopRatedExplorer";
 
 export const metadata: Metadata = {
-  title: "Top Rated Flight Schools – Flight School Finder",
+  title: "Top Rated Flight Schools",
   description:
     "Discover the highest-rated flight schools in the USA. Ranked by student reviews and ratings for Private Pilot, Instrument, Commercial, CFI, and ATP training.",
   alternates: { canonical: "/top-rated" },
   openGraph: {
-    title: "Top Rated Flight Schools – Flight School Finder",
+    title: "Top Rated Flight Schools",
     description:
       "Discover the highest-rated flight schools in the USA. Ranked by student reviews and ratings for Private Pilot, Instrument, Commercial, CFI, and ATP training.",
     url: "/top-rated",
     type: "website",
   },
   twitter: {
-    title: "Top Rated Flight Schools – Flight School Finder",
+    title: "Top Rated Flight Schools",
     description:
       "Discover the highest-rated flight schools in the USA. Ranked by student reviews and ratings for Private Pilot, Instrument, Commercial, CFI, and ATP training.",
   },
@@ -28,11 +28,15 @@ export default async function TopRatedPage() {
     getTopRatedSchools(),
     getLocationMaps(),
   ]);
-  const schools = topRated.map((school) => {
+  // Only what the cards render — keeps contacts / managedBy out of the client payload
+  const schools: TopRatedItem[] = topRated.map((school) => {
     const cityName = cityNameBySlug[school.citySlug];
     const state = stateBySlug[school.stateSlug];
     return {
-      ...school,
+      id: school.id,
+      name: school.name,
+      rating: school.rating,
+      reviewCount: school.reviewCount,
       location: cityName && state ? `${cityName}, ${state.abbreviation}` : school.citySlug,
       href: schoolHref(school),
     };

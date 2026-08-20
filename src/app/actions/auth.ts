@@ -2,11 +2,19 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import { absoluteUrl } from "@/lib/site";
+import { safeInternalPath } from "@/lib/safe-path";
+import { LIMITS } from "@/lib/types";
 
 export type AuthFormState = {
   error?: string;
   message?: string;
 };
+
+const MIN_PASSWORD_LENGTH = 8;
+
+const field = (formData: FormData, key: string) =>
+  ((formData.get(key) as string | null) ?? "").trim();
 
 export async function login(
   _prevState: AuthFormState,
@@ -15,12 +23,13 @@ export async function login(
   const supabase = await createClient();
 
   const { error } = await supabase.auth.signInWithPassword({
-    email: formData.get("email") as string,
-    password: formData.get("password") as string,
+    email: field(formData, "email"),
+    password: (formData.get("password") as string | null) ?? "",
   });
 
   if (error) return { error: error.message };
-  redirect("/");
+  // Back to where the user was heading — same-site paths only
+  redirect(safeInternalPath(formData.get("next") as string | null));
 }
 
 export async function signup(
@@ -29,21 +38,33 @@ export async function signup(
 ): Promise<AuthFormState> {
   const supabase = await createClient();
 
-  const password = formData.get("password") as string;
-  const confirmPassword = formData.get("confirmPassword") as string;
+  const firstName = field(formData, "firstName");
+  const lastName = field(formData, "lastName");
+  const email = field(formData, "email");
+  const password = (formData.get("password") as string | null) ?? "";
+  const confirmPassword = (formData.get("confirmPassword") as string | null) ?? "";
 
+  if (!firstName || !lastName) {
+    return { error: "Please enter your first and last name." };
+  }
+  if (firstName.length > LIMITS.personName || lastName.length > LIMITS.personName) {
+    return { error: `Names must be ${LIMITS.personName} characters or fewer.` };
+  }
+  if (password.length < MIN_PASSWORD_LENGTH) {
+    return { error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters.` };
+  }
   if (password !== confirmPassword) {
     return { error: "Passwords do not match." };
   }
 
   const { error } = await supabase.auth.signUp({
-    email: formData.get("email") as string,
+    email,
     password,
     options: {
       data: {
-        first_name: formData.get("firstName") as string,
-        last_name: formData.get("lastName") as string,
-        phone: formData.get("phone") as string,
+        first_name: firstName,
+        last_name: lastName,
+        phone: field(formData, "phone"),
       },
     },
   });
@@ -59,9 +80,9 @@ export async function resetPassword(
   const supabase = await createClient();
 
   const { error } = await supabase.auth.resetPasswordForEmail(
-    formData.get("email") as string,
+    field(formData, "email"),
     {
-      redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/confirm?next=/update-password`,
+      redirectTo: absoluteUrl("/auth/confirm?next=/update-password"),
     },
   );
 
@@ -75,9 +96,12 @@ export async function updatePassword(
 ): Promise<AuthFormState> {
   const supabase = await createClient();
 
-  const password = formData.get("password") as string;
-  const confirmPassword = formData.get("confirmPassword") as string;
+  const password = (formData.get("password") as string | null) ?? "";
+  const confirmPassword = (formData.get("confirmPassword") as string | null) ?? "";
 
+  if (password.length < MIN_PASSWORD_LENGTH) {
+    return { error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters.` };
+  }
   if (password !== confirmPassword) {
     return { error: "Passwords do not match." };
   }
@@ -85,6 +109,11 @@ export async function updatePassword(
   const { error } = await supabase.auth.updateUser({ password });
 
   if (error) return { error: error.message };
+
+  // End the recovery session (and any other active sessions) so the user
+  // signs in fresh with the new password instead of landing on /login while
+  // still logged in.
+  await supabase.auth.signOut();
   redirect("/login?message=password-updated");
 }
 

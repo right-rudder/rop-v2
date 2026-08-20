@@ -12,8 +12,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const airport = await getAirportByCode(airportCode);
   return {
     title: airport
-      ? `Edit ${airport.icao} – ${airport.name} – Flight School Finder`
-      : "Edit Airport – Flight School Finder",
+      ? `Edit ${airport.icao} – ${airport.name}`
+      : "Edit Airport",
     robots: { index: false },
   };
 }
