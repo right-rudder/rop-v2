@@ -39,8 +39,27 @@ export type ContactPerson = {
   email: string;
 };
 
-export type FleetRange =
-  | "1-3" | "3-6" | "6-9" | "10-20" | "20-30" | "30-40" | "40-50" | "50+";
+/** Fleet / instructor size buckets offered in the school forms */
+export const FLEET_RANGES = ["1-3", "3-6", "6-9", "10-20", "20-30", "30-40", "40-50", "50+"] as const;
+export type FleetRange = (typeof FLEET_RANGES)[number];
+
+/**
+ * Max lengths for user-supplied text. Mirrors the CHECK constraints in
+ * supabase/schema.sql — enforced in server actions and hinted via maxLength.
+ */
+export const LIMITS = {
+  reviewBody: 5000,
+  commentBody: 2000,
+  schoolName: 120,
+  schoolDescription: 5000,
+  website: 300,
+  phone: 40,
+  location: 80,
+  contactField: 120,
+  contacts: 10,
+  personName: 60,
+  bio: 1000,
+} as const;
 
 export type AircraftCategory =
   | "single-engine"

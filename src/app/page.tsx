@@ -1,16 +1,37 @@
 import type { Metadata } from "next";
+import type { CSSProperties } from "react";
 import Link from "next/link";
-import { SchoolCard } from "@/components/SchoolCard";
 import {
+  ArrowRight,
+  Bell,
+  Building2,
+  Map,
+  MessageSquare,
+  PencilLine,
+  SlidersHorizontal,
+} from "lucide-react";
+import { SchoolCard } from "@/components/SchoolCard";
+import { HeroSearch } from "@/components/HeroSearch";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { Container } from "@/components/ui/Container";
+import { Eyebrow } from "@/components/ui/Eyebrow";
+import { LogoMark } from "@/components/ui/Logo";
+import { Reveal } from "@/components/ui/Reveal";
+import { Section } from "@/components/ui/Section";
+import { SectionalMotif } from "@/components/ui/SectionalMotif";
+import {
+  getCities,
   getFeaturedSchools,
   getProgramsBySlugs,
   getSearchIndex,
+  getStates,
 } from "@/lib/data";
 import { schoolHref } from "@/lib/utils";
-import { HeroSearch } from "@/components/HeroSearch";
 
 export const metadata: Metadata = {
-  title: "Flight School Finder – Find Pilot Training Schools Across the USA",
+  // The home page is the brand — don't let the layout template append it again
+  title: { absolute: "Flight School Finder – Find Pilot Training Schools Across the USA" },
   description:
     "Find flight schools by city, state, airport, or school name. Compare ratings, programs, and contact info for pilot training across the USA.",
   alternates: { canonical: "/" },
@@ -27,259 +48,340 @@ export const metadata: Metadata = {
   },
 };
 
+/** The training ladder, in the order pilots actually climb it */
+const PATH_SLUGS = ["private-pilot", "instrument-rating", "commercial-pilot", "cfi"];
+
+const stagger = (i: number) => ({ "--i": i }) as CSSProperties;
+
 export default async function Home() {
-  const [featuredSchools, searchIndex, offeredPrograms] = await Promise.all([
+  const [featuredSchools, searchIndex, pathPrograms, states, cities] = await Promise.all([
     getFeaturedSchools(),
     getSearchIndex(),
-    getProgramsBySlugs([
-      "private-pilot",
-      "instrument-rating",
-      "commercial-pilot",
-      "cfi",
-    ]),
+    getProgramsBySlugs(PATH_SLUGS),
+    getStates(),
+    getCities(),
   ]);
-  const locationById = Object.fromEntries(
-    searchIndex.schools.map((s) => [s.id, s.location]),
+  const schoolById = Object.fromEntries(searchIndex.schools.map((s) => [s.id, s]));
+  const orderedPath = [...pathPrograms].sort(
+    (a, b) => PATH_SLUGS.indexOf(a.slug) - PATH_SLUGS.indexOf(b.slug),
   );
 
-  return (
-    <div className="pb-20">
-      {/* Hero section — no overflow-hidden: the search dropdown must be able
-          to extend past the hero's bottom edge */}
-      <section className="relative bg-linear-to-br from-slate-950 via-blue-950 to-indigo-900 text-white py-28 px-4">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_60%_0%,rgba(59,130,246,0.15),transparent_70%)]" />
-        <div className="max-w-4xl mx-auto text-center relative z-10">
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight mb-6 leading-tight">
-            Find Pilot Training Schools Across the USA
-          </h1>
-          <p className="text-lg md:text-xl text-blue-100/80 max-w-2xl mx-auto mb-10">
-            Search by flight school name, city, airport, or state — and compare
-            ratings, programs, and contact info.
-          </p>
+  const stats = [
+    { n: searchIndex.schools.length, label: "schools" },
+    { n: states.length, label: "states" },
+    { n: searchIndex.airports.length, label: "airports" },
+  ];
 
-          <HeroSearch
-            schools={searchIndex.schools}
-            airports={searchIndex.airports}
-          />
+  const browse = [
+    {
+      href: "/airports",
+      Icon: LogoMark,
+      title: "By airport",
+      body: "Start from an ICAO code or field name.",
+      count: `${searchIndex.airports.length} airports`,
+    },
+    {
+      href: "/cities",
+      Icon: Building2,
+      title: "By city",
+      body: "Schools near the metro you're in.",
+      count: `${cities.length} cities`,
+    },
+    {
+      href: "/states",
+      Icon: Map,
+      title: "By state",
+      body: "Every listing, state by state.",
+      count: `${states.length} states`,
+    },
+    {
+      href: "/search",
+      Icon: SlidersHorizontal,
+      title: "Advanced search",
+      body: "Filter by program, aircraft and location.",
+      count: "All filters",
+    },
+  ];
+
+  const accountPerks = [
+    {
+      Icon: MessageSquare,
+      title: "Respond to comments",
+      body: "Answer questions from prospective students and classmates, right on the review.",
+    },
+    {
+      Icon: PencilLine,
+      title: "Add or update listings",
+      body: "Keep your school's programs, fleet and contact details current.",
+    },
+    {
+      Icon: Bell,
+      title: "Get notified",
+      body: "Hear about new comments on your reviews or your school's page.",
+    },
+  ];
+
+  return (
+    <div>
+      {/* Hero — no overflow-hidden on the section: the search dropdown must be
+          able to extend past the hero's bottom edge. The motif is clipped in
+          its own wrapper instead. */}
+      <section className="relative border-b border-line bg-surface">
+        <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+          <SectionalMotif codes={searchIndex.airports.map((a) => a.code)} className="absolute -right-48 -top-40 h-[44rem] w-[44rem] opacity-[0.3] sm:-right-40 md:-top-28 lg:-right-24 lg:-top-32 lg:h-[56rem] lg:w-[56rem]" />
         </div>
+
+        <Container className="relative py-20 md:py-28 lg:py-32">
+          <div className="max-w-3xl">
+            <Eyebrow accent className="animate-fade-up stagger" style={stagger(0)}>
+              {stats.map((s, i) => (
+                <span key={s.label} className="inline-flex items-center gap-2">
+                  {i > 0 && <span className="text-line">/</span>}
+                  <span className="text-ink">{s.n.toLocaleString()}</span> {s.label}
+                </span>
+              ))}
+            </Eyebrow>
+
+            <h1
+              className="mt-6 animate-fade-up stagger text-5xl font-bold leading-[0.98] text-ink sm:text-6xl lg:text-7xl"
+              style={stagger(1)}
+            >
+              Find pilot training schools across the USA.
+            </h1>
+
+            <p
+              className="mt-6 max-w-xl animate-fade-up stagger text-lg text-muted md:text-xl"
+              style={stagger(2)}
+            >
+              Search by school name, city, airport code, or state — then compare
+              ratings, programs, and contact info before you book a discovery flight.
+            </p>
+
+            <div className="mt-10">
+              <HeroSearch
+                schools={searchIndex.schools}
+                airports={searchIndex.airports}
+                examples={["KFFZ", "Mesa, AZ", "Arizona"]}
+                staggerIndex={3}
+              />
+            </div>
+          </div>
+        </Container>
       </section>
 
       {/* Featured schools */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="flex items-center justify-between mb-8">
-          <h2 className="text-3xl md:text-4xl font-bold text-rose-800 dark:text-rose-700">
-            Featured Flight Schools
-          </h2>
-          <Link
-            href="/featured"
-            className="text-sm font-semibold text-blue-700 dark:text-blue-400 hover:underline"
-          >
-            View all →
-          </Link>
+      <Section
+        eyebrow="Featured"
+        title="Featured flight schools"
+        action={{ href: "/featured", label: "View all featured" }}
+      >
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {featuredSchools.map((school, i) => {
+            const indexed = schoolById[school.id];
+            return (
+              <Reveal key={school.id} index={i} className="h-full">
+                <SchoolCard
+                  name={school.name}
+                  location={indexed?.location ?? school.citySlug}
+                  airportCode={school.primaryAirportCode}
+                  rating={school.rating}
+                  reviewCount={school.reviewCount}
+                  href={schoolHref(school)}
+                />
+              </Reveal>
+            );
+          })}
         </div>
+      </Section>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-          {featuredSchools.map((school) => (
-            <SchoolCard
-              key={school.id}
-              name={school.name}
-              location={locationById[school.id] ?? school.citySlug}
-              rating={school.rating}
-              reviewCount={school.reviewCount}
-              href={schoolHref(school)}
-            />
+      {/* Browse by */}
+      <Section
+        tone="tinted"
+        eyebrow="Browse"
+        title="Start from where you are"
+        description="Every school is filed under its state, city and home airport — pick the way in that matches what you already know."
+      >
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {browse.map((b, i) => (
+            <Reveal key={b.href} index={i} className="h-full">
+              <Card href={b.href} className="flex h-full flex-col p-5">
+                <div className="mb-5 flex items-center justify-between">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-soft text-accent-ink">
+                    <b.Icon size={18} className="text-accent-ink" />
+                  </span>
+                  <span className="font-mono text-xs uppercase tracking-[0.12em] text-muted">
+                    {b.count}
+                  </span>
+                </div>
+                <h3 className="font-display text-xl font-bold tracking-tight text-ink">
+                  {b.title}
+                </h3>
+                <p className="mt-1 text-sm text-muted">{b.body}</p>
+                <span className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-accent-ink">
+                  Browse
+                  <ArrowRight
+                    size={14}
+                    className="transition-transform duration-200 group-hover:translate-x-0.5"
+                  />
+                </span>
+              </Card>
+            </Reveal>
           ))}
         </div>
-      </section>
-      {/* Why Create an Account */}
-      <section className="bg-linear-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800 py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl md:text-4xl font-bold text-center mb-12 text-blue-800 dark:text-blue-400">
-            Why Create an Account?
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-            {[
-              {
-                title: "Respond to Comments",
-                description:
-                  "Engage directly with potential students and classmates. Address feedback and questions other students may have.",
-                icon: "💬",
-              },
-              {
-                title: "Add/Update Flight School Listings",
-                description:
-                  "Manage your flight school's information and keep your listing up-to-date for potential students.",
-                icon: "✏️",
-              },
-              {
-                title: "Get Notified on Comments",
-                description:
-                  "Receive notifications when someone comments on reviews of your flight school or your reviews.",
-                icon: "🔔",
-              },
-              // {
-              //   title: "Earn Butter Points",
-              //   description: "Accumulate points for your participation that can be redeemed for special benefits.",
-              //   icon: "⭐",
-              // },
-            ].map((item) => (
-              <div
-                key={item.title}
-                className="bg-white dark:bg-zinc-900 p-6 rounded-2xl shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-200 text-center border border-slate-100 dark:border-zinc-800"
+      </Section>
+
+      {/* Training path — the content is a real sequence, so it's drawn as one */}
+      <Section
+        eyebrow="How flight training works"
+        title="One certificate at a time"
+        description="Most schools offer some combination of these certificates and ratings. Career pilots usually climb all four."
+      >
+        <div className="grid gap-12 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:gap-16">
+          <ol className="relative">
+            {orderedPath.map((program, i) => (
+              <Reveal
+                key={program.id}
+                index={i}
+                as="li"
+                className="relative flex gap-5 pb-10 last:pb-0"
               >
-                <div className="text-4xl mb-4 w-16 h-16 flex items-center justify-center mx-auto rounded-full bg-linear-to-br from-blue-100 to-slate-100 dark:from-slate-700 dark:to-slate-600">
-                  {item.icon}
-                </div>
-                <h3 className="text-xl font-semibold text-slate-800 dark:text-slate-200 mb-2">
-                  {item.title}
-                </h3>
-                <p className="text-slate-600 dark:text-slate-400">
-                  {item.description}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* How Flight Training Works */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <h2 className="text-3xl md:text-4xl font-bold text-center mb-12 text-rose-800 dark:text-rose-700">
-          How Flight Training Works
-        </h2>
-        <div className="max-w-4xl mx-auto bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-slate-100 dark:border-zinc-800 p-8 space-y-6 text-slate-700 dark:text-slate-300">
-          <p className="text-lg">
-            Flight training begins with the{" "}
-            <strong>Private Pilot License</strong>, which allows you to fly
-            small aircraft in good weather conditions. This foundational
-            certification is perfect for recreational flying and is the first
-            step for anyone interested in aviation.
-          </p>
-          <p className="text-lg">
-            If you&apos;re looking to make a career out of flying, you&apos;ll
-            need additional ratings and certificates, such as your Instrument
-            Rating, Commercial Pilot License, and potentially Flight Instructor
-            Certifications. Most airlines and good paying pilot jobs require{" "}
-            <strong>1500 hours of flight time</strong>, and many pilots choose
-            to become an instructor to gain the flight time needed to meet
-            minimum requirements.
-          </p>
-          <p className="text-lg">
-            Flight schools across the country offer programs to help you achieve
-            these certifications and ratings, each with different approaches,
-            aircraft fleets, and teaching methodologies.
-          </p>
-          <p className="text-lg">
-            We created <strong>Flight School Finder</strong> to help you
-            navigate these options and find the best flight training program for
-            your specific goals, budget, and location. Whether you&apos;re
-            looking to fly for fun or pursuing a professional career, finding
-            the right school is the first step toward your aviation journey.
-          </p>
-        </div>
-      </section>
-
-      {/* Common Flight School Offerings */}
-      <section className="bg-linear-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800 py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl md:text-4xl font-bold text-center mb-4 text-blue-800 dark:text-blue-400">
-            Common Flight School Offerings
-          </h2>
-          <p className="text-center text-slate-600 dark:text-slate-400 max-w-2xl mx-auto mb-12 text-lg">
-            Most flight schools offer some combination of these certifications
-            and ratings.
-          </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {offeredPrograms.map((program) => (
-                <Link
-                  key={program.id}
-                  href={`/programs/${program.slug}`}
-                  className="bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-slate-100 dark:border-zinc-800 p-6 hover:shadow-lg hover:-translate-y-1 transition-all duration-200 group"
+                {/* connector */}
+                {i < orderedPath.length - 1 && (
+                  <span
+                    aria-hidden
+                    className="absolute left-[11px] top-7 h-[calc(100%-0.5rem)] w-px border-l border-dashed border-accent/50"
+                  />
+                )}
+                <span
+                  aria-hidden
+                  className="relative mt-1.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 border-accent bg-surface"
                 >
-                  <div className="flex items-start justify-between mb-2">
-                    <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 group-hover:text-blue-700 dark:group-hover:text-blue-400 transition-colors">
+                  <span className="h-2 w-2 rounded-full bg-accent" />
+                </span>
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                    <Link
+                      href={`/programs/${program.slug}`}
+                      className="font-display text-2xl font-bold tracking-tight text-ink transition-colors hover:text-accent-ink"
+                    >
                       {program.shortName}
-                    </h3>
-                    {program.minimumHours && (
-                      <span className="text-xs font-semibold text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-slate-700 px-2 py-1 rounded whitespace-nowrap ml-2">
-                        {program.minimumHours}+ hrs
-                      </span>
-                    )}
-                  </div>
-                  {program.typicalDuration && (
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
+                    </Link>
+                    <span className="font-mono text-xs uppercase tracking-[0.12em] text-muted">
+                      {program.minimumHours && `${program.minimumHours}+ hrs`}
+                      {program.minimumHours && program.typicalDuration && " · "}
                       {program.typicalDuration}
-                    </p>
-                  )}
-                  <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed line-clamp-3">
-                    {program.description}
-                  </p>
-                  <span className="mt-4 inline-block text-sm font-semibold text-blue-700 dark:text-blue-400 group-hover:underline">
-                    Learn more →
-                  </span>
-                </Link>
-              ))}
-          </div>
-        </div>
-      </section>
+                    </span>
+                  </div>
+                  <p className="mt-2 max-w-prose text-muted">{program.description}</p>
+                </div>
+              </Reveal>
+            ))}
+          </ol>
 
-      {/* Update or Add Flight School */}
-      <section className="bg-slate-50 dark:bg-slate-900 py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl md:text-4xl font-bold text-center mb-12 text-rose-800 dark:text-rose-700">
-            Looking to Update or Add Your Flight School?
-          </h2>
-          <div className="max-w-3xl mx-auto bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-slate-100 dark:border-zinc-800 p-8 space-y-6 text-slate-700 dark:text-slate-300">
-            <p className="text-lg">
-              Adding your flight school to our directory is simple. Start by
-              creating a user account through our sign-up process. Once
-              registered, you&apos;ll have access to our submission form where
-              you can provide details about your flight school, including
-              location, aircraft fleet, certifications offered, and instructors.
-            </p>
-            <p className="text-lg">
-              After submission, our team will review your listing to ensure all
-              information is accurate and complete. Once approved, your flight
-              school will be published on our platform, making it visible to
-              potential students searching for flight training in your area.
-            </p>
-            <div className="text-center pt-4">
-              <Link
-                href="/signup"
-                className="inline-block px-6 py-3 bg-rose-700 text-white font-semibold rounded-xl hover:bg-rose-600 transition-colors shadow-sm"
-              >
-                Create Account
-              </Link>
+          <Reveal index={2}>
+            <div className="space-y-5 text-base leading-relaxed text-muted lg:sticky lg:top-24">
+              <p>
+                Flight training begins with the{" "}
+                <strong className="font-semibold text-ink">Private Pilot certificate</strong>,
+                which lets you fly small aircraft in good weather — the first step for anyone
+                interested in aviation, whether for fun or for a career.
+              </p>
+              <p>
+                To fly professionally you&apos;ll add an Instrument Rating, a Commercial
+                certificate and often a Flight Instructor certificate. Most airline and
+                well-paid pilot jobs require{" "}
+                <strong className="font-semibold text-ink">1,500 hours</strong>, and many
+                pilots instruct to build that time. Schools differ in approach, fleet and
+                teaching style — Flight School Finder exists to help you compare them for your
+                goals, budget and location.
+              </p>
+              <Button href="/programs" variant="secondary" size="sm">
+                See all programs
+                <ArrowRight size={14} />
+              </Button>
             </div>
-          </div>
+          </Reveal>
         </div>
-      </section>
+      </Section>
 
-      {/* Looking for Something Different */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <h2 className="text-3xl md:text-4xl font-bold text-center mb-12 text-blue-800 dark:text-blue-400">
-          Looking for Something Different?
-        </h2>
-        <div className="max-w-3xl mx-auto bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-slate-100 dark:border-zinc-800 p-8 space-y-6 text-slate-700 dark:text-slate-300">
-          <p className="text-lg">
-            While flight schools offer structured programs for pilot
-            certification, they might not be the right fit for everyone. If
-            you&apos;re looking for a more personalized approach to flight
-            training, connecting with private Certified Flight Instructors
-            (CFIs) could be a better option for you.
-          </p>
-          <p className="text-lg">
-            Private instruction offers more flexibility in scheduling,
-            one-on-one attention, and potentially a more tailored learning
-            experience that fits your specific needs and learning style.
-          </p>
-          <div className="text-center pt-4">
-            <button className="bg-blue-700 text-white px-6 py-3 rounded-xl hover:bg-blue-600 transition-colors shadow-sm font-semibold">
-              Connect with Private CFIs
-            </button>
-          </div>
+      {/* Why create an account */}
+      <Section
+        tone="tinted"
+        eyebrow="Accounts"
+        title="Why create an account?"
+        action={{ href: "/signup", label: "Create a free account" }}
+      >
+        <div className="grid gap-4 md:grid-cols-3">
+          {accountPerks.map((perk, i) => (
+            <Reveal key={perk.title} index={i} className="h-full">
+              <Card className="flex h-full flex-col p-6">
+                <span className="mb-5 flex h-10 w-10 items-center justify-center rounded-xl bg-accent-soft text-accent-ink">
+                  <perk.Icon size={18} />
+                </span>
+                <h3 className="font-display text-xl font-bold tracking-tight text-ink">
+                  {perk.title}
+                </h3>
+                <p className="mt-2 text-sm leading-relaxed text-muted">{perk.body}</p>
+              </Card>
+            </Reveal>
+          ))}
         </div>
-      </section>
+      </Section>
+
+      {/* Add your school */}
+      <Section>
+        <Reveal>
+          <Card className="relative overflow-hidden p-8 md:p-12">
+            <SectionalMotif
+              animate={false}
+              className="pointer-events-none absolute -right-32 -top-48 h-[30rem] w-[30rem] opacity-[0.12]"
+            />
+            <div className="relative grid gap-10 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:items-center">
+              <div>
+                <Eyebrow accent className="mb-4">
+                  For flight schools
+                </Eyebrow>
+                <h2 className="text-3xl font-bold leading-[1.05] text-ink md:text-4xl">
+                  Looking to add or update your flight school?
+                </h2>
+                <p className="mt-4 max-w-xl text-muted">
+                  Adding your school is simple. Create an account, submit your listing —
+                  location, fleet, certificates offered, instructors — and our team reviews
+                  it for accuracy. Once approved, it&apos;s visible to students searching for
+                  training in your area.
+                </p>
+                <div className="mt-7 flex flex-wrap gap-3">
+                  <Button href="/signup">Create account</Button>
+                  <Button href="/schools/add" variant="secondary">
+                    Submit a listing
+                  </Button>
+                </div>
+              </div>
+              <ol className="space-y-3 font-mono text-sm">
+                {["Create an account", "Submit your listing", "Reviewed, then published"].map(
+                  (step, i) => (
+                    <li
+                      key={step}
+                      className="flex items-center gap-4 rounded-xl border border-line bg-paper/60 px-4 py-3"
+                    >
+                      <span className="text-xs text-accent-ink">0{i + 1}</span>
+                      <span className="text-ink">{step}</span>
+                    </li>
+                  ),
+                )}
+              </ol>
+            </div>
+          </Card>
+        </Reveal>
+
+        <Reveal index={1}>
+          <p className="mx-auto mt-10 max-w-2xl text-center text-sm leading-relaxed text-muted">
+            Looking for something different? Structured school programs aren&apos;t the only
+            route. Working one-on-one with a private Certified Flight Instructor (CFI) offers
+            more scheduling flexibility and a learning pace tailored to you.
+          </p>
+        </Reveal>
+      </Section>
     </div>
   );
 }

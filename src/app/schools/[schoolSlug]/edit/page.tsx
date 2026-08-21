@@ -1,6 +1,5 @@
 import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
-import { Pencil } from "lucide-react";
 import {
   getSchoolBySlug,
   getCityBySlug,
@@ -10,6 +9,8 @@ import {
 import { getCurrentUser, isAdmin } from "@/lib/auth";
 import { schoolHref } from "@/lib/utils";
 import { EditSchoolForm } from "./EditSchoolForm";
+import { PageHero } from "@/components/PageHero";
+import { Container } from "@/components/ui/Container";
 
 type Props = { params: Promise<{ schoolSlug: string }> };
 
@@ -18,8 +19,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const school = await getSchoolBySlug(schoolSlug);
   return {
     title: school
-      ? `Edit ${school.name} – Flight School Finder`
-      : "Edit School – Flight School Finder",
+      ? `Edit ${school.name}`
+      : "Edit School",
     robots: { index: false },
   };
 }
@@ -44,24 +45,19 @@ export default async function EditSchoolPage({ params }: Props) {
 
   return (
     <div className="pb-20">
-      {/* Hero */}
-      <section className="bg-linear-to-br from-slate-950 via-blue-950 to-indigo-900 text-white py-16 px-4">
-        <div className="max-w-3xl mx-auto text-center">
-          <div className="flex justify-center mb-4">
-            <Pencil className="w-10 h-10 text-blue-300" />
-          </div>
-          <h1 className="text-3xl sm:text-4xl font-extrabold mb-3">
-            Edit Flight School
-          </h1>
-          <p className="text-blue-200 text-lg">
-            Editing{" "}
-            <span className="font-semibold text-white">{school.name}</span>
-          </p>
-        </div>
-      </section>
-
-      {/* Form */}
-      <section className="max-w-3xl mx-auto px-4 py-12">
+      <PageHero
+        size="narrow"
+        back={{ href: schoolHref(school), label: "Back to listing" }}
+        eyebrow={
+          <>
+            <span className="font-semibold text-sky">{school.primaryAirportCode}</span>
+            <span className="text-line">/</span>
+            Editing listing
+          </>
+        }
+        title={school.name}
+      />
+      <Container size="narrow" className="py-12">
         <EditSchoolForm
           school={school}
           cityName={city?.name ?? school.citySlug}
@@ -73,7 +69,7 @@ export default async function EditSchoolPage({ params }: Props) {
           viewerIsAdmin={isAdmin(viewer)}
           backHref={schoolHref(school)}
         />
-      </section>
+      </Container>
     </div>
   );
 }

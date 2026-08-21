@@ -9,9 +9,10 @@ import {
 } from "@/lib/data";
 import { schoolHref, slugToTitle } from "@/lib/utils";
 import { AdvancedSearchExplorer } from "@/components/AdvancedSearchExplorer";
+import { PageHero } from "@/components/PageHero";
 
 export const metadata: Metadata = {
-  title: "Search Flight Schools | Flight School Finder",
+  title: "Search Flight Schools",
   description:
     "Filter USA flight schools by state, airport code, aircraft fleet, programs offered, and FAA Part 61 or Part 141 certification to find the perfect fit for your training goals.",
   openGraph: {
@@ -75,6 +76,12 @@ export default async function SearchPage() {
   }));
 
   return (
+    <div className="pb-20">
+      <PageHero
+        eyebrow={`${schoolData.length} schools / ${programs.length} programs / ${trainerAircraft.length} aircraft`}
+        title="Search flight schools"
+        description="Narrow the whole directory by state, city, airport, training type, programs offered, fleet and rating."
+      />
     <Suspense>
       <AdvancedSearchExplorer
         schools={schoolData}
@@ -84,5 +91,6 @@ export default async function SearchPage() {
         cities={cityOptions}
       />
     </Suspense>
+    </div>
   );
 }

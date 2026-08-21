@@ -1,7 +1,16 @@
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ChevronLeft, MapPin, Phone, Globe, Star, Plane, Users, Mail } from "lucide-react";
+import { ExternalLink, Mail, MapPin, Phone, Plane, Users } from "lucide-react";
+import { PageHero } from "@/components/PageHero";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { Chip } from "@/components/ui/Chip";
+import { Container } from "@/components/ui/Container";
+import { Eyebrow } from "@/components/ui/Eyebrow";
+import { Notice } from "@/components/ui/Notice";
+import { Stars } from "@/components/ui/Stars";
 import {
   getSchoolBySlug,
   getCityBySlug,
@@ -18,6 +27,9 @@ import {
   getAirports,
 } from "@/lib/data";
 import { getCurrentUser } from "@/lib/auth";
+import { schoolHref } from "@/lib/utils";
+import { absoluteUrl } from "@/lib/site";
+import { JsonLd } from "@/components/JsonLd";
 import ReviewsSection from "@/components/ReviewsSection";
 import ReviewForm from "@/components/ReviewForm";
 
@@ -31,7 +43,7 @@ type Props = {
 };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { schoolSlug, stateSlug, citySlug, airportCode } = await params;
+  const { schoolSlug } = await params;
   const school = await getSchoolBySlug(schoolSlug);
   if (!school) return { title: "School Not Found" };
   const [city, state] = await Promise.all([
@@ -40,7 +52,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   ]);
   const title = `${school.name} – Flight School in ${city?.name ?? ""}, ${state?.abbreviation ?? ""}`;
   const description = school.description.slice(0, 160);
-  const canonical = `/${stateSlug}/${citySlug}/${airportCode}/${schoolSlug}`;
+  const canonical = schoolHref(school);
   return {
     title,
     description,
@@ -51,9 +63,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function SchoolDetailPage({ params }: Props) {
-  const { schoolSlug } = await params;
+  const { stateSlug, citySlug, airportCode, schoolSlug } = await params;
   const school = await getSchoolBySlug(schoolSlug);
   if (!school) notFound();
+
+  // Only the slug identifies the school; the other segments exist for SEO.
+  // Send mis-typed or stale URLs to the single canonical address instead of
+  // serving the same page (and a wrong canonical tag) under any path.
+  const canonicalPath = schoolHref(school);
+  if (`/${stateSlug}/${citySlug}/${airportCode}/${schoolSlug}` !== canonicalPath) {
+    permanentRedirect(canonicalPath);
+  }
 
   const [
     city,
@@ -122,26 +142,26 @@ export default async function SchoolDetailPage({ params }: Props) {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     itemListElement: [
-      { "@type": "ListItem", position: 1, name: "Home", item: "/" },
+      { "@type": "ListItem", position: 1, name: "Home", item: absoluteUrl("/") },
       {
         "@type": "ListItem",
         position: 2,
         name: `${state?.name ?? school.stateSlug} Flight Schools`,
-        item: `/states/${school.stateSlug}`,
+        item: absoluteUrl(`/states/${school.stateSlug}`),
       },
       {
         "@type": "ListItem",
         position: 3,
         name: `${city?.name ?? school.citySlug} Flight Schools`,
-        item: `/cities/${school.citySlug}`,
+        item: absoluteUrl(`/cities/${school.citySlug}`),
       },
       {
         "@type": "ListItem",
         position: 4,
         name: `${primaryAirport?.icao ?? school.primaryAirportCode} Flight Schools`,
-        item: `/airports/${school.primaryAirportCode.toLowerCase()}`,
+        item: absoluteUrl(`/airports/${school.primaryAirportCode.toLowerCase()}`),
       },
-      { "@type": "ListItem", position: 5, name: school.name },
+      { "@type": "ListItem", position: 5, name: school.name, item: absoluteUrl(canonicalPath) },
     ],
   };
 
@@ -151,352 +171,332 @@ export default async function SchoolDetailPage({ params }: Props) {
     "@type": "LocalBusiness",
     name: school.name,
     description: school.description,
-    telephone: school.phone,
-    url: school.website,
+    telephone: school.phone || undefined,
+    url: school.website || undefined,
     address: {
       "@type": "PostalAddress",
       addressLocality: city?.name ?? school.citySlug,
       addressRegion: state?.abbreviation ?? school.stateSlug,
       addressCountry: "US",
     },
-    aggregateRating: {
-      "@type": "AggregateRating",
-      ratingValue: school.rating.toFixed(1),
-      reviewCount: school.reviewCount,
-    },
+    // Google rejects AggregateRating with zero reviews — omit it until there are some
+    ...(school.reviewCount > 0
+      ? {
+          aggregateRating: {
+            "@type": "AggregateRating",
+            ratingValue: school.rating.toFixed(1),
+            reviewCount: school.reviewCount,
+            bestRating: 5,
+            worstRating: 1,
+          },
+        }
+      : {}),
   };
+
+  const locationLabel = `${city?.name ?? school.citySlug}, ${state?.abbreviation ?? school.stateSlug}`;
+  const faaLabel = school.faaPart
+    ? `FAR Part ${school.faaPart === "both" ? "61 / 141" : school.faaPart}`
+    : null;
+  const hasFleet =
+    schoolAircraft.length > 0 || school.estimatedPlanes || school.estimatedInstructors;
 
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
-      />
+      <JsonLd data={jsonLd} />
+      <JsonLd data={breadcrumbJsonLd} />
 
-      <div className="pb-20">
-        {/* Hero */}
-        <section className="bg-linear-to-br from-slate-950 via-blue-950 to-indigo-900 text-white py-16 px-4">
-          <div className="max-w-4xl mx-auto">
-            <Link
-              href={city ? `/cities/${city.slug}` : "/states"}
-              className="inline-flex items-center gap-1 text-slate-300 hover:text-white text-sm transition mb-4"
-            >
-              <ChevronLeft size={16} />
-              {city
-                ? `Flight Schools in ${city.name}`
-                : "Back"}
-            </Link>
-
-            <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-3">
-              {school.name}
-            </h1>
-
-            <div className="flex flex-wrap items-center gap-4 text-sm opacity-90">
-              <span className="flex items-center gap-1.5">
-                <MapPin size={16} />
-                {city?.name ?? school.citySlug},{" "}
-                {state?.abbreviation ?? school.stateSlug}
-              </span>
-              {primaryAirport && (
-                <Link
-                  href={`/airports/${primaryAirport.icao.toLowerCase()}`}
-                  className="flex items-center gap-1.5 font-mono font-semibold text-blue-300 hover:text-white transition"
-                >
-                  <Plane size={16} />
-                  {primaryAirport.icao}
-                </Link>
-              )}
-              {school.faaPart && (
-                <span className="bg-white/10 border border-white/20 rounded-full px-2.5 py-0.5 text-xs font-medium">
-                  FAR Part {school.faaPart === "both" ? "61 / 141" : school.faaPart}
-                </span>
-              )}
-            </div>
-
-            {/* Rating */}
-            <div className="flex items-center gap-2 mt-5">
-              <div className="flex items-center gap-1 text-amber-400">
-                {[1, 2, 3, 4, 5].map((i) => (
-                  <Star
-                    key={i}
-                    size={20}
-                    fill={i <= Math.round(school.rating) ? "currentColor" : "none"}
-                    strokeWidth={i <= Math.round(school.rating) ? 0 : 1.5}
-                  />
-                ))}
-              </div>
-              <span className="font-bold text-lg">{school.rating.toFixed(1)}</span>
-              <span className="text-slate-300 text-sm">
-                ({school.reviewCount} reviews)
-              </span>
-            </div>
-          </div>
-        </section>
-
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-12">
-          {/* Programs */}
-          <section>
-            <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-4">
-              Programs Offered
-            </h2>
-            <div className="flex flex-wrap gap-2">
-              {schoolPrograms.map((program) => (
-                <Link
-                  key={program.slug}
-                  href={`/programs/${program.slug}`}
-                  className="px-3 py-1.5 bg-blue-50 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-700 rounded-full text-sm font-medium hover:bg-blue-100 dark:hover:bg-blue-900/50 hover:border-blue-400 transition"
-                >
-                  {program.shortName}
-                </Link>
-              ))}
-            </div>
-          </section>
-
-          {/* About */}
-          <section>
-            <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-3">
-              About {school.name}
-            </h2>
-            <p className="text-slate-600 dark:text-slate-300 leading-relaxed">
-              {school.description}
-            </p>
-          </section>
-
-          {/* Contact */}
-          <section>
-            <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-4">
-              Contact &amp; Location
-            </h2>
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-6 space-y-4">
-              {/* Primary airport */}
-              {primaryAirport && (
-                <div className="flex items-start gap-3">
-                  <Plane size={18} className="text-slate-400 mt-0.5 shrink-0" />
-                  <div>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">
-                      Primary Airport
-                    </p>
-                    <Link
-                      href={`/airports/${primaryAirport.icao.toLowerCase()}`}
-                      className="font-semibold text-blue-700 dark:text-blue-400 hover:underline"
-                    >
-                      {primaryAirport.icao} – {primaryAirport.name}
-                    </Link>
-                  </div>
-                </div>
-              )}
-
-              {/* Address */}
-              <div className="flex items-start gap-3">
-                <MapPin size={18} className="text-slate-400 mt-0.5 shrink-0" />
-                <div>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">
-                    City
-                  </p>
-                  <p className="font-semibold text-slate-800 dark:text-slate-100">
-                    {city?.name ?? school.citySlug},{" "}
-                    {state?.name ?? school.stateSlug}
-                  </p>
-                </div>
-              </div>
-
-              {/* Phone */}
-              <div className="flex items-center gap-3">
-                <Phone size={18} className="text-slate-400 shrink-0" />
-                <div>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">
-                    Phone
-                  </p>
-                  <a
-                    href={`tel:${school.phone.replace(/\D/g, "")}`}
-                    className="font-semibold text-slate-800 dark:text-slate-100 hover:text-blue-700 dark:hover:text-blue-400 transition"
-                  >
-                    {school.phone}
-                  </a>
-                </div>
-              </div>
-
-              {/* Website */}
-              <div className="flex items-center gap-3">
-                <Globe size={18} className="text-slate-400 shrink-0" />
-                <div>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">
-                    Website
-                  </p>
-                  <a
-                    href={school.website}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="font-semibold text-blue-700 dark:text-blue-400 hover:underline"
-                  >
-                    {school.website.replace(/^https?:\/\//, "")}
-                  </a>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {/* Fleet & Staff */}
-          {(schoolAircraft.length > 0 || school.estimatedPlanes || school.estimatedInstructors) && (
-            <section>
-              <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-4">
-                Fleet &amp; Staff
-              </h2>
-              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl divide-y divide-slate-100 dark:divide-slate-800">
-                {/* Stats row */}
-                {(school.estimatedPlanes || school.estimatedInstructors) && (
-                  <div className="grid grid-cols-2 divide-x divide-slate-100 dark:divide-slate-800">
-                    {school.estimatedPlanes && (
-                      <div className="p-5 flex items-center gap-3">
-                        <Plane size={18} className="text-blue-600 dark:text-blue-400 shrink-0" />
-                        <div>
-                          <p className="text-xl font-bold text-slate-800 dark:text-slate-100">
-                            {school.estimatedPlanes}
-                          </p>
-                          <p className="text-xs text-slate-500 dark:text-slate-400">Estimated aircraft</p>
-                        </div>
-                      </div>
-                    )}
-                    {school.estimatedInstructors && (
-                      <div className="p-5 flex items-center gap-3">
-                        <Users size={18} className="text-blue-600 dark:text-blue-400 shrink-0" />
-                        <div>
-                          <p className="text-xl font-bold text-slate-800 dark:text-slate-100">
-                            {school.estimatedInstructors}
-                          </p>
-                          <p className="text-xs text-slate-500 dark:text-slate-400">Estimated instructors</p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-                {/* Aircraft list */}
-                {schoolAircraft.length > 0 && (
-                  <div className="p-5">
-                    <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-3">
-                      Aircraft
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {schoolAircraft.map((a) => (
-                        <Link
-                          key={a.slug}
-                          href={`/aircraft/${a.slug}`}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 hover:border-slate-400 transition"
-                        >
-                          <Plane size={13} className="text-slate-400" />
-                          {a.displayName}
-                        </Link>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </section>
-          )}
-
-          {/* Key Contacts */}
-          {school.contacts && school.contacts.length > 0 && (
-            <section>
-              <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-4">
-                Key Contacts
-              </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {school.contacts.map((contact) => (
-                  <div
-                    key={contact.email}
-                    className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-5 space-y-2"
-                  >
-                    <p className="font-semibold text-slate-800 dark:text-slate-100">{contact.name}</p>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">{contact.title}</p>
-                    <div className="pt-1 space-y-1.5">
-                      <a
-                        href={`tel:${contact.phone.replace(/\D/g, "")}`}
-                        className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300 hover:text-blue-700 dark:hover:text-blue-400 transition"
-                      >
-                        <Phone size={14} className="text-slate-400 shrink-0" />
-                        {contact.phone}
-                      </a>
-                      <a
-                        href={`mailto:${contact.email}`}
-                        className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300 hover:text-blue-700 dark:hover:text-blue-400 transition"
-                      >
-                        <Mail size={14} className="text-slate-400 shrink-0" />
-                        {contact.email}
-                      </a>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* Student Reviews */}
-          <section>
-            <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-4">
-              Student Reviews
-            </h2>
-            <ReviewsSection
-              reviews={schoolReviews}
-              commentsByReview={commentsByReview}
-              usersById={usersById}
-              programShortNames={programShortNames}
-              currentUserId={viewer?.id ?? null}
-            />
-          </section>
-
-          {/* Write a Review */}
-          <section>
-            <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-4">
-              Write a Review
-            </h2>
-            {ownReview ? (
-              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-6 text-sm text-slate-600 dark:text-slate-300">
-                You&apos;ve already reviewed this school. Delete your review to
-                write a new one.
-              </div>
-            ) : (
-              <ReviewForm schoolId={school.id} />
+      <PageHero
+        back={{
+          href: city ? `/cities/${city.slug}` : "/states",
+          label: city ? `Flight schools in ${city.name}` : "Back",
+        }}
+        eyebrow={
+          <>
+            {primaryAirport && (
+              <Link
+                href={`/airports/${primaryAirport.icao.toLowerCase()}`}
+                className="font-semibold text-sky hover:underline"
+              >
+                {primaryAirport.icao}
+              </Link>
             )}
-          </section>
+            {primaryAirport && <span className="text-line">/</span>}
+            <span>{locationLabel}</span>
+            {faaLabel && <Badge tone="accent">{faaLabel}</Badge>}
+          </>
+        }
+        title={school.name}
+        meta={
+          school.reviewCount > 0 ? (
+            <Stars value={school.rating} count={school.reviewCount} size={18} />
+          ) : (
+            <span>No reviews yet — be the first to share your experience.</span>
+          )
+        }
+        aside={
+          (school.website || school.phone) && (
+            <div className="flex flex-wrap gap-3">
+              {school.website && (
+                <Button href={school.website} target="_blank" rel="noopener noreferrer">
+                  Visit website
+                  <ExternalLink size={15} />
+                </Button>
+              )}
+              {school.phone && (
+                <Button href={`tel:${school.phone.replace(/\D/g, "")}`} variant="secondary">
+                  <Phone size={15} />
+                  {school.phone}
+                </Button>
+              )}
+            </div>
+          )
+        }
+      />
 
-          {/* Other locations — sibling listings for the same brand */}
-          {relatedSchools.length > 0 && (
+      <Container className="py-12 md:py-16">
+        <div className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-16">
+          {/* Main column */}
+          <div className="min-w-0 space-y-14">
+            {/* About */}
             <section>
-              <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-4">
-                Other Locations
-              </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {relatedSchools.map((sibling) => (
-                  <Link
-                    key={sibling.id}
-                    href={`/${sibling.stateSlug}/${sibling.citySlug}/${sibling.primaryAirportCode.toLowerCase()}/${sibling.slug}`}
-                    className="group bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-4 hover:shadow-md hover:border-blue-400 dark:hover:border-blue-500 transition"
-                  >
-                    <p className="font-semibold text-slate-800 dark:text-slate-100 group-hover:text-blue-700 dark:group-hover:text-blue-400 transition mb-1">
-                      {sibling.name}
-                    </p>
-                    {sibling.airport && (
-                      <p className="font-mono text-sm text-blue-700 dark:text-blue-400">
-                        {sibling.primaryAirportCode} – {sibling.airport.name}
-                      </p>
-                    )}
-                    {sibling.city && sibling.state && (
-                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-1">
-                        <MapPin size={12} />
-                        {sibling.city.name}, {sibling.state.abbreviation}
-                      </p>
-                    )}
-                  </Link>
-                ))}
-              </div>
+              <SectionTitle>About {school.name}</SectionTitle>
+              <p className="max-w-prose text-[1.05rem] leading-relaxed text-muted">
+                {school.description}
+              </p>
             </section>
-          )}
+
+            {/* Programs */}
+            {schoolPrograms.length > 0 && (
+              <section>
+                <SectionTitle>Programs offered</SectionTitle>
+                <div className="flex flex-wrap gap-2">
+                  {schoolPrograms.map((program) => (
+                    <Chip key={program.slug} href={`/programs/${program.slug}`}>
+                      {program.shortName}
+                    </Chip>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Fleet & Staff */}
+            {hasFleet && (
+              <section>
+                <SectionTitle>Fleet &amp; staff</SectionTitle>
+                <Card className="divide-y divide-line">
+                  {(school.estimatedPlanes || school.estimatedInstructors) && (
+                    <div className="grid grid-cols-2 divide-x divide-line">
+                      {school.estimatedPlanes && (
+                        <Stat icon={<Plane size={16} />} value={school.estimatedPlanes} label="Aircraft (est.)" />
+                      )}
+                      {school.estimatedInstructors && (
+                        <Stat icon={<Users size={16} />} value={school.estimatedInstructors} label="Instructors (est.)" />
+                      )}
+                    </div>
+                  )}
+                  {schoolAircraft.length > 0 && (
+                    <div className="p-5">
+                      <Eyebrow className="mb-3">Aircraft</Eyebrow>
+                      <div className="flex flex-wrap gap-2">
+                        {schoolAircraft.map((a) => (
+                          <Chip key={a.slug} href={`/aircraft/${a.slug}`}>
+                            <Plane size={13} className="text-muted" />
+                            {a.displayName}
+                          </Chip>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </Card>
+              </section>
+            )}
+
+            {/* Key Contacts */}
+            {school.contacts && school.contacts.length > 0 && (
+              <section>
+                <SectionTitle>Key contacts</SectionTitle>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  {school.contacts.map((contact, i) => (
+                    <Card key={`${i}-${contact.email}`} className="p-5">
+                      <p className="font-semibold text-ink">{contact.name}</p>
+                      <p className="text-sm text-muted">{contact.title}</p>
+                      <div className="mt-3 space-y-1.5">
+                        {contact.phone && (
+                          <a
+                            href={`tel:${contact.phone.replace(/\D/g, "")}`}
+                            className="flex items-center gap-2 text-sm text-ink transition-colors hover:text-accent-ink"
+                          >
+                            <Phone size={14} className="shrink-0 text-muted" />
+                            {contact.phone}
+                          </a>
+                        )}
+                        {contact.email && (
+                          <a
+                            href={`mailto:${contact.email}`}
+                            className="flex items-center gap-2 text-sm text-ink transition-colors hover:text-accent-ink"
+                          >
+                            <Mail size={14} className="shrink-0 text-muted" />
+                            {contact.email}
+                          </a>
+                        )}
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Student Reviews */}
+            <section id="reviews">
+              <SectionTitle>Student reviews</SectionTitle>
+              <ReviewsSection
+                reviews={schoolReviews}
+                commentsByReview={commentsByReview}
+                usersById={usersById}
+                programShortNames={programShortNames}
+                currentUserId={viewer?.id ?? null}
+              />
+            </section>
+
+            {/* Write a Review */}
+            <section>
+              <SectionTitle>Write a review</SectionTitle>
+              {ownReview ? (
+                <Notice tone="info">
+                  You&apos;ve already reviewed this school. Delete your review to write a new one.
+                </Notice>
+              ) : (
+                <ReviewForm schoolId={school.id} />
+              )}
+            </section>
+
+            {/* Other locations — sibling listings for the same brand */}
+            {relatedSchools.length > 0 && (
+              <section>
+                <SectionTitle>Other locations</SectionTitle>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  {relatedSchools.map((sibling) => (
+                    <Card key={sibling.id} href={schoolHref(sibling)} className="p-5">
+                      <p className="mb-1 font-mono text-xs uppercase tracking-[0.12em] text-muted">
+                        <span className="font-semibold text-sky">{sibling.primaryAirportCode}</span>
+                        {sibling.airport && ` · ${sibling.airport.name}`}
+                      </p>
+                      <p className="font-display text-lg font-bold tracking-tight text-ink transition-colors group-hover:text-accent-ink">
+                        {sibling.name}
+                      </p>
+                      {sibling.city && sibling.state && (
+                        <p className="mt-1 flex items-center gap-1 text-xs text-muted">
+                          <MapPin size={12} />
+                          {sibling.city.name}, {sibling.state.abbreviation}
+                        </p>
+                      )}
+                    </Card>
+                  ))}
+                </div>
+              </section>
+            )}
+          </div>
+
+          {/* Sticky contact aside */}
+          <aside className="lg:sticky lg:top-24 lg:self-start">
+            <Card className="p-6">
+              <Eyebrow accent className="mb-5">
+                Contact &amp; location
+              </Eyebrow>
+              <dl className="space-y-5">
+                {primaryAirport && (
+                  <div>
+                    <dt className="text-xs text-muted">Primary airport</dt>
+                    <dd className="mt-0.5">
+                      <Link
+                        href={`/airports/${primaryAirport.icao.toLowerCase()}`}
+                        className="font-semibold text-ink transition-colors hover:text-accent-ink"
+                      >
+                        <span className="font-mono text-sky">{primaryAirport.icao}</span>{" "}
+                        <span className="text-muted">–</span> {primaryAirport.name}
+                      </Link>
+                    </dd>
+                  </div>
+                )}
+                <div>
+                  <dt className="text-xs text-muted">City</dt>
+                  <dd className="mt-0.5 font-semibold text-ink">
+                    {city?.name ?? school.citySlug}, {state?.name ?? school.stateSlug}
+                  </dd>
+                </div>
+                {school.phone && (
+                  <div>
+                    <dt className="text-xs text-muted">Phone</dt>
+                    <dd className="mt-0.5">
+                      <a
+                        href={`tel:${school.phone.replace(/\D/g, "")}`}
+                        className="font-semibold text-ink transition-colors hover:text-accent-ink"
+                      >
+                        {school.phone}
+                      </a>
+                    </dd>
+                  </div>
+                )}
+                {school.website && (
+                  <div>
+                    <dt className="text-xs text-muted">Website</dt>
+                    <dd className="mt-0.5">
+                      <a
+                        href={school.website}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="break-all font-semibold text-accent-ink hover:underline"
+                      >
+                        {school.website.replace(/^https?:\/\//, "")}
+                      </a>
+                    </dd>
+                  </div>
+                )}
+              </dl>
+              {school.website && (
+                <Button
+                  href={school.website}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  full
+                  className="mt-7"
+                >
+                  Visit website
+                  <ExternalLink size={15} />
+                </Button>
+              )}
+            </Card>
+          </aside>
         </div>
-      </div>
+      </Container>
     </>
+  );
+}
+
+function SectionTitle({ children }: { children: React.ReactNode }) {
+  return (
+    <h2 className="mb-4 font-display text-2xl font-bold tracking-tight text-ink">{children}</h2>
+  );
+}
+
+function Stat({
+  icon,
+  value,
+  label,
+}: {
+  icon: React.ReactNode;
+  value: React.ReactNode;
+  label: string;
+}) {
+  return (
+    <div className="flex items-center gap-3 p-5">
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent-soft text-accent-ink">
+        {icon}
+      </span>
+      <div>
+        <p className="font-mono text-xl font-semibold text-ink">{value}</p>
+        <p className="text-xs text-muted">{label}</p>
+      </div>
+    </div>
   );
 }

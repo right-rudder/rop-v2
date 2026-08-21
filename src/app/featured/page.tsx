@@ -1,22 +1,26 @@
 import type { Metadata } from "next";
 import { SchoolCard } from "@/components/SchoolCard";
+import { PageHero } from "@/components/PageHero";
+import { Container } from "@/components/ui/Container";
+import { Reveal } from "@/components/ui/Reveal";
+import { EmptyState } from "@/components/EmptyState";
 import { getFeaturedSchools, getLocationMaps } from "@/lib/data";
 import { schoolHref } from "@/lib/utils";
 
 export const metadata: Metadata = {
-  title: "Featured Flight Schools – Flight School Finder",
+  title: "Featured Flight Schools",
   description:
     "Explore our hand-picked featured flight schools across the USA. Top-rated programs for Private Pilot, Instrument, Commercial, CFI, and ATP certifications.",
   alternates: { canonical: "/featured" },
   openGraph: {
-    title: "Featured Flight Schools – Flight School Finder",
+    title: "Featured Flight Schools",
     description:
       "Explore our hand-picked featured flight schools across the USA. Top-rated programs for Private Pilot, Instrument, Commercial, CFI, and ATP certifications.",
     url: "/featured",
     type: "website",
   },
   twitter: {
-    title: "Featured Flight Schools – Flight School Finder",
+    title: "Featured Flight Schools",
     description:
       "Explore our hand-picked featured flight schools across the USA. Top-rated programs for Private Pilot, Instrument, Commercial, CFI, and ATP certifications.",
   },
@@ -30,43 +34,38 @@ export default async function FeaturedSchoolsPage() {
 
   return (
     <div className="pb-20">
-      {/* Hero */}
-      <section className="bg-linear-to-br from-slate-950 via-blue-950 to-indigo-900 text-white py-16 px-4">
-        <div className="max-w-4xl mx-auto text-center">
-          <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-4">
-            Featured Flight Schools
-          </h1>
-          <p className="text-xl opacity-90 max-w-2xl mx-auto">
-            Featured schools that have a great reputation for flight training with programs for Private Pilot, Instrument, Commercial, CFI, and ATP.
-          </p>
-        </div>
-      </section>
+      <PageHero
+        eyebrow={`${featuredSchools.length} featured school${featuredSchools.length !== 1 ? "s" : ""}`}
+        title="Featured flight schools"
+        description="Schools with a strong reputation for flight training, offering programs from Private Pilot through Instrument, Commercial, CFI and ATP."
+      />
 
-      {/* School grid */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <p className="text-slate-500 dark:text-slate-400 mb-8">
-          {featuredSchools.length} featured school{featuredSchools.length !== 1 ? "s" : ""}
-        </p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-          {featuredSchools.map((school) => {
-            const cityName = cityNameBySlug[school.citySlug];
-            const state = stateBySlug[school.stateSlug];
-            const location = cityName && state
-              ? `${cityName}, ${state.abbreviation}`
-              : school.citySlug;
-            return (
-              <SchoolCard
-                key={school.id}
-                name={school.name}
-                location={location}
-                rating={school.rating}
-                reviewCount={school.reviewCount}
-                href={schoolHref(school)}
-              />
-            );
-          })}
-        </div>
-      </section>
+      <Container className="py-12 md:py-16">
+        {featuredSchools.length === 0 ? (
+          <EmptyState title="No featured schools yet" hint="Know a school that belongs here?" />
+        ) : (
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {featuredSchools.map((school, i) => {
+              const cityName = cityNameBySlug[school.citySlug];
+              const state = stateBySlug[school.stateSlug];
+              const location =
+                cityName && state ? `${cityName}, ${state.abbreviation}` : school.citySlug;
+              return (
+                <Reveal key={school.id} index={i % 6} className="h-full">
+                  <SchoolCard
+                    name={school.name}
+                    location={location}
+                    airportCode={school.primaryAirportCode}
+                    rating={school.rating}
+                    reviewCount={school.reviewCount}
+                    href={schoolHref(school)}
+                  />
+                </Reveal>
+              );
+            })}
+          </div>
+        )}
+      </Container>
     </div>
   );
 }

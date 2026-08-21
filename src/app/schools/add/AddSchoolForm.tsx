@@ -2,15 +2,16 @@
 
 import { useActionState } from "react";
 import Link from "next/link";
-import { CheckCircle } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
+import { FLEET_RANGES, LIMITS } from "@/lib/types";
 import { SchoolContactsField } from "@/components/SchoolContactsField";
 import { submitSchool } from "@/app/actions/schools";
-
-const inputClass =
-  "w-full px-4 py-3 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600";
-
-const sectionClass =
-  "bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 space-y-5";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { Field } from "@/components/ui/Field";
+import { FormSection, choiceClass } from "@/components/ui/FormSection";
+import { Input, Select, Textarea } from "@/components/ui/Input";
+import { Notice } from "@/components/ui/Notice";
 
 export function AddSchoolForm({
   programs,
@@ -21,285 +22,176 @@ export function AddSchoolForm({
 
   if (state.success) {
     return (
-      <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-xl p-10 flex flex-col items-center gap-3 text-center">
-        <CheckCircle size={44} className="text-green-600 dark:text-green-400" />
-        <p className="font-semibold text-green-800 dark:text-green-300 text-xl">
-          Thanks! Your school has been submitted.
+      <Card className="flex flex-col items-center gap-3 border-ok/30 bg-ok-soft p-10 text-center">
+        <CheckCircle2 size={40} className="text-ok" />
+        <p className="font-display text-2xl font-bold tracking-tight text-ink">
+          Submitted for review
         </p>
-        <p className="text-green-700 dark:text-green-400 text-sm max-w-md">
-          Our team will review your submission and you&apos;ll receive an email
-          once your listing is approved.
+        <p className="max-w-md text-sm text-muted">
+          Our team will review your listing and email you once it&apos;s approved and
+          published.
         </p>
-      </div>
+      </Card>
     );
   }
 
   return (
-    <form action={action} className="space-y-10">
+    <form action={action} className="space-y-8">
       {/* Basic Info */}
-      <div className={sectionClass}>
-        <h2 className="text-lg font-bold text-slate-900 dark:text-white">
-          Basic Information
-        </h2>
-
-        <div>
-          <label
-            htmlFor="name"
-            className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1"
-          >
-            School Name <span className="text-rose-600">*</span>
-          </label>
-          <input
+      <FormSection title="Basic information">
+        <Field label="School name" htmlFor="name" required>
+          <Input
             id="name"
             name="name"
             type="text"
             required
+            maxLength={LIMITS.schoolName}
             placeholder="e.g. Skyline Aviation Academy"
-            className={inputClass}
           />
-        </div>
+        </Field>
 
-        <div>
-          <label
-            htmlFor="description"
-            className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1"
-          >
-            Description <span className="text-rose-600">*</span>
-          </label>
-          <textarea
+        <Field
+          label="Description"
+          htmlFor="description"
+          required
+          hint="Your training philosophy, fleet, and what makes you stand out."
+        >
+          <Textarea
             id="description"
             name="description"
             rows={4}
             required
-            placeholder="Describe your school, training philosophy, and what makes you stand out…"
-            className={`${inputClass} resize-none`}
+            maxLength={LIMITS.schoolDescription}
+            placeholder="Describe your school…"
           />
-        </div>
+        </Field>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label
-              htmlFor="website"
-              className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1"
-            >
-              Website
-            </label>
-            <input
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Field label="Website" htmlFor="website">
+            <Input
               id="website"
               name="website"
               type="url"
+              maxLength={LIMITS.website}
               placeholder="https://yourschool.com"
-              className={inputClass}
             />
-          </div>
-          <div>
-            <label
-              htmlFor="phone"
-              className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1"
-            >
-              Phone Number
-            </label>
-            <input
+          </Field>
+          <Field label="Phone number" htmlFor="phone">
+            <Input
               id="phone"
               name="phone"
               type="tel"
+              maxLength={LIMITS.phone}
               placeholder="(555) 000-0000"
-              className={inputClass}
             />
-          </div>
+          </Field>
         </div>
-      </div>
+      </FormSection>
 
       {/* Location */}
-      <div className={sectionClass}>
-        <div>
-          <h2 className="text-lg font-bold text-slate-900 dark:text-white">
-            Location
-          </h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Enter the primary airport where your school operates.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div>
-            <label
-              htmlFor="airportCode"
-              className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1"
-            >
-              Airport Code (ICAO) <span className="text-rose-600">*</span>
-            </label>
-            <input
+      <FormSection
+        title="Location"
+        description="Enter the primary airport where your school operates."
+      >
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <Field label="Airport code (ICAO)" htmlFor="airportCode" required>
+            <Input
               id="airportCode"
               name="airportCode"
               type="text"
               required
               placeholder="e.g. KFFZ"
               maxLength={4}
-              className={`${inputClass} uppercase`}
+              className="font-mono uppercase placeholder:font-sans placeholder:normal-case"
             />
-          </div>
-          <div>
-            <label
-              htmlFor="city"
-              className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1"
-            >
-              City <span className="text-rose-600">*</span>
-            </label>
-            <input
-              id="city"
-              name="city"
-              type="text"
-              required
-              placeholder="e.g. Mesa"
-              className={inputClass}
-            />
-          </div>
-          <div>
-            <label
-              htmlFor="state"
-              className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1"
-            >
-              State <span className="text-rose-600">*</span>
-            </label>
-            <input
-              id="state"
-              name="state"
-              type="text"
-              required
-              placeholder="e.g. Arizona"
-              className={inputClass}
-            />
-          </div>
+          </Field>
+          <Field label="City" htmlFor="city" required>
+            <Input id="city" name="city" type="text" required placeholder="e.g. Mesa" />
+          </Field>
+          <Field label="State" htmlFor="state" required>
+            <Input id="state" name="state" type="text" required placeholder="e.g. Arizona" />
+          </Field>
         </div>
-      </div>
+      </FormSection>
 
       {/* Training */}
-      <div className={sectionClass}>
-        <h2 className="text-lg font-bold text-slate-900 dark:text-white">
-          Training &amp; Certification
-        </h2>
-
-        <div>
-          <p className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
-            FAA Operating Authority
-          </p>
-          <div className="flex flex-wrap gap-4">
+      <FormSection title="Training &amp; certification">
+        <fieldset>
+          <legend className="mb-2 text-sm font-semibold text-ink">FAA operating authority</legend>
+          <div className="flex flex-wrap gap-5">
             {(["61", "141", "both"] as const).map((part) => (
-              <label
-                key={part}
-                className="flex items-center gap-2 cursor-pointer text-slate-700 dark:text-slate-300"
-              >
-                <input
-                  type="radio"
-                  name="faaPart"
-                  value={part}
-                  className="accent-blue-700"
-                />
-                <span className="text-sm font-medium">
-                  {part === "both" ? "Both Part 61 & 141" : `Part ${part}`}
-                </span>
+              <label key={part} className="flex cursor-pointer items-center gap-2 text-sm text-ink">
+                <input type="radio" name="faaPart" value={part} className={choiceClass} />
+                {part === "both" ? "Both Part 61 & 141" : `Part ${part}`}
               </label>
             ))}
           </div>
-        </div>
+        </fieldset>
 
-        <div>
-          <p className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
-            Programs Offered
-          </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <fieldset>
+          <legend className="mb-2 text-sm font-semibold text-ink">Programs offered</legend>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             {programs.map((program) => (
               <label
                 key={program.slug}
-                className="flex items-center gap-2 cursor-pointer text-slate-700 dark:text-slate-300"
+                className="flex cursor-pointer items-center gap-2.5 text-sm text-ink"
               >
-                <input
-                  type="checkbox"
-                  name="programs"
-                  value={program.slug}
-                  className="accent-blue-700 w-4 h-4"
-                />
-                <span className="text-sm">{program.shortName}</span>
+                <input type="checkbox" name="programs" value={program.slug} className={choiceClass} />
+                {program.shortName}
               </label>
             ))}
           </div>
-        </div>
-      </div>
+        </fieldset>
+      </FormSection>
 
       {/* Fleet */}
-      <div className={sectionClass}>
-        <h2 className="text-lg font-bold text-slate-900 dark:text-white">
-          Fleet &amp; Instructors
-        </h2>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label
-              htmlFor="estimatedPlanes"
-              className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1"
-            >
-              Estimated Fleet Size
-            </label>
-            <select id="estimatedPlanes" name="estimatedPlanes" className={inputClass}>
+      <FormSection title="Fleet &amp; instructors">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Field label="Estimated fleet size" htmlFor="estimatedPlanes">
+            <Select id="estimatedPlanes" name="estimatedPlanes" defaultValue="">
               <option value="">Select range…</option>
-              {["1-3", "3-6", "6-9", "10-20", "20-30", "30-40", "40-50", "50+"].map((r) => (
+              {FLEET_RANGES.map((r) => (
                 <option key={r} value={r}>{r} aircraft</option>
               ))}
-            </select>
-          </div>
-          <div>
-            <label
-              htmlFor="estimatedInstructors"
-              className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1"
-            >
-              Estimated Number of Instructors
-            </label>
-            <select
-              id="estimatedInstructors"
-              name="estimatedInstructors"
-              className={inputClass}
-            >
+            </Select>
+          </Field>
+          <Field label="Estimated number of instructors" htmlFor="estimatedInstructors">
+            <Select id="estimatedInstructors" name="estimatedInstructors" defaultValue="">
               <option value="">Select range…</option>
-              {["1-3", "3-6", "6-9", "10-20", "20-30", "30-40", "40-50", "50+"].map((r) => (
+              {FLEET_RANGES.map((r) => (
                 <option key={r} value={r}>{r} instructors</option>
               ))}
-            </select>
-          </div>
+            </Select>
+          </Field>
         </div>
-      </div>
+      </FormSection>
 
       {/* Contacts — client component for dynamic add/remove */}
       <SchoolContactsField />
 
-      {/* Notice */}
-      <p className="text-sm text-slate-500 dark:text-slate-400 text-center">
-        Submissions are reviewed by our team before going live. You&apos;ll
-        receive an email once your listing is approved.
-      </p>
-
       {state.error && (
-        <p className="text-sm text-rose-600 dark:text-rose-400 text-center">
+        <Notice tone="error">
           {state.error}
           {state.error.includes("logged in") && (
             <>
               {" "}
-              <Link href="/login" className="font-semibold underline">
+              <Link href="/login?next=/schools/add" className="font-semibold underline underline-offset-2">
                 Log in
               </Link>
             </>
           )}
-        </p>
+        </Notice>
       )}
 
-      {/* Submit */}
-      <button
-        type="submit"
-        disabled={pending}
-        className="w-full py-4 bg-blue-700 hover:bg-blue-800 disabled:opacity-60 text-white font-bold text-lg rounded-xl transition"
-      >
-        {pending ? "Submitting…" : "Submit for Review"}
-      </button>
+      <div className="space-y-3">
+        <Button type="submit" size="lg" full disabled={pending}>
+          {pending ? "Submitting…" : "Submit for review"}
+        </Button>
+        <p className="text-center text-xs text-muted">
+          Submissions are reviewed by our team before going live. You&apos;ll receive an email
+          once your listing is approved.
+        </p>
+      </div>
     </form>
   );
 }

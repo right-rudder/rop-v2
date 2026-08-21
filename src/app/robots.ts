@@ -1,10 +1,5 @@
 import type { MetadataRoute } from "next";
-
-const BASE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL ??
-  (process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}`
-    : "http://localhost:3000");
+import { absoluteUrl } from "@/lib/site";
 
 export default function robots(): MetadataRoute.Robots {
   return {
@@ -12,9 +7,18 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: "*",
         allow: "/",
-        disallow: ["/api/", "/login", "/signup", "/forgot-password"],
+        // Auth + admin surfaces. Edit pages and profiles already send
+        // `robots: { index: false }` in their metadata.
+        disallow: [
+          "/admin/",
+          "/auth/",
+          "/login",
+          "/signup",
+          "/forgot-password",
+          "/update-password",
+        ],
       },
     ],
-    sitemap: `${BASE_URL}/sitemap.xml`,
+    sitemap: absoluteUrl("/sitemap.xml"),
   };
 }

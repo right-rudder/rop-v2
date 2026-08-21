@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import Link from "next/link";
-import { ChevronLeft, Clock, CheckCircle, BookOpen } from "lucide-react";
+import { Clock, Award, Timer } from "lucide-react";
 import {
   getProgramBySlug,
   getProgramsBySlugs,
@@ -10,6 +9,11 @@ import {
   getAirports,
 } from "@/lib/data";
 import { SchoolsExplorer } from "@/components/SchoolsExplorer";
+import { PageHero } from "@/components/PageHero";
+import { Badge } from "@/components/ui/Badge";
+import { Card } from "@/components/ui/Card";
+import { Chip } from "@/components/ui/Chip";
+import { Container } from "@/components/ui/Container";
 import { schoolHref } from "@/lib/utils";
 
 type Props = { params: Promise<{ programSlug: string }> };
@@ -29,6 +33,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     openGraph: { title, description, url: canonical, type: "website" },
   };
 }
+
+const h2 = "mb-4 font-display text-2xl font-bold tracking-tight text-ink";
 
 export default async function ProgramDetailPage({ params }: Props) {
   const { programSlug } = await params;
@@ -57,126 +63,102 @@ export default async function ProgramDetailPage({ params }: Props) {
       airportName: airportNameByIcao[school.primaryAirportCode],
       location: cityName && state ? `${cityName}, ${state.abbreviation}` : undefined,
       rating: school.rating,
+      reviewCount: school.reviewCount,
     };
   });
 
+  const facts = [
+    program.certificate && {
+      Icon: Award,
+      label: "Certificate / endorsement issued",
+      value: program.certificate,
+    },
+    program.minimumHours && {
+      Icon: Timer,
+      label: "Minimum flight hours (Part 61)",
+      value: `${program.minimumHours} hours`,
+    },
+    program.typicalDuration && {
+      Icon: Clock,
+      label: "Typical duration",
+      value: program.typicalDuration,
+    },
+  ].filter(Boolean) as { Icon: typeof Clock; label: string; value: string }[];
+
   return (
     <div className="pb-20">
-      {/* Hero */}
-      <section className="bg-linear-to-br from-slate-950 via-blue-950 to-indigo-900 text-white py-16 px-4">
-        <div className="max-w-4xl mx-auto">
-          <Link
-            href="/programs"
-            className="inline-flex items-center gap-1 text-slate-300 hover:text-white text-sm transition mb-4 pr-10"
-          >
-            <ChevronLeft size={16} />
-            All Programs
-          </Link>
-
-          <div className="inline-flex items-center gap-2 bg-white/10 border border-white/20 rounded-full px-3 py-1 text-sm mb-4">
-            <BookOpen size={14} />
+      <PageHero
+        back={{ href: "/programs", label: "All programs" }}
+        eyebrow={
+          <Badge tone="accent">
             {program.faaPart
               ? `FAR Part ${program.faaPart === "both" ? "61 / 141" : program.faaPart}`
-              : "Endorsement / Add-on"}
-          </div>
-
-          <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-4">
-            {program.name}
-          </h1>
-
-          <div className="flex flex-wrap gap-4 text-sm text-slate-300">
+              : "Endorsement / add-on"}
+          </Badge>
+        }
+        title={program.name}
+        meta={
+          <>
             {program.minimumHours && (
-              <span className="flex items-center gap-1.5">
-                <CheckCircle size={15} className="text-blue-300" />
-                {program.minimumHours}+ flight hours (Part 61 minimum)
-              </span>
+              <span className="font-mono">{program.minimumHours}+ flight hours (Part 61 minimum)</span>
             )}
             {program.typicalDuration && (
-              <span className="flex items-center gap-1.5">
-                <Clock size={15} className="text-blue-300" />
-                Typically {program.typicalDuration}
-              </span>
+              <span className="font-mono">Typically {program.typicalDuration}</span>
             )}
-          </div>
-        </div>
-      </section>
+          </>
+        }
+      />
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-12">
+      <Container size="default" className="space-y-14 py-12">
         {/* Overview */}
         <section>
-          <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-3">
-            What is the {program.shortName}?
-          </h2>
-          <p className="text-slate-600 dark:text-slate-300 leading-relaxed">
-            {program.description}
-          </p>
+          <h2 className={h2}>What is the {program.shortName}?</h2>
+          <p className="max-w-prose leading-relaxed text-muted">{program.description}</p>
         </section>
 
         {/* Key facts */}
-        <section>
-          <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-4">
-            Key Requirements
-          </h2>
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl divide-y divide-slate-100 dark:divide-slate-800">
-            {program.certificate && (
-              <div className="px-5 py-4 flex items-start gap-3">
-                <CheckCircle size={17} className="text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mb-0.5">Certificate / Endorsement Issued</p>
-                  <p className="font-semibold text-slate-800 dark:text-slate-100">{program.certificate}</p>
+        {facts.length > 0 && (
+          <section>
+            <h2 className={h2}>Key requirements</h2>
+            <Card className="divide-y divide-line">
+              {facts.map(({ Icon, label, value }) => (
+                <div key={label} className="flex items-start gap-3 px-5 py-4">
+                  <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent-soft text-accent-ink">
+                    <Icon size={15} />
+                  </span>
+                  <div>
+                    <p className="text-xs text-muted">{label}</p>
+                    <p className="font-semibold text-ink">{value}</p>
+                  </div>
                 </div>
-              </div>
-            )}
-            {program.minimumHours && (
-              <div className="px-5 py-4 flex items-start gap-3">
-                <CheckCircle size={17} className="text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mb-0.5">Minimum Flight Hours (Part 61)</p>
-                  <p className="font-semibold text-slate-800 dark:text-slate-100">{program.minimumHours} hours</p>
-                </div>
-              </div>
-            )}
-            {program.typicalDuration && (
-              <div className="px-5 py-4 flex items-start gap-3">
-                <Clock size={17} className="text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mb-0.5">Typical Duration</p>
-                  <p className="font-semibold text-slate-800 dark:text-slate-100">{program.typicalDuration}</p>
-                </div>
-              </div>
-            )}
-          </div>
-        </section>
+              ))}
+            </Card>
+          </section>
+        )}
 
         {/* Prerequisites */}
         {prereqs.length > 0 && (
           <section>
-            <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-4">
-              Prerequisites
-            </h2>
-            <p className="text-slate-500 dark:text-slate-400 text-sm mb-3">
+            <h2 className={h2}>Prerequisites</h2>
+            <p className="mb-3 text-sm text-muted">
               You must hold the following before beginning this program:
             </p>
             <div className="flex flex-wrap gap-2">
-              {prereqs.map((prereq) => prereq && (
-                <Link
-                  key={prereq.slug}
-                  href={`/programs/${prereq.slug}`}
-                  className="px-3 py-1.5 bg-blue-50 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-700 rounded-full text-sm font-medium hover:bg-blue-100 dark:hover:bg-blue-900/50 hover:border-blue-400 transition"
-                >
-                  {prereq.shortName}
-                </Link>
-              ))}
+              {prereqs.map(
+                (prereq) =>
+                  prereq && (
+                    <Chip key={prereq.slug} href={`/programs/${prereq.slug}`}>
+                      {prereq.shortName}
+                    </Chip>
+                  ),
+              )}
             </div>
           </section>
         )}
 
         {/* Schools offering this program */}
-        <SchoolsExplorer
-          schools={schools}
-          heading={`Schools Offering ${program.shortName}`}
-        />
-      </div>
+        <SchoolsExplorer schools={schools} heading={`Schools offering ${program.shortName}`} />
+      </Container>
     </div>
   );
 }

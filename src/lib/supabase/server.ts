@@ -14,9 +14,15 @@ export async function createClient() {
           return cookieStore.getAll();
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) =>
-            cookieStore.set(name, value, options),
-          );
+          try {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options),
+            );
+          } catch {
+            // Called from a Server Component, which can't write cookies.
+            // Safe to ignore: src/proxy.ts refreshes the session and writes
+            // the cookies on every request.
+          }
         },
       },
     },

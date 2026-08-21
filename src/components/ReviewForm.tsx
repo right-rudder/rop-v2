@@ -1,14 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useActionState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { Star, CheckCircle } from "lucide-react";
+import { Star, CheckCircle2 } from "lucide-react";
 import { submitReview } from "@/app/actions/reviews";
+import { LIMITS } from "@/lib/types";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { Field } from "@/components/ui/Field";
+import { Notice } from "@/components/ui/Notice";
+import { Textarea } from "@/components/ui/Input";
+import { cn } from "@/lib/cn";
 
 const SUBCATEGORIES = [
-  { key: "customerService", label: "Customer Service" },
+  { key: "customerService", label: "Customer service" },
   { key: "instructors",     label: "Instructors" },
   { key: "aircraft",        label: "Aircraft" },
   { key: "availability",    label: "Availability" },
@@ -19,6 +26,8 @@ type SubKey = typeof SUBCATEGORIES[number]["key"];
 
 type Ratings = Record<SubKey, number> & { overall: number };
 
+const RATING_WORDS = ["", "Poor", "Fair", "Good", "Very good", "Excellent"];
+
 function StarPicker({
   label,
   value,
@@ -26,6 +35,7 @@ function StarPicker({
   onRate,
   onHover,
   onLeave,
+  emphasis,
 }: {
   label: string;
   value: number;
@@ -33,29 +43,84 @@ function StarPicker({
   onRate: (v: number) => void;
   onHover: (v: number) => void;
   onLeave: () => void;
+  emphasis?: boolean;
 }) {
   const display = hovered || value;
+  const groupRef = useRef<HTMLDivElement>(null);
+
+  // WAI-ARIA radio group: one tab stop (the checked star, or the first when
+  // nothing is chosen); arrows move + select, Home/End jump to the extremes.
+  const tabStop = value || 1;
+  function onKeyDown(e: React.KeyboardEvent<HTMLButtonElement>, star: number) {
+    let next: number;
+    switch (e.key) {
+      case "ArrowRight":
+      case "ArrowUp":
+        next = star === 5 ? 1 : star + 1;
+        break;
+      case "ArrowLeft":
+      case "ArrowDown":
+        next = star === 1 ? 5 : star - 1;
+        break;
+      case "Home":
+        next = 1;
+        break;
+      case "End":
+        next = 5;
+        break;
+      default:
+        return;
+    }
+    e.preventDefault();
+    onRate(next);
+    groupRef.current
+      ?.querySelectorAll<HTMLButtonElement>('[role="radio"]')
+      [next - 1]?.focus();
+  }
+
   return (
     <div className="flex items-center justify-between gap-3">
-      <span className="text-sm text-slate-700 dark:text-slate-300 w-36 shrink-0">{label}</span>
-      <div className="flex items-center gap-0.5" onMouseLeave={onLeave}>
-        {[1, 2, 3, 4, 5].map((star) => (
-          <button
-            key={star}
-            type="button"
-            aria-label={`Rate ${label} ${star} star${star > 1 ? "s" : ""}`}
-            onClick={() => onRate(star)}
-            onMouseEnter={() => onHover(star)}
-            className="focus:outline-none"
-          >
-            <Star
-              size={22}
-              className={star <= display ? "text-amber-400" : "text-slate-300 dark:text-slate-600"}
-              fill={star <= display ? "currentColor" : "none"}
-              strokeWidth={star <= display ? 0 : 1.5}
-            />
-          </button>
-        ))}
+      <span className={cn("w-36 shrink-0 text-sm", emphasis ? "font-semibold text-ink" : "text-muted")}>
+        {label}
+      </span>
+      <div className="flex items-center gap-3">
+        <span className="hidden w-20 text-right font-mono text-xs text-muted sm:block" aria-hidden>
+          {display ? RATING_WORDS[display] : ""}
+        </span>
+        <div
+          ref={groupRef}
+          className="flex items-center gap-0.5"
+          onMouseLeave={onLeave}
+          role="radiogroup"
+          aria-label={label}
+        >
+          {[1, 2, 3, 4, 5].map((star) => (
+            <button
+              key={star}
+              type="button"
+              role="radio"
+              aria-checked={value === star}
+              aria-label={`Rate ${label} ${star} star${star > 1 ? "s" : ""}`}
+              tabIndex={star === tabStop ? 0 : -1}
+              onKeyDown={(e) => onKeyDown(e, star)}
+              onClick={() => onRate(star)}
+              onMouseEnter={() => onHover(star)}
+              onFocus={() => onHover(star)}
+              onBlur={onLeave}
+              className="rounded-md p-0.5 transition-transform duration-150 hover:scale-115 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            >
+              <Star
+                size={emphasis ? 26 : 22}
+                className={cn(
+                  "transition-colors duration-150",
+                  star <= display ? "text-star" : "text-line",
+                )}
+                fill="currentColor"
+                strokeWidth={0}
+              />
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -86,110 +151,98 @@ export default function ReviewForm({ schoolId }: { schoolId: string }) {
   function validate(e: React.FormEvent) {
     if (ratings.overall === 0) {
       e.preventDefault();
-      setClientError("Please select an overall rating.");
+      setClientError("Select an overall rating to continue.");
       return;
     }
     const missing = SUBCATEGORIES.find(({ key }) => ratings[key] === 0);
     if (missing) {
       e.preventDefault();
-      setClientError(`Please rate ${missing.label}.`);
+      setClientError(`Rate ${missing.label.toLowerCase()} to continue.`);
     }
   }
 
   if (state.success) {
     return (
-      <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-xl p-8 flex flex-col items-center gap-3 text-center">
-        <CheckCircle size={40} className="text-green-600 dark:text-green-400" />
-        <p className="font-semibold text-green-800 dark:text-green-300 text-lg">Thanks for your review!</p>
-        <p className="text-green-700 dark:text-green-400 text-sm">
-          Your review is now live on this page.
-        </p>
-      </div>
+      <Card className="flex flex-col items-center gap-3 border-ok/30 bg-ok-soft p-8 text-center">
+        <CheckCircle2 size={36} className="text-ok" />
+        <p className="font-display text-xl font-bold tracking-tight text-ink">Review published</p>
+        <p className="text-sm text-muted">Your review is now live on this page.</p>
+      </Card>
     );
   }
 
   const error = clientError || state.error;
 
   return (
-    <form
-      action={action}
-      onSubmit={validate}
-      className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-6 space-y-5"
-    >
-      <input type="hidden" name="schoolId" value={schoolId} />
-      <input type="hidden" name="path" value={pathname} />
-      {Object.entries(ratings).map(([key, value]) => (
-        <input key={key} type="hidden" name={key} value={value} />
-      ))}
+    <Card className="p-6">
+      <form action={action} onSubmit={validate} className="space-y-6">
+        <input type="hidden" name="schoolId" value={schoolId} />
+        <input type="hidden" name="path" value={pathname} />
+        {Object.entries(ratings).map(([key, value]) => (
+          <input key={key} type="hidden" name={key} value={value} />
+        ))}
 
-      {/* Ratings */}
-      <div>
-        <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">Ratings</p>
-        <div className="space-y-2.5">
-          {/* Overall */}
-          <StarPicker
-            label="Overall"
-            value={ratings.overall}
-            hovered={hovered.overall}
-            onRate={(v) => setRating("overall", v)}
-            onHover={(v) => setHover("overall", v)}
-            onLeave={() => clearHover("overall")}
-          />
-          <div className="border-t border-slate-100 dark:border-slate-800 pt-2.5 space-y-2.5">
-            {SUBCATEGORIES.map(({ key, label }) => (
-              <StarPicker
-                key={key}
-                label={label}
-                value={ratings[key]}
-                hovered={hovered[key]}
-                onRate={(v) => setRating(key, v)}
-                onHover={(v) => setHover(key, v)}
-                onLeave={() => clearHover(key)}
-              />
-            ))}
+        {/* Ratings */}
+        <fieldset>
+          <legend className="mb-4 text-sm font-semibold text-ink">Ratings</legend>
+          <div className="space-y-3">
+            <StarPicker
+              label="Overall"
+              emphasis
+              value={ratings.overall}
+              hovered={hovered.overall}
+              onRate={(v) => setRating("overall", v)}
+              onHover={(v) => setHover("overall", v)}
+              onLeave={() => clearHover("overall")}
+            />
+            <div className="space-y-2.5 border-t border-line pt-3">
+              {SUBCATEGORIES.map(({ key, label }) => (
+                <StarPicker
+                  key={key}
+                  label={label}
+                  value={ratings[key]}
+                  hovered={hovered[key]}
+                  onRate={(v) => setRating(key, v)}
+                  onHover={(v) => setHover(key, v)}
+                  onLeave={() => clearHover(key)}
+                />
+              ))}
+            </div>
           </div>
-        </div>
-      </div>
+        </fieldset>
 
-      {/* Body */}
-      <div>
-        <label
-          htmlFor="review-body"
-          className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1"
-        >
-          Your review
-        </label>
-        <textarea
-          id="review-body"
-          name="body"
-          rows={4}
-          required
-          placeholder="Share your experience with this flight school…"
-          className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-        />
-      </div>
+        <Field label="Your review" htmlFor="review-body" hint={`Up to ${LIMITS.reviewBody.toLocaleString()} characters.`}>
+          <Textarea
+            id="review-body"
+            name="body"
+            rows={5}
+            required
+            maxLength={LIMITS.reviewBody}
+            placeholder="What was training here actually like — instructors, aircraft availability, scheduling, cost?"
+          />
+        </Field>
 
-      {error && (
-        <p className="text-sm text-rose-600 dark:text-rose-400">
-          {error}
-          {error.includes("logged in") && (
-            <>
-              {" "}
-              <Link href="/login" className="font-semibold underline">
-                Log in
-              </Link>
-            </>
-          )}
-        </p>
-      )}
+        {error && (
+          <Notice tone="error">
+            {error}
+            {error.includes("logged in") && (
+              <>
+                {" "}
+                <Link
+                  href={`/login?next=${encodeURIComponent(pathname)}`}
+                  className="font-semibold underline underline-offset-2"
+                >
+                  Log in
+                </Link>
+              </>
+            )}
+          </Notice>
+        )}
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="w-full sm:w-auto px-6 py-2.5 bg-rose-800 hover:bg-rose-700 disabled:opacity-60 text-white font-semibold rounded-lg text-sm transition"
-      >
-        {pending ? "Submitting…" : "Submit Review"}
-      </button>
-    </form>
+        <Button type="submit" disabled={pending} className="w-full sm:w-auto">
+          {pending ? "Publishing…" : "Publish review"}
+        </Button>
+      </form>
+    </Card>
   );
 }

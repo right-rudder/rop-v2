@@ -11,18 +11,21 @@ create table public.profiles (
   role            text not null default 'user' check (role in ('user', 'admin')),
   bio             text,
   pilot_certificates jsonb default '[]',
-  joined_at       timestamptz not null default now()
+  joined_at       timestamptz not null default now(),
+  constraint profiles_name_length check (char_length(first_name) <= 60 and char_length(last_name) <= 60),
+  constraint profiles_bio_length  check (bio is null or char_length(bio) <= 1000)
 );
 
--- Auto-create a profile row when a user signs up
+-- Auto-create a profile row when a user signs up. Names come from the
+-- (user-editable) signup metadata, so trim and cap them here too.
 create or replace function public.handle_new_user()
 returns trigger language plpgsql security definer set search_path = public as $$
 begin
   insert into public.profiles (id, first_name, last_name)
   values (
     new.id,
-    coalesce(new.raw_user_meta_data->>'first_name', ''),
-    coalesce(new.raw_user_meta_data->>'last_name',  '')
+    left(trim(coalesce(new.raw_user_meta_data->>'first_name', '')), 60),
+    left(trim(coalesce(new.raw_user_meta_data->>'last_name',  '')), 60)
   );
   return new;
 end;
@@ -93,6 +96,8 @@ create table public.trainer_aircraft (
 );
 
 -- ── Flight Schools ────────────────────────────────────────────
+-- rating / review_count are maintained by the refresh_school_rating
+-- trigger below — never written by the app or the seed.
 create table public.flight_schools (
   id                    text primary key,
   name                  text not null,
@@ -111,7 +116,11 @@ create table public.flight_schools (
   contacts              jsonb not null default '[]',
   estimated_planes      text,
   estimated_instructors text,
-  managed_by            uuid references auth.users (id) on delete set null
+  managed_by            uuid references auth.users (id) on delete set null,
+  constraint flight_schools_name_length        check (char_length(name) between 1 and 120),
+  constraint flight_schools_description_length check (char_length(description) <= 5000),
+  constraint flight_schools_website_format     check (website = '' or (char_length(website) <= 300 and website ~* '^https?://')),
+  constraint flight_schools_phone_length       check (char_length(phone) <= 40)
 );
 
 -- ── School ↔ Programs (many-to-many) ─────────────────────────
@@ -140,7 +149,8 @@ create table public.reviews (
   availability     int not null check (availability between 1 and 5),
   facilities       int not null check (facilities between 1 and 5),
   body             text not null,
-  created_at       timestamptz not null default now()
+  created_at       timestamptz not null default now(),
+  constraint reviews_body_length check (char_length(body) between 1 and 5000)
 );
 
 -- One review per user per school (delete + re-post to change)
@@ -166,7 +176,16 @@ create table public.school_submissions (
   estimated_planes      text,
   estimated_instructors text,
   contacts              jsonb not null default '[]',
-  created_at            timestamptz not null default now()
+  created_at            timestamptz not null default now(),
+  constraint school_submissions_name_length        check (char_length(name) between 1 and 120),
+  constraint school_submissions_description_length check (char_length(description) between 1 and 5000),
+  constraint school_submissions_website_format     check (website = '' or (char_length(website) <= 300 and website ~* '^https?://')),
+  constraint school_submissions_phone_length       check (char_length(phone) <= 40),
+  constraint school_submissions_location_length    check (
+    char_length(city)  between 1 and 80 and
+    char_length(state) between 1 and 80 and
+    char_length(airport_code) between 3 and 4
+  )
 );
 
 -- ── Comments ──────────────────────────────────────────────────
@@ -175,7 +194,8 @@ create table public.comments (
   review_id  uuid not null references public.reviews (id) on delete cascade,
   user_id    uuid not null references auth.users (id) on delete cascade,
   body       text not null,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  constraint comments_body_length check (char_length(body) between 1 and 2000)
 );
 
 -- ============================================================
@@ -222,28 +242,34 @@ grant update (first_name, last_name, bio, pilot_certificates)
 
 -- Reviews: authenticated insert; owner can delete (reviews are
 -- immutable — delete and re-post to change)
-create policy "Authenticated insert" on public.reviews for insert with check (auth.uid() = user_id);
-create policy "Owner delete"         on public.reviews for delete using (auth.uid() = user_id);
+create policy "Authenticated insert" on public.reviews
+  for insert to authenticated with check ((select auth.uid()) = user_id);
+create policy "Owner delete" on public.reviews
+  for delete to authenticated using ((select auth.uid()) = user_id);
 
 -- Comments: authenticated insert; owner can update/delete
-create policy "Authenticated insert" on public.comments for insert with check (auth.uid() = user_id);
-create policy "Owner update"         on public.comments
+create policy "Authenticated insert" on public.comments
+  for insert to authenticated with check ((select auth.uid()) = user_id);
+create policy "Owner update" on public.comments
   for update to authenticated
   using ((select auth.uid()) = user_id)
   with check ((select auth.uid()) = user_id);
-create policy "Owner delete"         on public.comments for delete using (auth.uid() = user_id);
+create policy "Owner delete" on public.comments
+  for delete to authenticated using ((select auth.uid()) = user_id);
 
--- Flight schools: managed_by owner can update
+-- Flight schools: managed_by owner can update (content columns only —
+-- see protect_flight_school_columns below)
 create policy "Owner update" on public.flight_schools
   for update to authenticated
   using ((select auth.uid()) = managed_by)
   with check ((select auth.uid()) = managed_by);
 
--- School submissions: authenticated insert; submitter can read their own.
+-- School submissions: authenticated insert (always pending); submitter can read their own.
 create policy "Authenticated insert" on public.school_submissions
-  for insert to authenticated with check (auth.uid() = submitted_by);
+  for insert to authenticated
+  with check ((select auth.uid()) = submitted_by and status = 'pending');
 create policy "Own submissions read" on public.school_submissions
-  for select to authenticated using (auth.uid() = submitted_by);
+  for select to authenticated using ((select auth.uid()) = submitted_by);
 
 -- ============================================================
 -- Admin role (profiles.role = 'admin')
@@ -336,24 +362,78 @@ create policy "Admin delete" on public.school_aircraft
   for delete to authenticated using ((select public.is_admin()));
 
 -- ============================================================
+-- Protected columns on flight_schools
+-- ============================================================
+-- RLS decides WHICH rows an owner may update; this trigger decides WHICH
+-- COLUMNS. Owners edit content; only admins change ranking, placement,
+-- identity and ownership. Applies to direct Data API calls, not just the
+-- app's forms.
+
+create or replace function public.protect_flight_school_columns()
+returns trigger
+language plpgsql
+security invoker
+set search_path = public
+as $$
+begin
+  -- Only the Data API roles are restricted. The dashboard, the service
+  -- role and SECURITY DEFINER triggers (refresh_school_rating) run as
+  -- other roles and must keep working.
+  if current_user not in ('anon', 'authenticated') then
+    return new;
+  end if;
+  if (select public.is_admin()) then
+    return new;
+  end if;
+  if new.id                   is distinct from old.id
+  or new.slug                 is distinct from old.slug
+  or new.featured             is distinct from old.featured
+  or new.rating               is distinct from old.rating
+  or new.review_count         is distinct from old.review_count
+  or new.primary_airport_code is distinct from old.primary_airport_code
+  or new.city_slug            is distinct from old.city_slug
+  or new.state_slug           is distinct from old.state_slug
+  or new.organization_id      is distinct from old.organization_id
+  or new.managed_by           is distinct from old.managed_by
+  then
+    raise exception 'Only admins can change this field'
+      using errcode = '42501';
+  end if;
+  return new;
+end;
+$$;
+
+create trigger protect_flight_school_columns
+  before update on public.flight_schools
+  for each row execute function public.protect_flight_school_columns();
+
+-- ============================================================
 -- Keep flight_schools.rating / review_count in sync with reviews
 -- ============================================================
 
-create or replace function public.refresh_school_rating()
-returns trigger language plpgsql security definer set search_path = public as $$
-declare
-  target_school text;
-begin
-  if tg_op = 'DELETE' then
-    target_school := old.school_id;
-  else
-    target_school := new.school_id;
-  end if;
-
+create or replace function public.recompute_school_rating(target_school text)
+returns void
+language sql
+security definer
+set search_path = public
+as $$
   update public.flight_schools fs
   set rating       = coalesce((select round(avg(r.overall)::numeric, 2) from public.reviews r where r.school_id = target_school), 0),
       review_count = (select count(*) from public.reviews r where r.school_id = target_school)
   where fs.id = target_school;
+$$;
+-- Internal helper — only the trigger below may call it.
+revoke execute on function public.recompute_school_rating(text) from public, anon, authenticated;
+
+create or replace function public.refresh_school_rating()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  if tg_op <> 'INSERT' then
+    perform public.recompute_school_rating(old.school_id);
+  end if;
+  if tg_op = 'INSERT' or (tg_op = 'UPDATE' and new.school_id is distinct from old.school_id) then
+    perform public.recompute_school_rating(new.school_id);
+  end if;
   return null;
 end;
 $$;
@@ -361,3 +441,43 @@ $$;
 create trigger on_review_change
   after insert or update or delete on public.reviews
   for each row execute function public.refresh_school_rating();
+
+-- ============================================================
+-- Data API grants
+-- ============================================================
+-- Newer Supabase projects no longer expose tables to the Data API
+-- automatically, so state the intended privileges explicitly. RLS
+-- policies above still decide which rows each role can touch.
+
+grant usage on schema public to anon, authenticated;
+
+grant select on
+  public.states, public.cities, public.airports, public.programs,
+  public.trainer_aircraft, public.flight_schools, public.school_programs,
+  public.school_aircraft, public.reviews, public.comments, public.profiles
+  to anon, authenticated;
+grant select on public.school_submissions to authenticated;
+
+-- anon is read-only everywhere
+revoke insert, update, delete on all tables in schema public from anon;
+
+-- authenticated: writes only where a policy exists
+revoke insert, update, delete on
+  public.states, public.programs, public.trainer_aircraft
+  from authenticated;
+revoke delete on
+  public.flight_schools, public.airports, public.cities,
+  public.school_submissions, public.profiles
+  from authenticated;
+revoke insert on public.profiles from authenticated;
+grant insert, update, delete on public.reviews  to authenticated;
+grant insert, update, delete on public.comments to authenticated;
+grant insert, update on public.flight_schools, public.airports, public.cities to authenticated;
+grant insert, delete on public.school_programs, public.school_aircraft to authenticated;
+grant insert, update on public.school_submissions to authenticated;
+-- profiles: column-level update only (see "Own profile update" above)
+revoke update on public.profiles from anon, authenticated;
+grant update (first_name, last_name, bio, pilot_certificates)
+  on public.profiles to authenticated;
+
+grant execute on function public.is_admin() to anon, authenticated;

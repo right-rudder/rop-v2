@@ -3,12 +3,25 @@
 import { useState, useEffect } from "react";
 import { ArrowUp } from "lucide-react";
 import { SchoolCard } from "@/components/SchoolCard";
-import type { FlightSchool } from "@/lib/types";
+import { Button } from "@/components/ui/Button";
+import { Container } from "@/components/ui/Container";
+import { Reveal } from "@/components/ui/Reveal";
 
 const PAGE_SIZE = 6;
 
+/** Just the fields the cards render — keep the client payload small */
+export type TopRatedItem = {
+  id: string;
+  name: string;
+  location: string;
+  airportCode?: string;
+  href: string;
+  rating: number;
+  reviewCount: number;
+};
+
 type Props = {
-  schools: Array<FlightSchool & { location: string; href: string }>;
+  schools: TopRatedItem[];
 };
 
 export function TopRatedExplorer({ schools }: Props) {
@@ -25,51 +38,61 @@ export function TopRatedExplorer({ schools }: Props) {
   const hasMore = visibleCount < schools.length;
 
   return (
-    <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-      <p className="text-slate-500 dark:text-slate-400 mb-8">
-        Showing {visible.length} of {schools.length} schools · ranked by rating &amp; reviews
+    <Container className="py-12 md:py-16">
+      <p className="mb-8 font-mono text-xs uppercase tracking-[0.12em] text-muted">
+        Showing {visible.length} of {schools.length} schools
       </p>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+      <ol className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {visible.map((school, index) => (
-          <div key={school.id} className="relative">
-            {index < 3 && (
-              <div className="absolute -top-3 -left-3 z-10 w-8 h-8 rounded-full bg-rose-700 text-white text-sm font-bold flex items-center justify-center shadow-md">
-                {index + 1}
-              </div>
-            )}
+          <Reveal key={school.id} index={index % PAGE_SIZE} as="li" className="relative h-full">
+            {/* Rank — a real ordering, so it's numbered */}
+            <span
+              aria-label={`Rank ${index + 1}`}
+              className={
+                index < 3
+                  ? "absolute -left-2 -top-2 z-10 flex h-8 min-w-8 items-center justify-center rounded-full bg-accent px-2 font-mono text-sm font-semibold text-white shadow-sm"
+                  : "absolute -left-2 -top-2 z-10 flex h-8 min-w-8 items-center justify-center rounded-full border border-line bg-surface px-2 font-mono text-sm font-semibold text-muted"
+              }
+            >
+              {index + 1}
+            </span>
             <SchoolCard
               name={school.name}
               location={school.location}
+              airportCode={school.airportCode}
               rating={school.rating}
               reviewCount={school.reviewCount}
               href={school.href}
             />
-          </div>
+          </Reveal>
         ))}
-      </div>
+      </ol>
 
       {hasMore && (
         <div className="mt-12 text-center">
-          <button
-            onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
-            className="px-8 py-3 bg-blue-700 hover:bg-blue-800 text-white font-semibold rounded-lg transition"
-          >
-            Load More Schools
-          </button>
+          <Button variant="secondary" size="lg" onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}>
+            Show more schools
+          </Button>
         </div>
       )}
 
-      {/* Back to top */}
-      {showBackToTop && (
-        <button
-          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-          aria-label="Back to top"
-          className="fixed bottom-8 right-8 z-50 w-11 h-11 rounded-full bg-rose-800 hover:bg-rose-700 text-white flex items-center justify-center shadow-lg transition"
-        >
-          <ArrowUp className="w-5 h-5" />
-        </button>
-      )}
-    </section>
+      <BackToTop visible={showBackToTop} />
+    </Container>
+  );
+}
+
+/** Floating "back to top" control shared by the paged explorers */
+export function BackToTop({ visible }: { visible: boolean }) {
+  if (!visible) return null;
+  return (
+    <button
+      type="button"
+      onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+      aria-label="Back to top"
+      className="fixed bottom-6 right-6 z-40 flex h-11 w-11 animate-scale-in items-center justify-center rounded-full border border-line bg-surface text-ink shadow-card transition-colors hover:border-accent hover:text-accent-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+    >
+      <ArrowUp size={18} />
+    </button>
   );
 }

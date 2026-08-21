@@ -1,47 +1,35 @@
-import Link from "next/link";
-import { Plane } from "lucide-react";
+import { Button } from "@/components/ui/Button";
+import { Eyebrow } from "@/components/ui/Eyebrow";
+import { SectionalMotif } from "@/components/ui/SectionalMotif";
 
 export default function NotFound() {
   return (
-    <div className="min-h-[60vh] flex flex-col items-center justify-center px-4 text-center py-20">
-      <div className="mb-6 text-blue-700 dark:text-blue-400 opacity-60">
-        <Plane size={64} strokeWidth={1} />
-      </div>
-      <h1 className="text-7xl font-black text-blue-800 dark:text-blue-300 mb-4">
-        404
-      </h1>
-      <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-3">
-        Page Not Found
-      </h2>
-      <p className="text-slate-500 dark:text-slate-400 max-w-md mb-10">
-        We couldn&apos;t find that page. Try browsing flight schools by state,
-        city, or airport below.
-      </p>
-      <div className="flex flex-wrap gap-3 justify-center">
-        <Link
-          href="/"
-          className="px-5 py-2.5 bg-blue-700 text-white font-medium rounded-lg hover:bg-blue-800 transition"
-        >
-          Home
-        </Link>
-        <Link
-          href="/states"
-          className="px-5 py-2.5 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-medium rounded-lg hover:bg-slate-300 dark:hover:bg-slate-600 transition"
-        >
-          Browse by State
-        </Link>
-        <Link
-          href="/cities"
-          className="px-5 py-2.5 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-medium rounded-lg hover:bg-slate-300 dark:hover:bg-slate-600 transition"
-        >
-          Browse by City
-        </Link>
-        <Link
-          href="/airports"
-          className="px-5 py-2.5 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-medium rounded-lg hover:bg-slate-300 dark:hover:bg-slate-600 transition"
-        >
-          Browse by Airport
-        </Link>
+    <div className="relative flex min-h-[70vh] flex-col items-center justify-center overflow-hidden px-4 py-20 text-center">
+      <SectionalMotif className="pointer-events-none absolute left-1/2 top-1/2 h-[50rem] w-[50rem] -translate-x-1/2 -translate-y-1/2 opacity-[0.12]" />
+      <div className="relative">
+        <Eyebrow accent className="justify-center">
+          Off the chart
+        </Eyebrow>
+        <p className="mt-4 font-display text-[7rem] font-bold leading-none tracking-tighter text-ink md:text-[9rem]">
+          404
+        </p>
+        <h1 className="mt-2 text-2xl font-bold tracking-tight text-ink">Page not found</h1>
+        <p className="mx-auto mt-3 max-w-md text-muted">
+          We couldn&apos;t find that page. Try browsing flight schools by state, city, or
+          airport instead.
+        </p>
+        <div className="mt-8 flex flex-wrap justify-center gap-3">
+          <Button href="/">Home</Button>
+          <Button href="/states" variant="secondary">
+            By state
+          </Button>
+          <Button href="/cities" variant="secondary">
+            By city
+          </Button>
+          <Button href="/airports" variant="secondary">
+            By airport
+          </Button>
+        </div>
       </div>
     </div>
   );

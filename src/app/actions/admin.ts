@@ -162,7 +162,9 @@ async function createSchoolFromSubmission(
   if (links.length > 0) {
     const { error } = await supabase
       .from("school_programs")
-      .upsert(links, { onConflict: "school_id,program_slug" });
+      // ignoreDuplicates → ON CONFLICT DO NOTHING: the join table has no UPDATE
+      // policy, so a plain upsert would fail when re-approving after a partial run
+      .upsert(links, { onConflict: "school_id,program_slug", ignoreDuplicates: true });
     if (error) throw new Error(`Could not link programs: ${error.message}`);
   }
 
@@ -183,6 +185,12 @@ export async function approveSubmission(
     return { error: "This submission has already been processed." };
   }
 
+  // Order matters for crash-safety. The listing is created first — that step
+  // is idempotent (it reuses a listing already created for this submission),
+  // so if anything fails or the process dies before the status flips, the
+  // submission simply stays `pending` and the next approval picks up where it
+  // left off. The reverse order (claim → create) could strand a row as
+  // `approved` with no listing, which only manual SQL could recover.
   let schoolId: string;
   try {
     schoolId = await createSchoolFromSubmission(submission);
@@ -190,12 +198,23 @@ export async function approveSubmission(
     return { error: e instanceof Error ? e.message : "Approval failed." };
   }
 
+  // Conditional update: if another admin approved in the meantime, the
+  // listing above was the shared idempotent one and nothing is duplicated.
   const supabase = await createClient();
-  const { error } = await supabase
+  const { data: updated, error: updateError } = await supabase
     .from("school_submissions")
     .update({ status: "approved" })
-    .eq("id", id);
-  if (error) return { error: error.message };
+    .eq("id", id)
+    .eq("status", "pending")
+    .select("id");
+  if (updateError) {
+    return {
+      error: `Listing "${schoolId}" was created but the submission could not be marked approved (${updateError.message}). Approve again to finish.`,
+    };
+  }
+  if (!updated || updated.length === 0) {
+    return { error: "This submission has already been processed." };
+  }
 
   revalidatePath("/admin/submissions");
   return { message: `Approved — listing "${schoolId}" is live.` };
@@ -210,12 +229,16 @@ export async function rejectSubmission(
 
   const id = formData.get("submissionId") as string;
   const supabase = await createClient();
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("school_submissions")
     .update({ status: "rejected" })
     .eq("id", id)
-    .eq("status", "pending");
+    .eq("status", "pending")
+    .select("id");
   if (error) return { error: error.message };
+  if (!data || data.length === 0) {
+    return { error: "This submission has already been processed." };
+  }
 
   revalidatePath("/admin/submissions");
   return { message: "Submission rejected." };

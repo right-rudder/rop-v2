@@ -2,6 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { friendlyDbError } from "@/lib/supabase/errors";
+import { safeInternalPath } from "@/lib/safe-path";
+import { LIMITS } from "@/lib/types";
 
 export type ReviewFormState = {
   error?: string;
@@ -16,6 +19,12 @@ const RATING_KEYS = [
   "availability",
   "facilities",
 ] as const;
+
+/** Re-render the page the form was on — only ever a same-site path */
+function revalidateFormPath(formData: FormData) {
+  const path = safeInternalPath(formData.get("path") as string | null, "");
+  if (path) revalidatePath(path);
+}
 
 export async function submitReview(
   _prevState: ReviewFormState,
@@ -38,9 +47,17 @@ export async function submitReview(
 
   const body = (formData.get("body") as string | null)?.trim();
   if (!body) return { error: "Please write your review." };
+  if (body.length > LIMITS.reviewBody) {
+    return {
+      error: `Reviews can be at most ${LIMITS.reviewBody.toLocaleString()} characters.`,
+    };
+  }
+
+  const schoolId = (formData.get("schoolId") as string | null)?.trim();
+  if (!schoolId) return { error: "Missing school." };
 
   const { error } = await supabase.from("reviews").insert({
-    school_id: formData.get("schoolId") as string,
+    school_id: schoolId,
     user_id: user.id,
     overall: ratings.overall,
     customer_service: ratings.customerService,
@@ -58,11 +75,10 @@ export async function submitReview(
           "You've already reviewed this school. Delete your review to write a new one.",
       };
     }
-    return { error: error.message };
+    return { error: friendlyDbError(error) };
   }
 
-  const path = formData.get("path") as string | null;
-  if (path) revalidatePath(path);
+  revalidateFormPath(formData);
   return { success: true };
 }
 
@@ -86,13 +102,12 @@ export async function deleteReview(
     .eq("user_id", user.id) // RLS "Owner delete" also enforces this
     .select("id");
 
-  if (error) return { error: error.message };
+  if (error) return { error: friendlyDbError(error) };
   if (!data || data.length === 0) {
     return { error: "Review not found, or it isn't yours to delete." };
   }
 
-  const path = formData.get("path") as string | null;
-  if (path) revalidatePath(path);
+  revalidateFormPath(formData);
   return { success: true };
 }
 
@@ -108,16 +123,23 @@ export async function submitComment(
 
   const body = (formData.get("body") as string | null)?.trim();
   if (!body) return { error: "Please write your comment." };
+  if (body.length > LIMITS.commentBody) {
+    return {
+      error: `Comments can be at most ${LIMITS.commentBody.toLocaleString()} characters.`,
+    };
+  }
+
+  const reviewId = (formData.get("reviewId") as string | null)?.trim();
+  if (!reviewId) return { error: "Missing review." };
 
   const { error } = await supabase.from("comments").insert({
-    review_id: formData.get("reviewId") as string,
+    review_id: reviewId,
     user_id: user.id,
     body,
   });
 
-  if (error) return { error: error.message };
+  if (error) return { error: friendlyDbError(error) };
 
-  const path = formData.get("path") as string | null;
-  if (path) revalidatePath(path);
+  revalidateFormPath(formData);
   return { success: true };
 }
