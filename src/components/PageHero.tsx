@@ -41,8 +41,13 @@ export function PageHero({
 }) {
   const centered = align === "center";
   return (
-    <section className={cn("relative border-b border-line bg-surface", className)}>
-      <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+    <section
+      className={cn("relative border-b border-line bg-surface", className)}
+    >
+      <div
+        className="pointer-events-none absolute inset-0 overflow-hidden"
+        aria-hidden
+      >
         <SectionalMotif
           animate={false}
           className="absolute -right-28 -top-44 h-[30rem] w-[30rem] opacity-[0.13] md:-right-16 md:-top-40 md:h-[34rem] md:w-[34rem]"
@@ -50,8 +55,18 @@ export function PageHero({
       </div>
 
       <Container size={size} className="relative py-12 md:py-16">
-        <div className={cn("grid gap-8", aside && "lg:grid-cols-[1fr_auto] lg:items-end")}>
-          <div className={cn("flex gap-6", centered && "mx-auto max-w-3xl text-center")}>
+        <div
+          className={cn(
+            "grid gap-8",
+            aside && "lg:grid-cols-[1fr_auto] lg:items-end",
+          )}
+        >
+          <div
+            className={cn(
+              "flex gap-6",
+              centered && "mx-auto max-w-3xl text-center",
+            )}
+          >
             {leading && <div className="shrink-0">{leading}</div>}
             <div className="min-w-0 flex-1">
               {back && (
@@ -67,7 +82,10 @@ export function PageHero({
                 </Link>
               )}
               {eyebrow && (
-                <Eyebrow accent className={cn("mb-4", centered && "justify-center")}>
+                <Eyebrow
+                  accent
+                  className={cn("mb-4", centered && "justify-center")}
+                >
                   {eyebrow}
                 </Eyebrow>
               )}
@@ -75,7 +93,12 @@ export function PageHero({
                 {title}
               </h1>
               {description && (
-                <p className={cn("mt-4 max-w-2xl text-lg text-muted", centered && "mx-auto")}>
+                <p
+                  className={cn(
+                    "mt-4 max-w-2xl text-lg text-muted",
+                    centered && "mx-auto",
+                  )}
+                >
                   {description}
                 </p>
               )}
@@ -90,7 +113,9 @@ export function PageHero({
                 </div>
               )}
               {children && (
-                <div className={cn("mt-8", centered && "mx-auto max-w-xl")}>{children}</div>
+                <div className={cn("mt-8", centered && "mx-auto max-w-xl")}>
+                  {children}
+                </div>
               )}
             </div>
           </div>

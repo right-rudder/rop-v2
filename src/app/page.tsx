@@ -128,7 +128,7 @@ export default async function Home() {
           its own wrapper instead. */}
       <section className="relative border-b border-line bg-surface">
         <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
-          <SectionalMotif className="absolute -right-48 -top-40 h-[44rem] w-[44rem] opacity-[0.18] sm:-right-40 md:-top-28 lg:-right-24 lg:-top-32 lg:h-[56rem] lg:w-[56rem]" />
+          <SectionalMotif codes={searchIndex.airports.map((a) => a.code)} className="absolute -right-48 -top-40 h-[44rem] w-[44rem] opacity-[0.3] sm:-right-40 md:-top-28 lg:-right-24 lg:-top-32 lg:h-[56rem] lg:w-[56rem]" />
         </div>
 
         <Container className="relative py-20 md:py-28 lg:py-32">

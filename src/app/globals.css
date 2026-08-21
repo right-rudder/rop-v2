@@ -216,3 +216,118 @@
     transform: none;
   }
 }
+
+/* Radar scope (SectionalMotif): sweep + contact pings share a 4s period so
+   each contact flares exactly as the sweep crosses its bearing (--a). */
+@keyframes radar-sweep {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes radar-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes radar-blip {
+  0% {
+    opacity: 1;
+    transform: scale(1.8);
+  }
+  14% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0.2;
+    transform: scale(1);
+  }
+}
+
+.radar-sweep {
+  position: absolute;
+  inset: 4.1667%; /* (360 - 330) / 720 → sized to the outer ring */
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg 255deg,
+    color-mix(in srgb, currentColor 55%, transparent) 360deg
+  );
+  will-change: transform;
+  animation:
+    radar-sweep 4s linear infinite,
+    radar-fade 1.2s cubic-bezier(0.25, 1, 0.5, 1) 0.9s both;
+}
+.radar-sweep::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 1.5px;
+  height: 50%;
+  background: currentColor;
+  transform: translateX(-50%);
+}
+
+/* Contacts drift in and out of detection (data-on toggled by the component). */
+.radar-contact {
+  opacity: 0;
+  transition: opacity 1.6s cubic-bezier(0.25, 1, 0.5, 1);
+}
+.radar-contact[data-on] {
+  opacity: 1;
+}
+.radar-label {
+  opacity: 0;
+  transition: opacity 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+}
+.radar-contact[data-hot] .radar-label,
+.radar-contact[data-label] .radar-label {
+  opacity: 1;
+}
+
+.radar-blip {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: radar-blip 4s cubic-bezier(0.25, 1, 0.5, 1) infinite;
+  animation-delay: calc((var(--a, 0) / 360 - 1) * 4s);
+}
+.radar-lock {
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+  transform: scale(1.4);
+  transition:
+    opacity 0.25s cubic-bezier(0.25, 1, 0.5, 1),
+    transform 0.25s cubic-bezier(0.25, 1, 0.5, 1);
+}
+/* !important so the highlight wins over the running ping animation without
+   restarting it (which would desync the contact from the sweep). */
+.radar-contact[data-hot] .radar-blip {
+  opacity: 1 !important;
+}
+.radar-contact[data-hot] .radar-lock {
+  opacity: 0.9;
+  transform: none;
+}
+
+.radar-reticle {
+  opacity: 0;
+  transition: opacity 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+}
+[data-tracking] .radar-reticle {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* The global 0.01ms rule would freeze an infinite sweep mid-rotation. */
+  .radar-sweep {
+    display: none;
+  }
+  .radar-blip {
+    animation: none;
+  }
+}
