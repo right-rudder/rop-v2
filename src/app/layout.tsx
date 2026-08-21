@@ -5,6 +5,7 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { BASE_URL } from "@/lib/site";
+import { getCurrentUser, isAdmin } from "@/lib/auth";
 
 const display = Bricolage_Grotesque({
   subsets: ["latin"],
@@ -42,11 +43,16 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Server-resolved auth state for the navbar. Memoized per request, so pages
+  // that also call getCurrentUser() don't pay for a second lookup.
+  const viewer = await getCurrentUser();
+  const navViewer = viewer ? { id: viewer.id, isAdmin: isAdmin(viewer) } : null;
+
   return (
     <html
       lang="en"
@@ -55,7 +61,7 @@ export default function RootLayout({
     >
       <body className="font-sans antialiased">
         <ThemeProvider>
-          <Navbar />
+          <Navbar viewer={navViewer} />
           <main className="min-h-screen bg-paper">{children}</main>
           <Footer />
         </ThemeProvider>

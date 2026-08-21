@@ -1,10 +1,5 @@
-"use client";
-
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ShieldCheck } from "lucide-react";
-import type { User } from "@supabase/supabase-js";
-import { createClient } from "@/lib/supabase/client";
 import { logout } from "@/app/actions/auth";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/cn";
@@ -12,48 +7,29 @@ import { cn } from "@/lib/cn";
 /** Admin-only navigation destinations shown next to the auth controls */
 const adminLinks = [{ label: "Submissions", href: "/admin/submissions" }];
 
+/** Minimal, serializable view of the signed-in user for the navbar */
+export type NavViewer = {
+  id: string;
+  isAdmin: boolean;
+};
+
 /**
  * Login button that swaps to Profile + Log Out once a session exists, plus
  * admin shortcuts when the signed-in user's profile has role = 'admin'.
- * Subscribes to auth state so it updates immediately after login/logout
- * without a full page reload.
+ *
+ * Purely presentational: `viewer` is resolved server-side in the root layout
+ * (see getCurrentUser in src/lib/auth.ts). The auth Server Actions call
+ * revalidatePath("/", "layout") before redirecting, so the layout — and this
+ * button — re-render with the new session without a full page reload.
  */
-export function AuthButton({ mobile = false }: { mobile?: boolean }) {
-  const [user, setUser] = useState<User | null>(null);
-  // id of the user confirmed as admin — comparing against the current user
-  // avoids a stale admin badge flashing after switching accounts
-  const [adminUserId, setAdminUserId] = useState<string | null>(null);
-
-  useEffect(() => {
-    const supabase = createClient();
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-    });
-    return () => subscription.unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    if (!user) return;
-    const supabase = createClient();
-    let cancelled = false;
-    supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", user.id)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (!cancelled && data?.role === "admin") setAdminUserId(user.id);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [user]);
-
-  const isAdmin = user !== null && adminUserId === user.id;
-
-  if (!user) {
+export function AuthButton({
+  viewer,
+  mobile = false,
+}: {
+  viewer: NavViewer | null;
+  mobile?: boolean;
+}) {
+  if (!viewer) {
     return (
       <Button href="/login" size="sm" full={mobile}>
         Log in
@@ -63,7 +39,7 @@ export function AuthButton({ mobile = false }: { mobile?: boolean }) {
 
   return (
     <div className={cn("flex items-center gap-2", mobile && "w-full flex-wrap gap-3")}>
-      {isAdmin &&
+      {viewer.isAdmin &&
         adminLinks.map((link) => (
           <Link
             key={link.href}
@@ -79,7 +55,7 @@ export function AuthButton({ mobile = false }: { mobile?: boolean }) {
           </Link>
         ))}
       <Button
-        href={`/profile/${user.id}`}
+        href={`/profile/${viewer.id}`}
         variant="ghost"
         size="sm"
         className={cn(mobile && "flex-1")}

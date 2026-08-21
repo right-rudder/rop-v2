@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { absoluteUrl } from "@/lib/site";
 import { safeInternalPath } from "@/lib/safe-path";
 import { LIMITS } from "@/lib/types";
@@ -28,6 +29,8 @@ export async function login(
   });
 
   if (error) return { error: error.message };
+  // Re-render the root layout so the navbar picks up the new session
+  revalidatePath("/", "layout");
   // Back to where the user was heading — same-site paths only
   redirect(safeInternalPath(formData.get("next") as string | null));
 }
@@ -114,11 +117,14 @@ export async function updatePassword(
   // signs in fresh with the new password instead of landing on /login while
   // still logged in.
   await supabase.auth.signOut();
+  revalidatePath("/", "layout");
   redirect("/login?message=password-updated");
 }
 
 export async function logout() {
   const supabase = await createClient();
   await supabase.auth.signOut();
+  // Re-render the root layout so the navbar drops the signed-in state
+  revalidatePath("/", "layout");
   redirect("/");
 }

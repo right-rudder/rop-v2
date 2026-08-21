@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { Menu, X, ChevronDown } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { AuthButton } from "@/components/AuthButton";
+import { AuthButton, type NavViewer } from "@/components/AuthButton";
 import { Logo } from "@/components/ui/Logo";
 import { Container } from "@/components/ui/Container";
 import { navLinks } from "@/lib/nav-links";
@@ -19,7 +19,7 @@ const linkIdle = "text-muted hover:text-ink";
 const linkActive =
   "text-ink after:absolute after:inset-x-0 after:-bottom-1.5 after:h-0.5 after:rounded-full after:bg-accent";
 
-export function Navbar() {
+export function Navbar({ viewer }: { viewer: NavViewer | null }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   // Desktop dropdown opened by click / keyboard (hover still works via CSS)
@@ -110,7 +110,7 @@ export function Navbar() {
               ),
             )}
             <div className="ml-1 flex items-center gap-2 border-l border-line pl-5">
-              <AuthButton />
+              <AuthButton viewer={viewer} />
               <ThemeToggle />
             </div>
           </nav>
@@ -153,7 +153,7 @@ export function Navbar() {
               </Link>
             ))}
             <div className="mt-2 border-t border-line px-1 pt-4">
-              <AuthButton mobile />
+              <AuthButton viewer={viewer} mobile />
             </div>
           </nav>
         </div>
