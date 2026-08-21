@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect, useRef, useId } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { MapPin, Star, SlidersHorizontal, X, ArrowUp, ArrowDown } from "lucide-react";
 import { Button } from "@/components/ui/Button";
@@ -84,9 +84,12 @@ function TypeaheadFilter<T extends { slug: string }>({
   renderSuggestion: (item: T) => React.ReactNode;
   placeholder: string;
 }) {
+  // Stable per-instance id: the panel is rendered twice (mobile + desktop), so
+  // a fixed id would collide and send the label's click to the hidden input.
+  const inputId = useId();
   return (
     <div>
-      <label className={filterLabel}>
+      <label htmlFor={inputId} className={filterLabel}>
         {label}
         {selectedItems.length > 0 && (
           <span className="ml-2 font-mono text-xs font-normal text-accent-ink">
@@ -118,6 +121,7 @@ function TypeaheadFilter<T extends { slug: string }>({
 
       <div className="relative">
         <Input
+          id={inputId}
           type="text"
           value={inputValue}
           onChange={(e) => onInputChange(e.target.value)}

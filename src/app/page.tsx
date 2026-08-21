@@ -239,38 +239,41 @@ export default async function Home() {
         <div className="grid gap-12 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:gap-16">
           <ol className="relative">
             {orderedPath.map((program, i) => (
-              <Reveal key={program.id} index={i}>
-                <li className="relative flex gap-5 pb-10 last:pb-0">
-                  {/* connector */}
-                  {i < orderedPath.length - 1 && (
-                    <span
-                      aria-hidden
-                      className="absolute left-[11px] top-7 h-[calc(100%-0.5rem)] w-px border-l border-dashed border-accent/50"
-                    />
-                  )}
+              <Reveal
+                key={program.id}
+                index={i}
+                as="li"
+                className="relative flex gap-5 pb-10 last:pb-0"
+              >
+                {/* connector */}
+                {i < orderedPath.length - 1 && (
                   <span
                     aria-hidden
-                    className="relative mt-1.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 border-accent bg-surface"
-                  >
-                    <span className="h-2 w-2 rounded-full bg-accent" />
-                  </span>
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                      <Link
-                        href={`/programs/${program.slug}`}
-                        className="font-display text-2xl font-bold tracking-tight text-ink transition-colors hover:text-accent-ink"
-                      >
-                        {program.shortName}
-                      </Link>
-                      <span className="font-mono text-xs uppercase tracking-[0.12em] text-muted">
-                        {program.minimumHours && `${program.minimumHours}+ hrs`}
-                        {program.minimumHours && program.typicalDuration && " · "}
-                        {program.typicalDuration}
-                      </span>
-                    </div>
-                    <p className="mt-2 max-w-prose text-muted">{program.description}</p>
+                    className="absolute left-[11px] top-7 h-[calc(100%-0.5rem)] w-px border-l border-dashed border-accent/50"
+                  />
+                )}
+                <span
+                  aria-hidden
+                  className="relative mt-1.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 border-accent bg-surface"
+                >
+                  <span className="h-2 w-2 rounded-full bg-accent" />
+                </span>
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                    <Link
+                      href={`/programs/${program.slug}`}
+                      className="font-display text-2xl font-bold tracking-tight text-ink transition-colors hover:text-accent-ink"
+                    >
+                      {program.shortName}
+                    </Link>
+                    <span className="font-mono text-xs uppercase tracking-[0.12em] text-muted">
+                      {program.minimumHours && `${program.minimumHours}+ hrs`}
+                      {program.minimumHours && program.typicalDuration && " · "}
+                      {program.typicalDuration}
+                    </span>
                   </div>
-                </li>
+                  <p className="mt-2 max-w-prose text-muted">{program.description}</p>
+                </div>
               </Reveal>
             ))}
           </ol>

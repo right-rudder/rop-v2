@@ -45,28 +45,26 @@ export function TopRatedExplorer({ schools }: Props) {
 
       <ol className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {visible.map((school, index) => (
-          <Reveal key={school.id} index={index % PAGE_SIZE} className="h-full">
-            <li className="relative h-full">
-              {/* Rank — a real ordering, so it's numbered */}
-              <span
-                aria-label={`Rank ${index + 1}`}
-                className={
-                  index < 3
-                    ? "absolute -left-2 -top-2 z-10 flex h-8 min-w-8 items-center justify-center rounded-full bg-accent px-2 font-mono text-sm font-semibold text-white shadow-sm"
-                    : "absolute -left-2 -top-2 z-10 flex h-8 min-w-8 items-center justify-center rounded-full border border-line bg-surface px-2 font-mono text-sm font-semibold text-muted"
-                }
-              >
-                {index + 1}
-              </span>
-              <SchoolCard
-                name={school.name}
-                location={school.location}
-                airportCode={school.airportCode}
-                rating={school.rating}
-                reviewCount={school.reviewCount}
-                href={school.href}
-              />
-            </li>
+          <Reveal key={school.id} index={index % PAGE_SIZE} as="li" className="relative h-full">
+            {/* Rank — a real ordering, so it's numbered */}
+            <span
+              aria-label={`Rank ${index + 1}`}
+              className={
+                index < 3
+                  ? "absolute -left-2 -top-2 z-10 flex h-8 min-w-8 items-center justify-center rounded-full bg-accent px-2 font-mono text-sm font-semibold text-white shadow-sm"
+                  : "absolute -left-2 -top-2 z-10 flex h-8 min-w-8 items-center justify-center rounded-full border border-line bg-surface px-2 font-mono text-sm font-semibold text-muted"
+              }
+            >
+              {index + 1}
+            </span>
+            <SchoolCard
+              name={school.name}
+              location={school.location}
+              airportCode={school.airportCode}
+              rating={school.rating}
+              reviewCount={school.reviewCount}
+              href={school.href}
+            />
           </Reveal>
         ))}
       </ol>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useActionState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
@@ -46,6 +46,38 @@ function StarPicker({
   emphasis?: boolean;
 }) {
   const display = hovered || value;
+  const groupRef = useRef<HTMLDivElement>(null);
+
+  // WAI-ARIA radio group: one tab stop (the checked star, or the first when
+  // nothing is chosen); arrows move + select, Home/End jump to the extremes.
+  const tabStop = value || 1;
+  function onKeyDown(e: React.KeyboardEvent<HTMLButtonElement>, star: number) {
+    let next: number;
+    switch (e.key) {
+      case "ArrowRight":
+      case "ArrowUp":
+        next = star === 5 ? 1 : star + 1;
+        break;
+      case "ArrowLeft":
+      case "ArrowDown":
+        next = star === 1 ? 5 : star - 1;
+        break;
+      case "Home":
+        next = 1;
+        break;
+      case "End":
+        next = 5;
+        break;
+      default:
+        return;
+    }
+    e.preventDefault();
+    onRate(next);
+    groupRef.current
+      ?.querySelectorAll<HTMLButtonElement>('[role="radio"]')
+      [next - 1]?.focus();
+  }
+
   return (
     <div className="flex items-center justify-between gap-3">
       <span className={cn("w-36 shrink-0 text-sm", emphasis ? "font-semibold text-ink" : "text-muted")}>
@@ -55,7 +87,13 @@ function StarPicker({
         <span className="hidden w-20 text-right font-mono text-xs text-muted sm:block" aria-hidden>
           {display ? RATING_WORDS[display] : ""}
         </span>
-        <div className="flex items-center gap-0.5" onMouseLeave={onLeave} role="radiogroup" aria-label={label}>
+        <div
+          ref={groupRef}
+          className="flex items-center gap-0.5"
+          onMouseLeave={onLeave}
+          role="radiogroup"
+          aria-label={label}
+        >
           {[1, 2, 3, 4, 5].map((star) => (
             <button
               key={star}
@@ -63,6 +101,8 @@ function StarPicker({
               role="radio"
               aria-checked={value === star}
               aria-label={`Rate ${label} ${star} star${star > 1 ? "s" : ""}`}
+              tabIndex={star === tabStop ? 0 : -1}
+              onKeyDown={(e) => onKeyDown(e, star)}
               onClick={() => onRate(star)}
               onMouseEnter={() => onHover(star)}
               onFocus={() => onHover(star)}

@@ -185,30 +185,35 @@ export async function approveSubmission(
     return { error: "This submission has already been processed." };
   }
 
-  // Claim the row first so two admins can't both approve it: the conditional
-  // update succeeds for exactly one of them.
+  // Order matters for crash-safety. The listing is created first — that step
+  // is idempotent (it reuses a listing already created for this submission),
+  // so if anything fails or the process dies before the status flips, the
+  // submission simply stays `pending` and the next approval picks up where it
+  // left off. The reverse order (claim → create) could strand a row as
+  // `approved` with no listing, which only manual SQL could recover.
+  let schoolId: string;
+  try {
+    schoolId = await createSchoolFromSubmission(submission);
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Approval failed." };
+  }
+
+  // Conditional update: if another admin approved in the meantime, the
+  // listing above was the shared idempotent one and nothing is duplicated.
   const supabase = await createClient();
-  const { data: claimed, error: claimError } = await supabase
+  const { data: updated, error: updateError } = await supabase
     .from("school_submissions")
     .update({ status: "approved" })
     .eq("id", id)
     .eq("status", "pending")
     .select("id");
-  if (claimError) return { error: claimError.message };
-  if (!claimed || claimed.length === 0) {
-    return { error: "This submission has already been processed." };
+  if (updateError) {
+    return {
+      error: `Listing "${schoolId}" was created but the submission could not be marked approved (${updateError.message}). Approve again to finish.`,
+    };
   }
-
-  let schoolId: string;
-  try {
-    schoolId = await createSchoolFromSubmission(submission);
-  } catch (e) {
-    // Release the claim so the admin can fix the data and retry
-    await supabase
-      .from("school_submissions")
-      .update({ status: "pending" })
-      .eq("id", id);
-    return { error: e instanceof Error ? e.message : "Approval failed." };
+  if (!updated || updated.length === 0) {
+    return { error: "This submission has already been processed." };
   }
 
   revalidatePath("/admin/submissions");
