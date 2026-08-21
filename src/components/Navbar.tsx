@@ -25,6 +25,18 @@ export function Navbar({ viewer }: { viewer: NavViewer | null }) {
   // Desktop dropdown opened by click / keyboard (hover still works via CSS)
   const [openMenu, setOpenMenu] = useState<string | null>(null);
 
+  // Close the mobile panel whenever the route or the session changes. The
+  // panel's state lives in the root layout and survives soft navigations, so
+  // without this it stays open after tapping the logo, an auth link, or
+  // logging out (which redirects to the same path but swaps `viewer`).
+  // Conditional setState during render is React's documented reset pattern.
+  const navKey = `${pathname}|${viewer?.id ?? ""}`;
+  const [prevNavKey, setPrevNavKey] = useState(navKey);
+  if (navKey !== prevNavKey) {
+    setPrevNavKey(navKey);
+    setOpen(false);
+  }
+
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
 
@@ -153,7 +165,7 @@ export function Navbar({ viewer }: { viewer: NavViewer | null }) {
               </Link>
             ))}
             <div className="mt-2 border-t border-line px-1 pt-4">
-              <AuthButton viewer={viewer} mobile />
+              <AuthButton viewer={viewer} mobile onNavigate={() => setOpen(false)} />
             </div>
           </nav>
         </div>
