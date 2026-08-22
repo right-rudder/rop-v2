@@ -13,7 +13,9 @@
 -- 3. Resets table privileges for anon / authenticated to exactly the
 --    matrix in schema.sql. Projects grant ALL (incl. TRUNCATE,
 --    REFERENCES, TRIGGER) on every table by default; the earlier
---    patches only revoked insert/update/delete.
+--    patches only revoked insert/update/delete. Also revokes the
+--    *default* privileges so tables / functions created later start
+--    from nothing instead of ALL.
 --
 -- Idempotent — safe to run on an existing database. Run AFTER
 -- add-audit-hardening.sql. Run in: Supabase Dashboard > SQL Editor
@@ -37,6 +39,11 @@ end $$;
 -- (Revoking a table privilege also revokes the matching column
 -- privileges, so the profiles column grant is re-issued below.)
 revoke all on all tables in schema public from anon, authenticated;
+-- Default privileges: tables / functions created later by the postgres
+-- role (SQL editor, migrations) start with no Data API access either —
+-- grant explicitly, as above. (Supabase's project defaults grant ALL.)
+alter default privileges for role postgres in schema public revoke all on tables from anon, authenticated;
+alter default privileges for role postgres in schema public revoke execute on functions from anon, authenticated;
 
 grant usage on schema public to anon, authenticated;
 grant select on

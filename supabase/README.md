@@ -52,8 +52,9 @@ fresh installs):
   recompute of `rating` / `review_count` from real reviews
 - `supabase/add-grant-hygiene.sql` — run after the above: drops the leftover
   `school_contacts` table, revokes RPC `EXECUTE` on trigger functions, and
-  resets `anon` / `authenticated` table privileges to exactly what the app
-  needs (the defaults also granted TRUNCATE / REFERENCES / TRIGGER)
+  resets `anon` / `authenticated` table privileges — and the default privileges
+  for future tables / functions — to exactly what the app needs (the defaults
+  granted ALL, incl. TRUNCATE / REFERENCES / TRIGGER)
 
 ### Data API exposure
 

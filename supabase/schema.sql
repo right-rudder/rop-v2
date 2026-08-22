@@ -454,6 +454,11 @@ create trigger on_review_change
 -- exactly what the app needs. Revoking a table privilege also revokes
 -- the matching column privileges, hence the profiles column grant below.
 revoke all on all tables in schema public from anon, authenticated;
+-- Default privileges: tables / functions created later by the postgres
+-- role (SQL editor, migrations) start with no Data API access either —
+-- grant explicitly, as above. (Supabase's project defaults grant ALL.)
+alter default privileges for role postgres in schema public revoke all on tables from anon, authenticated;
+alter default privileges for role postgres in schema public revoke execute on functions from anon, authenticated;
 grant usage on schema public to anon, authenticated;
 
 grant select on
@@ -479,3 +484,10 @@ grant execute on function public.is_admin() to anon, authenticated;
 revoke execute on function public.handle_new_user()               from public, anon, authenticated;
 revoke execute on function public.refresh_school_rating()         from public, anon, authenticated;
 revoke execute on function public.protect_flight_school_columns() from public, anon, authenticated;
+-- Supabase's own "enforce RLS on new tables" event trigger, when enabled.
+do $$
+begin
+  if to_regprocedure('public.rls_auto_enable()') is not null then
+    revoke execute on function public.rls_auto_enable() from public, anon, authenticated;
+  end if;
+end $$;
