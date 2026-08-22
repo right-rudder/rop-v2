@@ -139,6 +139,48 @@ export type Database = {
         Update: { user_id?: string; school_id?: string; created_at?: string };
         Relationships: [];
       };
+      leads: {
+        Row: {
+          id: string;
+          school_id: string | null;
+          name: string;
+          email: string;
+          phone: string;
+          program_slug: string | null;
+          message: string;
+          source_path: string;
+          ip_hash: string;
+          status: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          school_id?: string | null;
+          name: string;
+          email: string;
+          phone?: string;
+          program_slug?: string | null;
+          message?: string;
+          source_path?: string;
+          ip_hash: string;
+          status?: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          school_id?: string | null;
+          name?: string;
+          email?: string;
+          phone?: string;
+          program_slug?: string | null;
+          message?: string;
+          source_path?: string;
+          ip_hash?: string;
+          status?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       programs: {
         Row: {
           id: string;
@@ -447,7 +489,21 @@ export type Database = {
       };
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      submit_lead: {
+        Args: {
+          p_school_id: string;
+          p_name: string;
+          p_email: string;
+          p_phone: string;
+          p_program_slug: string;
+          p_message: string;
+          p_source_path: string;
+          p_ip_hash: string;
+        };
+        Returns: string;
+      };
+    };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
   };

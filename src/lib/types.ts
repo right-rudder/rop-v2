@@ -178,6 +178,24 @@ export type Comment = {
 
 export type SubmissionStatus = "pending" | "approved" | "rejected";
 
+export type LeadStatus = "new" | "contacted" | "closed";
+
+/** A "Request information" submission from a school page (see submit_lead in the DB) */
+export type Lead = {
+  id: string;
+  /** null once the school has been removed — the lead is kept as a record */
+  schoolId: string | null;
+  name: string;
+  email: string;
+  phone: string;
+  programSlug?: string;
+  message: string;
+  /** Same-site path the form was submitted from */
+  sourcePath: string;
+  status: LeadStatus;
+  createdAt: string;
+};
+
 /** A raw "Add Your Flight School" form submission awaiting admin review */
 export type SchoolSubmission = {
   id: string;

@@ -217,6 +217,32 @@ create table public.favorites (
 );
 create index favorites_school_id_idx on public.favorites (school_id);
 
+-- ── Leads ("Request information") ────────────────────────────
+-- Inserted only through public.submit_lead() below (server-only);
+-- admins read / update. Deleting a school keeps its leads (school_id → null).
+create table public.leads (
+  id           uuid primary key default gen_random_uuid(),
+  school_id    text references public.flight_schools (id) on delete set null,
+  name         text not null,
+  email        text not null,
+  phone        text not null default '',
+  program_slug text references public.programs (slug),
+  message      text not null default '',
+  source_path  text not null default '',
+  ip_hash      text not null,
+  status       text not null default 'new' check (status in ('new', 'contacted', 'closed')),
+  created_at   timestamptz not null default now(),
+  constraint leads_name_length    check (char_length(name) between 1 and 120),
+  constraint leads_email_format   check (char_length(email) <= 254 and email ~* '^[^@\s]+@[^@\s]+\.[^@\s]+$'),
+  constraint leads_phone_length   check (char_length(phone) <= 40),
+  constraint leads_message_length check (char_length(message) <= 2000),
+  constraint leads_source_length  check (char_length(source_path) <= 300),
+  constraint leads_ip_hash_format check (ip_hash ~ '^[0-9a-f]{64}$')
+);
+create index leads_school_created_idx on public.leads (school_id, created_at desc);
+create index leads_ip_created_idx     on public.leads (ip_hash, created_at desc);
+create index leads_email_school_idx   on public.leads (lower(email), school_id, created_at desc);
+
 -- ============================================================
 -- Row Level Security
 -- ============================================================
@@ -234,6 +260,7 @@ alter table public.reviews        enable row level security;
 alter table public.comments       enable row level security;
 alter table public.school_submissions enable row level security;
 alter table public.favorites     enable row level security;
+alter table public.leads         enable row level security;
 
 -- Public read for catalog / browse tables
 create policy "Public read" on public.states          for select using (true);
@@ -351,6 +378,11 @@ create policy "Admin update" on public.cities
 create policy "Admin read" on public.school_submissions
   for select to authenticated using ((select public.is_admin()));
 create policy "Admin update" on public.school_submissions
+  for update to authenticated
+  using ((select public.is_admin())) with check ((select public.is_admin()));
+create policy "Admin read" on public.leads
+  for select to authenticated using ((select public.is_admin()));
+create policy "Admin update" on public.leads
   for update to authenticated
   using ((select public.is_admin())) with check ((select public.is_admin()));
 
@@ -471,6 +503,58 @@ create trigger on_review_change
   for each row execute function public.refresh_school_rating();
 
 -- ============================================================
+-- submit_lead — the only write path into public.leads
+-- ============================================================
+-- Server-only: executable by service_role (the app's server action),
+-- never by the Data API roles, so the rate-limit fingerprint is always
+-- computed server-side. SECURITY INVOKER — service_role already holds
+-- the table privileges. User-safe errors use errcode P0001.
+create or replace function public.submit_lead(
+  p_school_id    text,
+  p_name         text,
+  p_email        text,
+  p_phone        text,
+  p_program_slug text,
+  p_message      text,
+  p_source_path  text,
+  p_ip_hash      text
+) returns uuid
+language plpgsql
+security invoker
+set search_path = public
+as $$
+declare
+  v_id uuid;
+begin
+  if not exists (select 1 from public.flight_schools where id = p_school_id) then
+    raise exception 'Unknown school' using errcode = 'P0001';
+  end if;
+  if p_ip_hash !~ '^[0-9a-f]{64}$' then
+    raise exception 'Missing request fingerprint' using errcode = 'P0001';
+  end if;
+  if (select count(*) from public.leads
+      where ip_hash = p_ip_hash and created_at > now() - interval '1 hour') >= 3 then
+    raise exception 'Too many requests. Please try again in an hour.' using errcode = 'P0001';
+  end if;
+  if exists (select 1 from public.leads
+             where lower(email) = lower(p_email) and school_id = p_school_id
+               and created_at > now() - interval '24 hours') then
+    raise exception 'You already contacted this school today.' using errcode = 'P0001';
+  end if;
+
+  insert into public.leads (school_id, name, email, phone, program_slug, message, source_path, ip_hash)
+  values (
+    p_school_id, p_name, p_email, coalesce(p_phone, ''),
+    nullif(p_program_slug, ''), coalesce(p_message, ''), coalesce(p_source_path, ''), p_ip_hash
+  )
+  returning id into v_id;
+  return v_id;
+end;
+$$;
+revoke execute on function public.submit_lead(text, text, text, text, text, text, text, text) from public, anon, authenticated;
+grant  execute on function public.submit_lead(text, text, text, text, text, text, text, text) to service_role;
+
+-- ============================================================
 -- Data API grants
 -- ============================================================
 -- Newer Supabase projects no longer expose tables to the Data API
@@ -496,6 +580,7 @@ grant select on
   to anon, authenticated;
 grant select on public.school_submissions to authenticated;
 grant select, insert, delete on public.favorites to authenticated;
+grant select, update (status) on public.leads to authenticated;
 
 -- authenticated: writes only where a policy exists
 grant insert, update, delete on public.reviews  to authenticated;

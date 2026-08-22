@@ -5,7 +5,10 @@ import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/cn";
 
 /** Admin-only navigation destinations shown next to the auth controls */
-const adminLinks = [{ label: "Submissions", href: "/admin/submissions" }];
+const adminLinks = [
+  { label: "Submissions", href: "/admin/submissions" },
+  { label: "Leads", href: "/admin/leads" },
+];
 
 /** Minimal, serializable view of the signed-in user for the navbar */
 export type NavViewer = {

@@ -20,7 +20,7 @@ Patch `supabase/add-leads.sql` (idempotent; folded into `schema.sql`, listed in 
 ```sql
 create table if not exists public.leads (
   id           uuid primary key default gen_random_uuid(),
-  school_id    text not null references public.flight_schools (id) on delete cascade,
+  school_id    text references public.flight_schools (id) on delete set null,
   name         text not null,
   email        text not null,
   phone        text not null default '',
@@ -34,7 +34,8 @@ create table if not exists public.leads (
   constraint leads_email_format   check (char_length(email) <= 254 and email ~* '^[^@\s]+@[^@\s]+\.[^@\s]+$'),
   constraint leads_phone_length   check (char_length(phone) <= 40),
   constraint leads_message_length check (char_length(message) <= 2000),
-  constraint leads_source_length  check (char_length(source_path) <= 300)
+  constraint leads_source_length  check (char_length(source_path) <= 300),
+  constraint leads_ip_hash_format check (ip_hash ~ '^[0-9a-f]{64}$')
 );
 create index if not exists leads_school_created_idx on public.leads (school_id, created_at desc);
 create index if not exists leads_ip_created_idx     on public.leads (ip_hash, created_at desc);
@@ -45,18 +46,21 @@ create policy "Admin update" on public.leads for update to authenticated using (
 grant select, update (status) on public.leads to authenticated;
 ```
 
-No INSERT grant or policy for any API role — inserts only happen inside `submit_lead`:
+No INSERT grant or policy for any API role — inserts only happen inside `submit_lead`, which only `service_role` may execute:
 
 ```sql
 create or replace function public.submit_lead(
   p_school_id text, p_name text, p_email text, p_phone text,
   p_program_slug text, p_message text, p_source_path text, p_ip_hash text
 ) returns uuid
-language plpgsql security definer set search_path = public as $$
+language plpgsql security invoker set search_path = public as $$
 declare v_id uuid;
 begin
   if not exists (select 1 from public.flight_schools where id = p_school_id) then
     raise exception 'Unknown school' using errcode = 'P0001';
+  end if;
+  if p_ip_hash !~ '^[0-9a-f]{64}$' then
+    raise exception 'Missing request fingerprint' using errcode = 'P0001';
   end if;
   if (select count(*) from public.leads where ip_hash = p_ip_hash and created_at > now() - interval '1 hour') >= 3 then
     raise exception 'Too many requests. Please try again in an hour.' using errcode = 'P0001';
@@ -69,11 +73,11 @@ begin
   returning id into v_id;
   return v_id;
 end $$;
-revoke execute on function public.submit_lead(text,text,text,text,text,text,text,text) from public;
-grant  execute on function public.submit_lead(text,text,text,text,text,text,text,text) to anon, authenticated;
+revoke execute on function public.submit_lead(text,text,text,text,text,text,text,text) from public, anon, authenticated;
+grant  execute on function public.submit_lead(text,text,text,text,text,text,text,text) to service_role;
 ```
 
-The table's CHECK constraints are the validation of record; the function adds existence, rate limits, and normalisation. `SECURITY DEFINER` is justified because callers must be able to insert a row they can never read; the function takes no caller-controlled table/column names and has a fixed `search_path`. Errors raised with `P0001` carry user-safe messages the action shows verbatim; other errors go through `friendlyDbError`.
+The table's CHECK constraints are the validation of record; the function adds existence, rate limits, and normalisation. **Review revision (PR #6):** the function is `SECURITY INVOKER`, executable only by `service_role`, and the server action calls it through a service-role client (`src/lib/supabase/service.ts`, `SUPABASE_SERVICE_ROLE_KEY`). A caller-supplied `p_ip_hash` on an `anon`-callable RPC would let a direct Data API caller pick a fresh hash per request and skip the honeypot; making the function server-only closes that. `ip_hash` is constrained to 64 hex chars. `school_id` is nullable with `ON DELETE SET NULL` so leads survive a school's removal (the admin card shows "School no longer listed"). Errors raised with `P0001` carry user-safe messages the action shows verbatim; other errors go through `friendlyDbError`.
 
 `src/lib/supabase/database.types.ts` gains `leads` and the `submit_lead` function signature.
 
@@ -91,7 +95,7 @@ The table's CHECK constraints are the validation of record; the function adds ex
 2. Resolve school via `getSchoolById(schoolId)`; unknown → error.
 3. `validateLead` with the school's `programSlugs`.
 4. Client IP from `headers()`: `x-nf-client-connection-ip` (Netlify) → first entry of `x-forwarded-for` → `"unknown"`; `hashIp(ip, process.env.LEAD_IP_SALT ?? process.env.NEXT_PUBLIC_SITE_URL ?? "")`.
-5. `supabase.rpc("submit_lead", {...})` with the anon/user client. `P0001` → show `error.message`; others → `friendlyDbError`.
+5. `service.rpc("submit_lead", {...})` with the service-role client (`createServiceClient()`); if the key is missing the action returns a clear "not configured" error. `P0001` → show `error.message`; others → `friendlyDbError`.
 6. If `GHL_WEBHOOK_URL` is set: `fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(buildGhlPayload(...)), signal: AbortSignal.timeout(8000) })`. Non-2xx or throw → `console.error("[ghl]", …)`; never surfaces to the user.
 7. `revalidatePath("/admin/leads")`; return `{ success: true }`.
 

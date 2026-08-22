@@ -31,6 +31,8 @@ import type {
   SchoolSubmission,
   SubmissionStatus,
   LatLng,
+  Lead,
+  LeadStatus,
 } from "@/lib/types";
 import type { Tables } from "@/lib/supabase/database.types";
 import type {
@@ -749,4 +751,36 @@ export async function getFavoriteSchools(userId: string): Promise<FlightSchool[]
   const ids = await getFavoriteSchoolIds(userId);
   const byId = await getSchoolsByIds(ids);
   return ids.flatMap((id) => (byId[id] ? [byId[id]] : []));
+}
+
+// ── Leads ──────────────────────────────────────────────────────────────────────
+
+/** Everything an admin needs — never ip_hash. */
+const LEAD_SELECT =
+  "id, school_id, name, email, phone, program_slug, message, source_path, status, created_at";
+type LeadRow = Omit<Tables<"leads">, "ip_hash">;
+
+function toLead(row: LeadRow): Lead {
+  return {
+    id: row.id,
+    schoolId: row.school_id,
+    name: row.name,
+    email: row.email,
+    phone: row.phone,
+    programSlug: row.program_slug ?? undefined,
+    message: row.message,
+    sourcePath: row.source_path,
+    status: row.status as LeadStatus,
+    createdAt: row.created_at,
+  };
+}
+
+/** All leads, newest first. RLS restricts this to admins (others get an empty list). */
+export async function getLeads(): Promise<Lead[]> {
+  const supabase = await createClient();
+  const res = await supabase
+    .from("leads")
+    .select(LEAD_SELECT)
+    .order("created_at", { ascending: false });
+  return orThrow(res).map(toLead);
 }
