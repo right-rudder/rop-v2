@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTheme } from "next-themes";
 import { setOptions, importLibrary } from "@googlemaps/js-api-loader";
 import { Notice } from "@/components/ui/Notice";
+import { cn } from "@/lib/cn";
 import { formatMiles } from "@/lib/geo";
 import type { LatLng } from "@/lib/types";
 
@@ -24,6 +25,10 @@ type Props = {
   origin?: { coords: LatLng; label: string };
   radiusMiles?: number;
   className?: string;
+  /** "tall" for a results view, "compact" for a sidebar card. */
+  height?: "tall" | "compact";
+  /** Zoom used when there is exactly one pin and no radius circle. */
+  zoom?: number;
 };
 
 type Libs = {
@@ -124,7 +129,14 @@ function buildInfo(group: MapSchool[]): HTMLElement {
   return root;
 }
 
-export function SchoolsMap({ schools, origin, radiusMiles, className }: Props) {
+export function SchoolsMap({
+  schools,
+  origin,
+  radiusMiles,
+  className,
+  height = "tall",
+  zoom = 11,
+}: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const { resolvedTheme } = useTheme();
   const dark = resolvedTheme === "dark";
@@ -230,7 +242,7 @@ export function SchoolsMap({ schools, origin, radiusMiles, className }: Props) {
     const pinCount = markers.length + (originMarker ? 1 : 0);
     if (pinCount === 1 && !circle) {
       map.setCenter(bounds.getCenter());
-      map.setZoom(11);
+      map.setZoom(zoom);
     } else if (pinCount > 0) {
       map.fitBounds(bounds, 48);
     }
@@ -241,7 +253,7 @@ export function SchoolsMap({ schools, origin, radiusMiles, className }: Props) {
       if (originMarker) originMarker.map = null;
       circle?.setMap(null);
     };
-  }, [libs, map, mappable, origin, radiusMiles]);
+  }, [libs, map, mappable, origin, radiusMiles, zoom]);
 
   if (!API_KEY) {
     return (
@@ -258,7 +270,10 @@ export function SchoolsMap({ schools, origin, radiusMiles, className }: Props) {
       <div
         role="region"
         aria-label="Map of matching flight schools"
-        className="relative h-[70vh] min-h-[420px] overflow-hidden rounded-2xl border border-line bg-surface-2"
+        className={cn(
+          "relative overflow-hidden rounded-2xl border border-line bg-surface-2",
+          height === "compact" ? "h-56" : "h-[70vh] min-h-[420px]",
+        )}
       >
         <div ref={containerRef} className="h-full w-full" />
         {!libs && !error && (
