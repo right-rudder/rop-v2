@@ -50,6 +50,10 @@ fresh installs):
   listing (BEFORE UPDATE trigger), submissions always start `pending`,
   length/format constraints, explicit Data API grants, and a one-off
   recompute of `rating` / `review_count` from real reviews
+- `supabase/add-grant-hygiene.sql` — run after the above: drops the leftover
+  `school_contacts` table, revokes RPC `EXECUTE` on trigger functions, and
+  resets `anon` / `authenticated` table privileges to exactly what the app
+  needs (the defaults also granted TRUNCATE / REFERENCES / TRIGGER)
 
 ### Data API exposure
 
