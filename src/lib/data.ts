@@ -30,6 +30,7 @@ import type {
   UserRole,
   SchoolSubmission,
   SubmissionStatus,
+  LatLng,
 } from "@/lib/types";
 import type { Tables } from "@/lib/supabase/database.types";
 import type {
@@ -69,6 +70,17 @@ function toCity(row: Tables<"cities">): City {
   };
 }
 
+/**
+ * Both values must be real numbers. Also guards the window before
+ * supabase/add-coordinates.sql has been applied, when the columns are
+ * simply absent from the row (undefined).
+ */
+function toCoords(lat: number | null | undefined, lng: number | null | undefined): LatLng | undefined {
+  return typeof lat === "number" && typeof lng === "number" && Number.isFinite(lat) && Number.isFinite(lng)
+    ? { lat, lng }
+    : undefined;
+}
+
 function toAirport(row: Tables<"airports">): Airport {
   return {
     id: row.id,
@@ -79,6 +91,7 @@ function toAirport(row: Tables<"airports">): Airport {
     iata: row.iata,
     faaLid: row.faa_lid,
     description: row.description ?? undefined,
+    coords: toCoords(row.latitude, row.longitude),
   };
 }
 
@@ -145,6 +158,7 @@ function toSchool(row: SchoolRowWithJoins): FlightSchool {
     estimatedInstructors:
       (row.estimated_instructors as FleetRange | null) ?? undefined,
     managedBy: row.managed_by ?? undefined,
+    coords: toCoords(row.latitude, row.longitude),
   };
 }
 

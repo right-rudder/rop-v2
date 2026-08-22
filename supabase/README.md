@@ -15,6 +15,16 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon / publishable key>
 NEXT_PUBLIC_SITE_URL=http://localhost:3000     # production URL when deployed
 ```
 
+The map view on `/search` additionally needs a Google Maps browser key:
+
+```ini
+NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=<key restricted to your HTTP referrers + Maps JavaScript API>
+NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID=                 # optional Cloud map style id; defaults to DEMO_MAP_ID
+```
+
+Without the key the rest of the site — including the near-me radius filter —
+works; only the map itself shows a notice.
+
 The app never uses the **service-role key** — every write goes through the
 user's session and RLS. Don't put it in `.env.local` (if an older copy of
 the file has it, delete the line; rotate the key in the dashboard if the
@@ -50,6 +60,9 @@ fresh installs):
   listing (BEFORE UPDATE trigger), submissions always start `pending`,
   length/format constraints, explicit Data API grants, and a one-off
   recompute of `rating` / `review_count` from real reviews
+- `supabase/add-coordinates.sql` — `latitude` / `longitude` on airports and
+  flight schools (+ range checks) and a backfill for the seeded airports.
+  Powers "near me" search and the map view on `/search`.
 
 ### Data API exposure
 
