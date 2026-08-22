@@ -31,6 +31,8 @@ import type {
   SchoolSubmission,
   SubmissionStatus,
   LatLng,
+  Lead,
+  LeadStatus,
 } from "@/lib/types";
 import type { Tables } from "@/lib/supabase/database.types";
 import type {
@@ -749,4 +751,31 @@ export async function getFavoriteSchools(userId: string): Promise<FlightSchool[]
   const ids = await getFavoriteSchoolIds(userId);
   const byId = await getSchoolsByIds(ids);
   return ids.flatMap((id) => (byId[id] ? [byId[id]] : []));
+}
+
+// ── Leads ──────────────────────────────────────────────────────────────────────
+
+function toLead(row: Tables<"leads">): Lead {
+  return {
+    id: row.id,
+    schoolId: row.school_id,
+    name: row.name,
+    email: row.email,
+    phone: row.phone,
+    programSlug: row.program_slug ?? undefined,
+    message: row.message,
+    sourcePath: row.source_path,
+    status: row.status as LeadStatus,
+    createdAt: row.created_at,
+  };
+}
+
+/** All leads, newest first. RLS restricts this to admins (others get an empty list). */
+export async function getLeads(): Promise<Lead[]> {
+  const supabase = await createClient();
+  const res = await supabase
+    .from("leads")
+    .select("*")
+    .order("created_at", { ascending: false });
+  return orThrow(res).map(toLead);
 }
