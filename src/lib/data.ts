@@ -70,8 +70,15 @@ function toCity(row: Tables<"cities">): City {
   };
 }
 
-function toCoords(lat: number | null, lng: number | null): LatLng | undefined {
-  return lat !== null && lng !== null ? { lat, lng } : undefined;
+/**
+ * Both values must be real numbers. Also guards the window before
+ * supabase/add-coordinates.sql has been applied, when the columns are
+ * simply absent from the row (undefined).
+ */
+function toCoords(lat: number | null | undefined, lng: number | null | undefined): LatLng | undefined {
+  return typeof lat === "number" && typeof lng === "number" && Number.isFinite(lat) && Number.isFinite(lng)
+    ? { lat, lng }
+    : undefined;
 }
 
 function toAirport(row: Tables<"airports">): Airport {
