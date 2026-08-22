@@ -6,6 +6,8 @@ import type { User } from "@/lib/types";
 export type CurrentUser = {
   id: string;
   email?: string;
+  /** Phone given at signup (auth metadata); profiles has no phone column */
+  phone?: string;
   /** The public.profiles row; null if the trigger hasn't created one */
   profile: User | null;
 };
@@ -23,7 +25,13 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   if (!user) return null;
 
   const profile = (await getUserById(user.id)) ?? null;
-  return { id: user.id, email: user.email, profile };
+  const phone = user.user_metadata?.phone;
+  return {
+    id: user.id,
+    email: user.email,
+    phone: typeof phone === "string" && phone.trim() ? phone.trim() : undefined,
+    profile,
+  };
 });
 
 export function isAdmin(viewer: CurrentUser | null): boolean {

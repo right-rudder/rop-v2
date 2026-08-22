@@ -3,13 +3,25 @@
 import Link from "next/link";
 import { useActionState } from "react";
 import { signup } from "@/app/actions/auth";
+import { useActionToast } from "@/components/ToastProvider";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
 import { Input } from "@/components/ui/Input";
 import { Notice } from "@/components/ui/Notice";
 
-export function SignupForm() {
+type Props = {
+  /** Pre-filled values (e.g. carried over from a lead form) */
+  defaults?: { firstName?: string; lastName?: string; email?: string };
+  /** Same-site path to land on after the confirmation email link */
+  next?: string;
+};
+
+export function SignupForm({ defaults, next }: Props = {}) {
   const [state, action, pending] = useActionState(signup, {});
+  useActionToast(state, {
+    ok: (s) => ({ title: "Account created", description: s.message }),
+    errorTitle: "Couldn't create account",
+  });
 
   if (state.message) {
     return (
@@ -22,6 +34,7 @@ export function SignupForm() {
   return (
     <form action={action} className="space-y-5">
       {state.error && <Notice tone="error">{state.error}</Notice>}
+      {next && <input type="hidden" name="next" value={next} />}
 
       <div className="grid grid-cols-2 gap-4">
         <Field label="First name" htmlFor="firstName">
@@ -32,6 +45,7 @@ export function SignupForm() {
             autoComplete="given-name"
             required
             placeholder="Charles"
+            defaultValue={defaults?.firstName}
           />
         </Field>
         <Field label="Last name" htmlFor="lastName">
@@ -42,6 +56,7 @@ export function SignupForm() {
             autoComplete="family-name"
             required
             placeholder="Lindbergh"
+            defaultValue={defaults?.lastName}
           />
         </Field>
       </div>
@@ -54,6 +69,7 @@ export function SignupForm() {
           autoComplete="email"
           required
           placeholder="you@example.com"
+          defaultValue={defaults?.email}
         />
       </Field>
 

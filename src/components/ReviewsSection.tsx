@@ -10,6 +10,7 @@ import { submitComment, deleteReview, deleteComment } from "@/app/actions/review
 import { LIMITS } from "@/lib/types";
 import { canDeleteContent, type ModerationViewer } from "@/lib/permissions";
 import { ConfirmDeleteButton } from "@/components/ConfirmDeleteButton";
+import { useActionToast } from "@/components/ToastProvider";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Notice } from "@/components/ui/Notice";
@@ -47,6 +48,7 @@ function LoginHint({ error }: { error: string }) {
 function CommentForm({ reviewId }: { reviewId: string }) {
   const pathname = usePathname();
   const [state, action, pending] = useActionState(submitComment, {});
+  useActionToast(state, { ok: { title: "Comment posted" }, errorTitle: "Couldn't post comment" });
 
   if (state.success) {
     return (

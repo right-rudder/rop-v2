@@ -1,5 +1,7 @@
 "use server";
 
+import { withFlash } from "@/lib/toast";
+
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -68,5 +70,5 @@ export async function updateProfile(
   // re-render is cheap and keeps the navbar/viewer consistent.
   revalidatePath("/", "layout");
   // Land on the profile so the user sees the saved result in place.
-  redirect(`/profile/${viewer.id}`);
+  redirect(withFlash(`/profile/${viewer.id}`, "profile-updated"));
 }

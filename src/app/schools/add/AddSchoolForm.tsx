@@ -6,6 +6,7 @@ import { CheckCircle2 } from "lucide-react";
 import { FLEET_RANGES, LIMITS } from "@/lib/types";
 import { SchoolContactsField } from "@/components/SchoolContactsField";
 import { submitSchool } from "@/app/actions/schools";
+import { useActionToast } from "@/components/ToastProvider";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Field } from "@/components/ui/Field";
@@ -19,6 +20,10 @@ export function AddSchoolForm({
   programs: { slug: string; shortName: string }[];
 }) {
   const [state, action, pending] = useActionState(submitSchool, {});
+  useActionToast(state, {
+    ok: { title: "Listing submitted", description: "We'll review it and email you once it's live." },
+    errorTitle: "Couldn't submit listing",
+  });
 
   if (state.success) {
     return (

@@ -96,3 +96,12 @@ export function buildGhlPayload(a: GhlPayloadArgs): Record<string, string> {
 export function hashIp(ip: string, salt: string): string {
   return createHash("sha256").update(`${salt}:${ip}`).digest("hex");
 }
+
+/**
+ * "Ada King Lovelace" → { firstName: "Ada", lastName: "King Lovelace" }.
+ * Used to pre-fill the signup form from a lead's single name field.
+ */
+export function splitName(name: string): { firstName: string; lastName: string } {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  return { firstName: parts[0] ?? "", lastName: parts.slice(1).join(" ") };
+}

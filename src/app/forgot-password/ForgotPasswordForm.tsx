@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useActionState } from "react";
 import { resetPassword } from "@/app/actions/auth";
+import { useActionToast } from "@/components/ToastProvider";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
 import { Input } from "@/components/ui/Input";
@@ -10,6 +11,10 @@ import { Notice } from "@/components/ui/Notice";
 
 export function ForgotPasswordForm() {
   const [state, action, pending] = useActionState(resetPassword, {});
+  useActionToast(state, {
+    ok: (s) => ({ title: "Reset link sent", description: s.message }),
+    errorTitle: "Couldn't send reset link",
+  });
 
   if (state.message) {
     return (

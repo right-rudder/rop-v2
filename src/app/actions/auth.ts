@@ -60,10 +60,13 @@ export async function signup(
     return { error: "Passwords do not match." };
   }
 
+  // Where the confirmation email's link lands — same-site paths only
+  const next = safeInternalPath(formData.get("next") as string | null);
   const { error } = await supabase.auth.signUp({
     email,
     password,
     options: {
+      emailRedirectTo: absoluteUrl(`/auth/confirm?next=${encodeURIComponent(next)}`),
       data: {
         first_name: firstName,
         last_name: lastName,

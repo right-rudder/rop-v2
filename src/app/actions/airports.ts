@@ -1,5 +1,7 @@
 "use server";
 
+import { withFlash } from "@/lib/toast";
+
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -47,5 +49,5 @@ export async function updateAirport(
   revalidatePath(href);
   revalidatePath(`${href}/edit`);
   // Land on the airport page so the editor sees the saved result in place.
-  redirect(href);
+  redirect(withFlash(href, "airport-updated"));
 }

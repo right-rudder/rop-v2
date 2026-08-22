@@ -11,6 +11,7 @@ import {
   type ReactNode,
 } from "react";
 import { toggleFavorite } from "@/app/actions/favorites";
+import { useToast } from "@/components/ToastProvider";
 
 type Ctx = {
   viewerId: string | null;
@@ -39,6 +40,7 @@ export function FavoritesProvider({
   const [pending, setPending] = useState<Set<string>>(() => new Set());
   const [lastError, setLastError] = useState<string | null>(null);
   const seeded = useRef(initialIds.join(","));
+  const toast = useToast();
 
   // Re-seed when the server hands down a different list (login/logout re-render the layout).
   useEffect(() => {
@@ -66,15 +68,21 @@ export function FavoritesProvider({
         .then((result) => {
           if ("error" in result) {
             setLastError(result.error);
+            toast.error("Couldn't update saved schools", result.error);
             setIds((prev) => {
               const next = new Set(prev);
               if (wasSaved) next.add(schoolId);
               else next.delete(schoolId);
               return next;
             });
+          } else {
+            toast.ok(wasSaved ? "Removed from saved schools" : "Saved school", wasSaved ? undefined : "Find it anytime under Saved.");
           }
         })
-        .catch(() => setLastError("Couldn't save — try again."))
+        .catch(() => {
+          setLastError("Couldn't save — try again.");
+          toast.error("Couldn't save — try again.");
+        })
         .finally(() =>
           setPending((prev) => {
             const next = new Set(prev);
@@ -83,7 +91,7 @@ export function FavoritesProvider({
           }),
         );
     },
-    [viewerId, ids, pending],
+    [viewerId, ids, pending, toast],
   );
 
   const value = useMemo(

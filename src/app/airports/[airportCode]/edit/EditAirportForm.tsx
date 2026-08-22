@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import type { Airport } from "@/lib/types";
 import { updateAirport } from "@/app/actions/airports";
+import { useActionToast } from "@/components/ToastProvider";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
 import { FormSection } from "@/components/ui/FormSection";
@@ -17,6 +18,7 @@ type Props = {
 
 export function EditAirportForm({ airport, cityName, stateName }: Props) {
   const [state, action, pending] = useActionState(updateAirport, {});
+  useActionToast(state, { errorTitle: "Couldn't save airport" });
   const backHref = `/airports/${airport.icao.toLowerCase()}`;
 
   return (
