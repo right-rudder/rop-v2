@@ -6,7 +6,9 @@ import {
   getTrainerAircraft,
   getStates,
   getCities,
+  getAirports,
 } from "@/lib/data";
+import { centroid } from "@/lib/geo";
 import { schoolHref, slugToTitle } from "@/lib/utils";
 import { AdvancedSearchExplorer } from "@/components/AdvancedSearchExplorer";
 import { PageHero } from "@/components/PageHero";
@@ -14,7 +16,7 @@ import { PageHero } from "@/components/PageHero";
 export const metadata: Metadata = {
   title: "Search Flight Schools",
   description:
-    "Filter USA flight schools by state, airport code, aircraft fleet, programs offered, and FAA Part 61 or Part 141 certification to find the perfect fit for your training goals.",
+    "Filter USA flight schools by location, state, airport code, aircraft fleet, programs offered, and FAA Part 61 or Part 141 certification — or search within a radius of where you are.",
   openGraph: {
     title: "Search Flight Schools",
     description:
@@ -23,19 +25,23 @@ export const metadata: Metadata = {
 };
 
 export default async function SearchPage() {
-  const [flightSchools, programs, trainerAircraft, states, cities] =
+  const [flightSchools, programs, trainerAircraft, states, cities, airports] =
     await Promise.all([
       getFlightSchools(),
       getPrograms(),
       getTrainerAircraft(),
       getStates(),
       getCities(),
+      getAirports(),
     ]);
 
   const stateAbbrevMap = Object.fromEntries(
     states.map((s) => [s.slug, s.abbreviation])
   );
   const cityNameMap = Object.fromEntries(cities.map((c) => [c.slug, c.name]));
+  const airportByIcao = new Map(airports.map((a) => [a.icao, a]));
+  const locationOf = (citySlug: string, stateSlug: string) =>
+    `${cityNameMap[citySlug] ?? slugToTitle(citySlug)}, ${stateAbbrevMap[stateSlug] ?? stateSlug.toUpperCase()}`;
 
   const schoolData = flightSchools.map((school) => ({
     id: school.id,
@@ -49,8 +55,15 @@ export default async function SearchPage() {
     faaPart: school.faaPart,
     rating: school.rating,
     reviewCount: school.reviewCount,
-    location: `${cityNameMap[school.citySlug] ?? slugToTitle(school.citySlug)}, ${stateAbbrevMap[school.stateSlug] ?? school.stateSlug.toUpperCase()}`,
+    location: locationOf(school.citySlug, school.stateSlug),
+    coords: school.coords ?? airportByIcao.get(school.primaryAirportCode)?.coords,
   }));
+
+  const airportOptions = airports.flatMap((a) =>
+    a.coords
+      ? [{ icao: a.icao, name: a.name, location: locationOf(a.citySlug, a.stateSlug), coords: a.coords }]
+      : [],
+  );
 
   const programOptions = programs.map((p) => ({
     slug: p.slug,
@@ -73,6 +86,9 @@ export default async function SearchPage() {
     name: c.name,
     stateSlug: c.stateSlug,
     stateAbbreviation: c.stateAbbreviation,
+    coords: centroid(
+      airports.flatMap((a) => (a.citySlug === c.slug && a.coords ? [a.coords] : [])),
+    ),
   }));
 
   return (
@@ -80,7 +96,7 @@ export default async function SearchPage() {
       <PageHero
         eyebrow={`${schoolData.length} schools / ${programs.length} programs / ${trainerAircraft.length} aircraft`}
         title="Search flight schools"
-        description="Narrow the whole directory by state, city, airport, training type, programs offered, fleet and rating."
+        description="Narrow the whole directory by location, state, city, airport, training type, programs offered, fleet and rating — or search near you."
       />
     <Suspense>
       <AdvancedSearchExplorer
@@ -89,6 +105,7 @@ export default async function SearchPage() {
         aircraft={aircraftOptions}
         states={stateOptions}
         cities={cityOptions}
+        airports={airportOptions}
       />
     </Suspense>
     </div>
