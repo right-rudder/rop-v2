@@ -4,10 +4,12 @@ import { useState } from "react";
 import { useActionState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Star, MessageSquare, Trash2 } from "lucide-react";
+import { Star, MessageSquare } from "lucide-react";
 import type { Review, Comment, User } from "@/lib/types";
-import { submitComment, deleteReview } from "@/app/actions/reviews";
+import { submitComment, deleteReview, deleteComment } from "@/app/actions/reviews";
 import { LIMITS } from "@/lib/types";
+import { canDeleteContent, type ModerationViewer } from "@/lib/permissions";
+import { ConfirmDeleteButton } from "@/components/ConfirmDeleteButton";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Notice } from "@/components/ui/Notice";
@@ -79,62 +81,21 @@ function CommentForm({ reviewId }: { reviewId: string }) {
   );
 }
 
-function DeleteReviewButton({ reviewId }: { reviewId: string }) {
-  const pathname = usePathname();
-  const [confirming, setConfirming] = useState(false);
-  const [state, action, pending] = useActionState(deleteReview, {});
-
-  if (!confirming) {
-    return (
-      <button
-        type="button"
-        onClick={() => setConfirming(true)}
-        className="flex items-center gap-1.5 text-xs text-muted transition-colors hover:text-danger"
-      >
-        <Trash2 size={13} />
-        Delete review
-      </button>
-    );
-  }
-
-  return (
-    <form action={action} className="flex flex-wrap items-center gap-3">
-      <input type="hidden" name="reviewId" value={reviewId} />
-      <input type="hidden" name="path" value={pathname} />
-      <span className="text-xs text-muted">Delete your review? This can&apos;t be undone.</span>
-      <button
-        type="submit"
-        disabled={pending}
-        className="text-xs font-semibold text-danger hover:underline disabled:opacity-60"
-      >
-        {pending ? "Deleting…" : "Yes, delete"}
-      </button>
-      <button
-        type="button"
-        onClick={() => setConfirming(false)}
-        className="text-xs text-muted hover:underline"
-      >
-        Cancel
-      </button>
-      {state.error && <span className="text-xs text-danger">{state.error}</span>}
-    </form>
-  );
-}
-
 function ReviewCard({
   review,
   comments,
   usersById,
   programShortNames,
-  currentUserId,
+  viewer,
 }: {
   review: Review;
   comments: Comment[];
   usersById: Record<string, User>;
   programShortNames: Record<string, string>;
-  currentUserId?: string | null;
+  viewer: ModerationViewer;
 }) {
   const [showForm, setShowForm] = useState(false);
+  const ownsReview = review.userId === viewer.id;
 
   const user = usersById[review.userId];
   const fullName = user ? `${user.firstName} ${user.lastName}` : "Anonymous";
@@ -202,14 +163,28 @@ function ReviewCard({
               <div key={comment.id} className="flex gap-3">
                 <div className="w-0.5 shrink-0 self-stretch rounded-full bg-accent/40" />
                 <div className="min-w-0 flex-1">
-                  <div className="mb-0.5 flex items-center gap-2">
-                    <Link
-                      href={`/profile/${comment.userId}`}
-                      className="text-xs font-semibold text-ink transition-colors hover:text-accent-ink"
-                    >
-                      {commenterName}
-                    </Link>
-                    <span className="font-mono text-[0.65rem] text-muted">{commentDate}</span>
+                  <div className="mb-0.5 flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <Link
+                        href={`/profile/${comment.userId}`}
+                        className="text-xs font-semibold text-ink transition-colors hover:text-accent-ink"
+                      >
+                        {commenterName}
+                      </Link>
+                      <span className="font-mono text-[0.65rem] text-muted">{commentDate}</span>
+                    </div>
+                    {canDeleteContent(viewer, comment.userId) && (
+                      <ConfirmDeleteButton
+                        action={deleteComment}
+                        fields={{ commentId: comment.id }}
+                        label="Delete"
+                        confirmText={
+                          comment.userId === viewer.id
+                            ? "Delete your comment?"
+                            : "Delete this comment as admin?"
+                        }
+                      />
+                    )}
                   </div>
                   <p className="text-xs leading-relaxed text-muted">{comment.body}</p>
                 </div>
@@ -233,7 +208,18 @@ function ReviewCard({
         ) : (
           <span />
         )}
-        {review.userId === currentUserId && <DeleteReviewButton reviewId={review.id} />}
+        {canDeleteContent(viewer, review.userId) && (
+          <ConfirmDeleteButton
+            action={deleteReview}
+            fields={{ reviewId: review.id }}
+            label="Delete review"
+            confirmText={
+              ownsReview
+                ? "Delete your review? This can't be undone."
+                : "Delete this user's review as admin? This can't be undone."
+            }
+          />
+        )}
       </div>
       {showForm && <CommentForm reviewId={review.id} />}
     </Card>
@@ -246,13 +232,18 @@ export default function ReviewsSection({
   usersById,
   programShortNames,
   currentUserId,
+  viewerIsAdmin = false,
 }: {
   reviews: Review[];
   commentsByReview: Record<string, Comment[]>;
   usersById: Record<string, User>;
   programShortNames: Record<string, string>;
   currentUserId?: string | null;
+  /** Admins may delete any review or comment (RLS "Admin delete") */
+  viewerIsAdmin?: boolean;
 }) {
+  const viewer: ModerationViewer = { id: currentUserId ?? null, isAdmin: viewerIsAdmin };
+
   if (reviews.length === 0) {
     return (
       <div className="rounded-2xl border border-dashed border-line px-6 py-10 text-center text-sm text-muted">
@@ -333,7 +324,7 @@ export default function ReviewsSection({
             comments={commentsByReview[review.id] ?? []}
             usersById={usersById}
             programShortNames={programShortNames}
-            currentUserId={currentUserId}
+            viewer={viewer}
           />
         ))}
       </div>

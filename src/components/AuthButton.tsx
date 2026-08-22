@@ -4,12 +4,6 @@ import { logout } from "@/app/actions/auth";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/cn";
 
-/** Admin-only navigation destinations shown next to the auth controls */
-const adminLinks = [
-  { label: "Submissions", href: "/admin/submissions" },
-  { label: "Leads", href: "/admin/leads" },
-];
-
 /** Minimal, serializable view of the signed-in user for the navbar */
 export type NavViewer = {
   id: string;
@@ -18,7 +12,7 @@ export type NavViewer = {
 
 /**
  * Login button that swaps to Profile + Log Out once a session exists, plus
- * admin shortcuts when the signed-in user's profile has role = 'admin'.
+ * an Admin shortcut when the signed-in user's profile has role = 'admin'.
  *
  * Purely presentational: `viewer` is resolved server-side in the root layout
  * (see getCurrentUser in src/lib/auth.ts). The auth Server Actions call
@@ -57,22 +51,20 @@ export function AuthButton({
         <Heart size={14} />
         Saved
       </Link>
-      {viewer.isAdmin &&
-        adminLinks.map((link) => (
-          <Link
-            key={link.href}
-            href={link.href}
-            title={`Admin: ${link.label}`}
-            onClick={onNavigate}
-            className={cn(
-              "inline-flex items-center gap-1.5 rounded-full border border-accent/30 bg-accent-soft px-3 py-1.5 text-xs font-semibold text-accent-ink transition-colors hover:border-accent/60",
-              mobile && "flex-1 justify-center",
-            )}
-          >
-            <ShieldCheck size={14} />
-            {link.label}
-          </Link>
-        ))}
+      {viewer.isAdmin && (
+        <Link
+          href="/admin"
+          title="Admin"
+          onClick={onNavigate}
+          className={cn(
+            "inline-flex items-center gap-1.5 rounded-full border border-accent/30 bg-accent-soft px-3 py-1.5 text-xs font-semibold text-accent-ink transition-colors hover:border-accent/60",
+            mobile && "flex-1 justify-center",
+          )}
+        >
+          <ShieldCheck size={14} />
+          Admin
+        </Link>
+      )}
       <Button
         href={`/profile/${viewer.id}`}
         variant="ghost"

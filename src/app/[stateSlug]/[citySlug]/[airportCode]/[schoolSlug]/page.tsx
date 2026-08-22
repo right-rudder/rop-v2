@@ -26,7 +26,7 @@ import {
   getLocationMaps,
   getAirports,
 } from "@/lib/data";
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUser, isAdmin } from "@/lib/auth";
 import { schoolHref } from "@/lib/utils";
 import { absoluteUrl } from "@/lib/site";
 import { JsonLd } from "@/components/JsonLd";
@@ -383,6 +383,7 @@ export default async function SchoolDetailPage({ params }: Props) {
                 usersById={usersById}
                 programShortNames={programShortNames}
                 currentUserId={viewer?.id ?? null}
+                viewerIsAdmin={isAdmin(viewer)}
               />
             </section>
 

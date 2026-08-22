@@ -619,6 +619,69 @@ export async function getCommentsByUser(userId: string): Promise<Comment[]> {
   return orThrow(res).map(toComment);
 }
 
+/** Coerce a caller-supplied row limit to an integer in [1, 200] */
+function clampLimit(limit: number): number {
+  const n = Math.trunc(limit);
+  return Number.isFinite(n) ? Math.min(Math.max(n, 1), 200) : 50;
+}
+
+/** Newest reviews across every school — the moderation queue. */
+export async function getRecentReviews(limit = 50): Promise<Review[]> {
+  const supabase = await createClient();
+  const res = await supabase
+    .from("reviews")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(clampLimit(limit));
+  return orThrow(res).map(toReview);
+}
+
+/** Newest comments across every review — the moderation queue. */
+export async function getRecentComments(limit = 50): Promise<Comment[]> {
+  const supabase = await createClient();
+  const res = await supabase
+    .from("comments")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(clampLimit(limit));
+  return orThrow(res).map(toComment);
+}
+
+// ── Admin overview ─────────────────────────────────────────────────────────────
+
+export type AdminCounts = {
+  pendingSubmissions: number;
+  newLeads: number;
+  reviews: number;
+  comments: number;
+  reviewsLast7Days: number;
+};
+
+/**
+ * Head-only counts for the /admin overview. Leads and submissions are
+ * RLS-scoped, so a non-admin would simply see zeros (the page 404s first).
+ */
+export async function getAdminCounts(): Promise<AdminCounts> {
+  const supabase = await createClient();
+  const since = new Date(Date.now() - 7 * 86_400_000).toISOString();
+  const count = async (
+    query: PromiseLike<{ count: number | null; error: { message: string } | null }>,
+  ): Promise<number> => {
+    const res = await query;
+    if (res.error) throw new Error(`Supabase query failed: ${res.error.message}`);
+    return res.count ?? 0;
+  };
+  const head = { count: "exact", head: true } as const;
+  const [pendingSubmissions, newLeads, reviews, comments, reviewsLast7Days] = await Promise.all([
+    count(supabase.from("school_submissions").select("id", head).eq("status", "pending")),
+    count(supabase.from("leads").select("id", head).eq("status", "new")),
+    count(supabase.from("reviews").select("id", head)),
+    count(supabase.from("comments").select("id", head)),
+    count(supabase.from("reviews").select("id", head).gte("created_at", since)),
+  ]);
+  return { pendingSubmissions, newLeads, reviews, comments, reviewsLast7Days };
+}
+
 // ── School submissions ─────────────────────────────────────────────────────────
 // Reads are RLS-gated: submitters see their own rows, admins see all.
 

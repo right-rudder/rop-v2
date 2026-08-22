@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { friendlyDbError } from "@/lib/supabase/errors";
 import { safeInternalPath } from "@/lib/safe-path";
+import { isUuid } from "@/lib/permissions";
 import { LIMITS } from "@/lib/types";
 
 export type ReviewFormState = {
@@ -24,6 +25,12 @@ const RATING_KEYS = [
 function revalidateFormPath(formData: FormData) {
   const path = safeInternalPath(formData.get("path") as string | null, "");
   if (path) revalidatePath(path);
+}
+
+/** Admin surfaces that list reviews/comments and must refresh after a delete */
+function revalidateModeration() {
+  revalidatePath("/admin/moderation");
+  revalidatePath("/admin");
 }
 
 export async function submitReview(
@@ -90,24 +97,58 @@ export async function deleteReview(
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { error: "You must be logged in to delete your review." };
+  if (!user) return { error: "You must be logged in to delete a review." };
 
-  const reviewId = formData.get("reviewId") as string | null;
-  if (!reviewId) return { error: "Missing review." };
+  const reviewId = formData.get("reviewId");
+  if (!isUuid(reviewId)) return { error: "Missing review." };
 
+  // No user_id filter: RLS decides — "Owner delete" for the author, "Admin
+  // delete" for moderators. A non-permitted delete returns zero rows, not an
+  // error. Comments cascade; the on_review_change trigger recomputes the
+  // school's rating and review_count.
   const { data, error } = await supabase
     .from("reviews")
     .delete()
     .eq("id", reviewId)
-    .eq("user_id", user.id) // RLS "Owner delete" also enforces this
     .select("id");
 
   if (error) return { error: friendlyDbError(error) };
   if (!data || data.length === 0) {
-    return { error: "Review not found, or it isn't yours to delete." };
+    return { error: "Review not found, or you don't have permission to delete it." };
   }
 
   revalidateFormPath(formData);
+  revalidateModeration();
+  return { success: true };
+}
+
+export async function deleteComment(
+  _prevState: ReviewFormState,
+  formData: FormData,
+): Promise<ReviewFormState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "You must be logged in to delete a comment." };
+
+  const commentId = formData.get("commentId");
+  if (!isUuid(commentId)) return { error: "Missing comment." };
+
+  // Same RLS contract as deleteReview: owner or admin, zero rows otherwise.
+  const { data, error } = await supabase
+    .from("comments")
+    .delete()
+    .eq("id", commentId)
+    .select("id");
+
+  if (error) return { error: friendlyDbError(error) };
+  if (!data || data.length === 0) {
+    return { error: "Comment not found, or you don't have permission to delete it." };
+  }
+
+  revalidateFormPath(formData);
+  revalidateModeration();
   return { success: true };
 }
 
