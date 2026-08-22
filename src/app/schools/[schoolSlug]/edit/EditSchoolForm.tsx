@@ -1,7 +1,6 @@
 "use client";
 
 import { useActionState } from "react";
-import Link from "next/link";
 import { FLEET_RANGES, LIMITS, type FlightSchool } from "@/lib/types";
 import { SchoolContactsField } from "@/components/SchoolContactsField";
 import { updateSchool } from "@/app/actions/schools";
@@ -11,6 +10,7 @@ import { ImageUploadField } from "@/components/ui/ImageUploadField";
 import { FormSection, choiceClass } from "@/components/ui/FormSection";
 import { Input, Select, Textarea } from "@/components/ui/Input";
 import { Notice } from "@/components/ui/Notice";
+import { Switch } from "@/components/ui/Switch";
 
 type Props = {
   school: FlightSchool;
@@ -37,15 +37,6 @@ export function EditSchoolForm({
   return (
     <form action={action} className="space-y-8">
       <input type="hidden" name="schoolId" value={school.id} />
-
-      {state.success && (
-        <Notice tone="ok">
-          Changes saved.{" "}
-          <Link href={backHref} className="font-semibold underline underline-offset-2">
-            View listing
-          </Link>
-        </Notice>
-      )}
 
       {/* Basic Info */}
       <FormSection title="Basic information">
@@ -100,19 +91,21 @@ export function EditSchoolForm({
           alt={`${school.name} logo`}
         />
 
-        {viewerIsAdmin && (
-          <label className="flex cursor-pointer items-center gap-2.5 text-sm font-semibold text-ink">
-            <input
-              id="featured"
-              name="featured"
-              type="checkbox"
-              defaultChecked={school.featured ?? false}
-              className={choiceClass}
-            />
-            Featured listing
-          </label>
-        )}
       </FormSection>
+
+      {/* Admin-only: featuring is a site-team call, not the owner's. The
+          protect_flight_school_columns trigger enforces this in the DB too. */}
+      {viewerIsAdmin && (
+        <FormSection title="Curation">
+          <Switch
+            id="featured"
+            name="featured"
+            defaultChecked={school.featured ?? false}
+            label="Featured listing"
+            description="Shown on the Featured page and promoted across the directory."
+          />
+        </FormSection>
+      )}
 
       {/* Location — read-only: changing it re-links catalog records */}
       <FormSection
