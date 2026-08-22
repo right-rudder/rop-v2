@@ -20,8 +20,12 @@ const SIZES = {
 } as const;
 
 /**
- * A school's logo, or its monogram when none is set. Server Component — it
- * resolves the storage path itself, so callers only pass the school.
+ * A school's logo, or its monogram when none is set. Callers pass the stored
+ * path and this resolves the URL, so they never build one by hand.
+ *
+ * This renders inside Client Components too (SchoolCard -> TopRatedExplorer),
+ * so it MUST stay client-safe: import from lib/supabase/storage-url, never
+ * from lib/supabase/storage, which pulls in node:crypto via lib/images.
  */
 export function SchoolLogo({
   name,

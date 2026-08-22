@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "./database.types";
-import { validateImage, storageObjectName, MAGIC_BYTES_NEEDED } from "@/lib/images";
+import { validateImage, storageObjectName, IMAGE_LIMITS, MAGIC_BYTES_NEEDED } from "@/lib/images";
 import type { Bucket } from "./storage-url";
 
 /**
@@ -46,13 +46,24 @@ export async function uploadImage(opts: {
     upsert: false,
   });
   if (error) {
-    console.error("[storage] upload", bucket, path, error.message);
-    // The policies deny writes outside a school you manage; surface that
-    // rather than a generic failure.
-    if (/row-level security|Unauthorized|violates/i.test(error.message)) {
-      return { error: "You don't have permission to upload here." };
+    // Branch on `code`, not the message text and not `status`: the Storage API
+    // returns HTTP 400 for all of these (RLS denial, bad mime, too large), and
+    // only `code` tells them apart. Verified against the live API.
+    const code = "code" in error ? (error.code as string | undefined) : undefined;
+    console.error("[storage] upload", bucket, path, code ?? "", error.message);
+    switch (code) {
+      case "AccessDenied":
+        // The policies deny writes outside a school you manage.
+        return { error: "You don't have permission to upload here." };
+      case "InvalidMimeType":
+        return { error: "Please upload a PNG, JPEG, or WebP image." };
+      case "EntityTooLarge":
+        return { error: `Images must be smaller than ${IMAGE_LIMITS.maxBytes / (1024 * 1024)}MB.` };
+      case "KeyAlreadyExists":
+        return { error: "That image already exists. Please try again." };
+      default:
+        return { error: "That image couldn't be uploaded. Please try again." };
     }
-    return { error: "That image couldn't be uploaded. Please try again." };
   }
   return { path };
 }

@@ -226,6 +226,14 @@ export async function updateSchool(
     return { error: friendlyDbError(error) };
   }
 
+  // The row now points somewhere else, so the old object is unreachable. Do
+  // this here, not after the program sync below: that has its own early
+  // returns, and every one of them would leak the replaced object.
+  // Best-effort — an orphan is not worth failing a saved edit over.
+  if (logoPath !== undefined && school.logoPath && school.logoPath !== logoPath) {
+    await removeImage(supabase, BUCKETS.schoolLogos, school.logoPath);
+  }
+
   // Sync program links without an empty intermediate state: add the checked
   // set first (skipping rows that already exist), then drop the unchecked rest.
   const catalog = new Set((await getPrograms()).map((p) => p.slug));
@@ -248,12 +256,6 @@ export async function updateSchool(
   }
   const { error: clearError } = await removal;
   if (clearError) return { error: friendlyDbError(clearError) };
-
-  // The row now points somewhere else, so the old object is unreachable.
-  // Best-effort: an orphan is not worth failing a saved edit over.
-  if (logoPath !== undefined && school.logoPath && school.logoPath !== logoPath) {
-    await removeImage(supabase, BUCKETS.schoolLogos, school.logoPath);
-  }
 
   revalidatePath(schoolHref(school));
   revalidatePath(`/schools/${school.slug}/edit`);
