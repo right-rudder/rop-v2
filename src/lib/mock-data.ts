@@ -101,52 +101,70 @@ export const cities: City[] = [
 export const airports: Airport[] = [
   // Arizona
   { id: "kffz", name: "Falcon Field Airport",               citySlug: "mesa",           stateSlug: "arizona",    icao: "KFFZ", iata: "MSC",  faaLid: "FFZ",
+    coords: { lat: 33.4608, lng: -111.7283 },
     description: "Falcon Field Airport (KFFZ) in Mesa, Arizona is one of the busiest general aviation airports in the United States. Originally built as a World War II training base for British RAF pilots, the airport today serves a thriving community of flight schools, charter operators, and private pilots. Its uncongested airspace, 300+ days of sunshine per year, and proximity to the Phoenix metro make it an ideal location for year-round flight training from first solo through advanced ratings." },
   { id: "kdvt", name: "Phoenix Deer Valley Airport",         citySlug: "phoenix",        stateSlug: "arizona",    icao: "KDVT", iata: null,   faaLid: "DVT",
+    coords: { lat: 33.6883, lng: -112.0826 },
     description: "Phoenix Deer Valley Airport (KDVT) is one of the nation's busiest single-runway general aviation airports, handling hundreds of operations daily in the northwest Phoenix metro. The airport's Class D airspace and pattern-intensive environment give student pilots exceptional radio communication and traffic-awareness experience early in their training. Excellent VFR weather, a modern terminal, and multiple flight school tenants make KDVT a top choice for Private Pilot through CFI training." },
   { id: "kphx", name: "Phoenix Sky Harbor International",    citySlug: "phoenix",        stateSlug: "arizona",    icao: "KPHX", iata: "PHX",  faaLid: "PHX",
+    coords: { lat: 33.4373, lng: -112.0078 },
     description: "Phoenix Sky Harbor International Airport (KPHX) is the primary commercial service airport for the greater Phoenix metropolitan area and one of the busiest airports in the American Southwest. As a Class B airport, it serves as an important navigational reference and airspace boundary for student pilots training at nearby GA fields. Some advanced and instrument-rated training programs conduct Class B transition flights out of KPHX to give students real-world experience in complex, high-traffic airspace." },
   { id: "kchd", name: "Chandler Municipal Airport",          citySlug: "chandler",       stateSlug: "arizona",    icao: "KCHD", iata: null,   faaLid: "CHD",
+    coords: { lat: 33.2691, lng: -111.8110 },
     description: "Chandler Municipal Airport (KCHD) is a general aviation reliever airport in the southeast Phoenix metro. With minimal commercial traffic and a relaxed pattern environment, KCHD is well-suited for primary flight training. The airport sits within easy flying distance of several practice areas in the Sonoran Desert and benefits from the same 300+ days of VFR weather that makes the entire Phoenix metro a pilot-training hub." },
   { id: "ktus", name: "Tucson International Airport",        citySlug: "tucson",         stateSlug: "arizona",    icao: "KTUS", iata: "TUS",  faaLid: "TUS",
+    coords: { lat: 32.1161, lng: -110.9410 },
     description: "Tucson International Airport (KTUS) serves both commercial airline traffic and a robust general aviation community in southern Arizona. Situated at roughly 2,600 feet MSL with consistent desert VFR conditions, KTUS is home to several flight training programs that leverage the region's clear skies and diverse terrain — from desert flatlands to mountain ridges — for well-rounded pilot development. Instrument students benefit from the full suite of ILS, RNAV, and VOR approaches serving the airport." },
 
   // Illinois (St. Louis metro — airport is in Belleville, IL but serves St. Louis, MO)
   { id: "kcps", name: "St. Louis Downtown Airport",          citySlug: "belleville",     stateSlug: "illinois",   icao: "KCPS", iata: "CPS",  faaLid: "CPS",
+    coords: { lat: 38.5707, lng: -90.1562 },
     description: "St. Louis Downtown Airport (KCPS), located in Belleville, Illinois, is a general aviation reliever airport serving the greater St. Louis metro area. Despite its Illinois address, KCPS functions as a practical training hub for pilots from both sides of the Mississippi River. Its relatively quiet pattern and proximity to St. Louis Lambert's Class B airspace give student pilots valuable exposure to complex airspace transitions while keeping training costs manageable at a non-commercial field." },
 
   // Missouri
   { id: "kstl", name: "St. Louis Lambert International",     citySlug: "st-louis",       stateSlug: "missouri",   icao: "KSTL", iata: "STL",  faaLid: "STL",
+    coords: { lat: 38.7487, lng: -90.3700 },
     description: "St. Louis Lambert International Airport (KSTL) is Missouri's largest and busiest airport, anchoring the St. Louis metro's aviation infrastructure. As a Class B facility with multiple parallel runways and a full ILS/RNAV approach suite, KSTL is the benchmark airspace environment for instrument-rated pilots training in the region. Flight schools operating here give students unparalleled exposure to real-world ATC communication and commercial traffic procedures in a major hub environment." },
   { id: "kmkc", name: "Charles B. Wheeler Downtown Airport", citySlug: "kansas-city",    stateSlug: "missouri",   icao: "KMKC", iata: "MKC",  faaLid: "MKC",
+    coords: { lat: 39.1232, lng: -94.5928 },
     description: "Charles B. Wheeler Downtown Airport (KMKC) sits along the Missouri River just north of downtown Kansas City, offering a uniquely urban backdrop for general aviation training. The airport features Class D airspace and sits comfortably clear of Kansas City International's Class B, making it an ideal base for primary training with convenient access to practice areas and cross-country routes across the Great Plains. Its downtown location means easy access for Kansas City-area students." },
 
   // Kansas
   { id: "kojc", name: "Johnson County Executive Airport",    citySlug: "overland-park",  stateSlug: "kansas",     icao: "KOJC", iata: "OJC",  faaLid: "OJC",
+    coords: { lat: 38.8476, lng: -94.7376 },
     description: "Johnson County Executive Airport (KOJC) in Overland Park, Kansas is a modern GA reliever airport serving the prosperous Kansas side of the Kansas City metro. With a well-maintained runway, instrument approaches, and a growing roster of flight school tenants, KOJC is the go-to training airport for students in Johnson County and the surrounding suburbs. Its Class D airspace and active pattern traffic give trainees solid radio discipline and situational awareness from their earliest lessons." },
   { id: "kixd", name: "New Century Aircenter",               citySlug: "overland-park",  stateSlug: "kansas",     icao: "KIXD", iata: null,   faaLid: "IXD",
+    coords: { lat: 38.8309, lng: -94.8903 },
     description: "New Century Aircenter (KIXD) is a general aviation airport located southwest of the Kansas City metro near Gardner, Kansas. Originally built as Olathe Naval Air Station, the airport retains wide runways and excellent facilities suited to both primary training and complex/high-performance operations. Its non-towered environment and multiple runways offer student pilots flexibility in pattern work, while the relatively light traffic density provides a confidence-building setting for solo and cross-country flights." },
 
   // Florida
   { id: "kfxe", name: "Fort Lauderdale Executive Airport",   citySlug: "fort-lauderdale",stateSlug: "florida",    icao: "KFXE", iata: "FXE",  faaLid: "FXE",
+    coords: { lat: 26.1973, lng: -80.1707 },
     description: "Fort Lauderdale Executive Airport (KFXE) is one of the premier general aviation airports in South Florida, handling a mix of private jets, charter turboprops, and flight school traffic in Broward County. The airport's Class D airspace, year-round VMC weather, and proximity to both Miami's Class B and the Atlantic coast make it an outstanding environment for building diverse pilot experience. Multiple FAA-certificated flight schools call KFXE home, offering training from PPL through ATP in one of the country's most active GA markets." },
   { id: "kopf", name: "Miami-Opa Locka Executive Airport",   citySlug: "miami",          stateSlug: "florida",    icao: "KOPF", iata: "OPF",  faaLid: "OPF",
+    coords: { lat: 25.9070, lng: -80.2784 },
     description: "Miami-Opa Locka Executive Airport (KOPF) is a busy general aviation reliever airport serving the northern Miami-Dade area. Situated just outside Miami's Class B airspace, KOPF gives student pilots immediate access to one of the nation's most complex airspace environments while training in a more manageable tower-controlled setting. Year-round tropical VFR conditions and a diverse surrounding landscape — coast, Everglades, and urban corridor — make for a rich and varied training experience." },
   { id: "kpmp", name: "Pompano Beach Airpark",               citySlug: "pembroke-pines", stateSlug: "florida",    icao: "KPMP", iata: "PMP",  faaLid: "PMP",
+    coords: { lat: 26.2471, lng: -80.1111 },
     description: "Pompano Beach Airpark (KPMP) is a general aviation airport in Broward County, Florida, ideally positioned between Fort Lauderdale and Boca Raton. With a non-towered environment, a single active runway, and consistent South Florida VFR weather, KPMP is a popular base for primary and multi-engine flight training. Student pilots here quickly become comfortable with self-announce procedures and uncontrolled pattern operations — skills that translate directly to real-world cross-country flying." },
 
   // California
   { id: "kmyf", name: "Montgomery-Gibbs Executive Airport",  citySlug: "san-diego",      stateSlug: "california", icao: "KMYF", iata: "MYF",  faaLid: "MYF",
+    coords: { lat: 32.8157, lng: -117.1396 },
     description: "Montgomery-Gibbs Executive Airport (KMYF) is San Diego's busiest general aviation airport, located in the Mission Hills area just eight miles northeast of downtown. Its Class D airspace, coastal proximity, and mild year-round weather create an exceptional training environment where students fly over Pacific beaches, mountains, and desert terrain within a single lesson. KMYF hosts numerous flight training programs and benefits from San Diego's remarkably consistent VFR conditions, averaging fewer IFR days per year than almost any major metro in the country." },
   { id: "kcrq", name: "McClellan-Palomar Airport",           citySlug: "san-diego",      stateSlug: "california", icao: "KCRQ", iata: "CLD",  faaLid: "CLD",
+    coords: { lat: 33.1283, lng: -117.2802 },
     description: "McClellan-Palomar Airport (KCRQ) in Carlsbad, California serves the north San Diego County coast and is one of Southern California's most active general aviation airports. The airport's tower-controlled environment, ILS approach, and proximity to both LAX and SAN Class B airspace give students valuable experience navigating complex SoCal airspace. Marine-layer mornings followed by clear afternoons mean IFR students get genuine IMC exposure while VFR students enjoy some of the best cross-country flying conditions in the western United States." },
   { id: "klax", name: "Los Angeles International Airport",   citySlug: "los-angeles",    stateSlug: "california", icao: "KLAX", iata: "LAX",  faaLid: "LAX",
+    coords: { lat: 33.9425, lng: -118.4081 },
     description: "Los Angeles International Airport (KLAX) is one of the world's busiest airports and the primary commercial aviation gateway to Southern California. As a Class B airport with multiple parallel runways and extraordinarily dense ATC traffic, KLAX itself is not a typical flight training base — but it forms the centerpiece of the LA Basin's complex airspace that every SoCal instrument student must learn to navigate. Advanced and instrument-rated training programs regularly conduct Class B operations and approaches into KLAX to give students authentic high-workload flight experience." },
 
   // Tennessee
   { id: "kbna", name: "Nashville International Airport",     citySlug: "nashville",      stateSlug: "tennessee",  icao: "KBNA", iata: "BNA",  faaLid: "BNA",
+    coords: { lat: 36.1245, lng: -86.6782 },
     description: "Nashville International Airport (KBNA) is Tennessee's busiest airport, serving both commercial airline traffic and a growing general aviation community in the heart of Middle Tennessee. The airport's Class C airspace, multiple instrument approaches, and diverse surrounding terrain — rolling hills, river valleys, and open farmland — make it an excellent environment for instrument and commercial training. Flight schools operating at KBNA give students real-world exposure to ATC procedures at a major regional hub without the complexity of a full Class B facility." },
   { id: "kcha", name: "Chattanooga Metropolitan Airport",    citySlug: "chattanooga",    stateSlug: "tennessee",  icao: "KCHA", iata: "CHA",  faaLid: "CHA",
+    coords: { lat: 35.0353, lng: -85.2038 },
     description: "Chattanooga Metropolitan Airport (KCHA) serves the greater Chattanooga area in the scenic Tennessee River valley, flanked by Lookout Mountain and the ridges of the southern Appalachians. The airport's Class C airspace and mix of commercial and GA traffic give student pilots meaningful ATC interaction in a less overwhelming environment than a major hub. The surrounding mountain terrain provides outstanding cross-country and instrument training routes, and the relatively mild four-season climate allows for solid year-round training schedules." },
 ];
 

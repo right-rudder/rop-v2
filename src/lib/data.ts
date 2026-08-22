@@ -30,6 +30,7 @@ import type {
   UserRole,
   SchoolSubmission,
   SubmissionStatus,
+  LatLng,
 } from "@/lib/types";
 import type { Tables } from "@/lib/supabase/database.types";
 import type {
@@ -69,6 +70,10 @@ function toCity(row: Tables<"cities">): City {
   };
 }
 
+function toCoords(lat: number | null, lng: number | null): LatLng | undefined {
+  return lat !== null && lng !== null ? { lat, lng } : undefined;
+}
+
 function toAirport(row: Tables<"airports">): Airport {
   return {
     id: row.id,
@@ -79,6 +84,7 @@ function toAirport(row: Tables<"airports">): Airport {
     iata: row.iata,
     faaLid: row.faa_lid,
     description: row.description ?? undefined,
+    coords: toCoords(row.latitude, row.longitude),
   };
 }
 
@@ -145,6 +151,7 @@ function toSchool(row: SchoolRowWithJoins): FlightSchool {
     estimatedInstructors:
       (row.estimated_instructors as FleetRange | null) ?? undefined,
     managedBy: row.managed_by ?? undefined,
+    coords: toCoords(row.latitude, row.longitude),
   };
 }
 

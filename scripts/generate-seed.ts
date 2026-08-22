@@ -72,7 +72,7 @@ chunks.push(
 chunks.push(
   insert(
     "airports",
-    ["id", "name", "icao", "iata", "faa_lid", "city_slug", "state_slug", "description"],
+    ["id", "name", "icao", "iata", "faa_lid", "city_slug", "state_slug", "description", "latitude", "longitude"],
     airports.map((a) => [
       lit(a.id),
       lit(a.name),
@@ -82,6 +82,8 @@ chunks.push(
       lit(a.citySlug),
       lit(a.stateSlug),
       lit(a.description ?? null),
+      lit(a.coords?.lat ?? null),
+      lit(a.coords?.lng ?? null),
     ]),
   ),
 );

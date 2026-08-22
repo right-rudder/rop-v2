@@ -50,6 +50,9 @@ fresh installs):
   listing (BEFORE UPDATE trigger), submissions always start `pending`,
   length/format constraints, explicit Data API grants, and a one-off
   recompute of `rating` / `review_count` from real reviews
+- `supabase/add-coordinates.sql` — `latitude` / `longitude` on airports and
+  flight schools (+ range checks) and a backfill for the seeded airports.
+  Powers "near me" search and the map view on `/search`.
 
 ### Data API exposure
 
