@@ -459,6 +459,16 @@ create trigger on_review_change
 -- automatically, so state the intended privileges explicitly. RLS
 -- policies above still decide which rows each role can touch.
 
+-- Start from nothing for the Data API roles (projects grant ALL on every
+-- table by default, incl. TRUNCATE / REFERENCES / TRIGGER), then grant
+-- exactly what the app needs. Revoking a table privilege also revokes
+-- the matching column privileges, hence the profiles column grant below.
+revoke all on all tables in schema public from anon, authenticated;
+-- Default privileges: tables / functions created later by the postgres
+-- role (SQL editor, migrations) start with no Data API access either —
+-- grant explicitly, as above. (Supabase's project defaults grant ALL.)
+alter default privileges for role postgres in schema public revoke all on tables from anon, authenticated;
+alter default privileges for role postgres in schema public revoke execute on functions from anon, authenticated;
 grant usage on schema public to anon, authenticated;
 
 grant select on
@@ -468,26 +478,26 @@ grant select on
   to anon, authenticated;
 grant select on public.school_submissions to authenticated;
 
--- anon is read-only everywhere
-revoke insert, update, delete on all tables in schema public from anon;
-
 -- authenticated: writes only where a policy exists
-revoke insert, update, delete on
-  public.states, public.programs, public.trainer_aircraft
-  from authenticated;
-revoke delete on
-  public.flight_schools, public.airports, public.cities,
-  public.school_submissions, public.profiles
-  from authenticated;
-revoke insert on public.profiles from authenticated;
 grant insert, update, delete on public.reviews  to authenticated;
 grant insert, update, delete on public.comments to authenticated;
 grant insert, update on public.flight_schools, public.airports, public.cities to authenticated;
 grant insert, delete on public.school_programs, public.school_aircraft to authenticated;
 grant insert, update on public.school_submissions to authenticated;
 -- profiles: column-level update only (see "Own profile update" above)
-revoke update on public.profiles from anon, authenticated;
 grant update (first_name, last_name, bio, pilot_certificates)
   on public.profiles to authenticated;
 
 grant execute on function public.is_admin() to anon, authenticated;
+-- Trigger functions are not an API: keep them out of /rest/v1/rpc.
+-- (Triggers still fire — EXECUTE is not checked for the calling role.)
+revoke execute on function public.handle_new_user()               from public, anon, authenticated;
+revoke execute on function public.refresh_school_rating()         from public, anon, authenticated;
+revoke execute on function public.protect_flight_school_columns() from public, anon, authenticated;
+-- Supabase's own "enforce RLS on new tables" event trigger, when enabled.
+do $$
+begin
+  if to_regprocedure('public.rls_auto_enable()') is not null then
+    revoke execute on function public.rls_auto_enable() from public, anon, authenticated;
+  end if;
+end $$;

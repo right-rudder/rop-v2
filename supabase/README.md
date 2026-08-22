@@ -60,9 +60,11 @@ fresh installs):
   listing (BEFORE UPDATE trigger), submissions always start `pending`,
   length/format constraints, explicit Data API grants, and a one-off
   recompute of `rating` / `review_count` from real reviews
-- `supabase/add-coordinates.sql` — `latitude` / `longitude` on airports and
-  flight schools (+ range checks) and a backfill for the seeded airports.
-  Powers "near me" search and the map view on `/search`.
+- `supabase/add-grant-hygiene.sql` — run after the above: drops the leftover
+  `school_contacts` table, revokes RPC `EXECUTE` on trigger functions, and
+  resets `anon` / `authenticated` table privileges — and the default privileges
+  for future tables / functions — to exactly what the app needs (the defaults
+  granted ALL, incl. TRUNCATE / REFERENCES / TRIGGER)
 
 ### Data API exposure
 
