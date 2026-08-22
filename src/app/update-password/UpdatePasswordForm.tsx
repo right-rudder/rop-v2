@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { updatePassword } from "@/app/actions/auth";
+import { useActionToast } from "@/components/ToastProvider";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
 import { Input } from "@/components/ui/Input";
@@ -9,6 +10,8 @@ import { Notice } from "@/components/ui/Notice";
 
 export function UpdatePasswordForm() {
   const [state, action, pending] = useActionState(updatePassword, {});
+  // Success signs out and lands on /login, which shows its own notice
+  useActionToast(state, { errorTitle: "Couldn't update password" });
 
   return (
     <form action={action} className="space-y-5">

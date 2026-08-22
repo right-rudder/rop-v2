@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { Star, CheckCircle2 } from "lucide-react";
 import { submitReview } from "@/app/actions/reviews";
+import { useActionToast } from "@/components/ToastProvider";
 import { LIMITS } from "@/lib/types";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -136,6 +137,10 @@ export default function ReviewForm({ schoolId }: { schoolId: string }) {
     overall: 0, customerService: 0, instructors: 0, aircraft: 0, availability: 0, facilities: 0,
   });
   const [clientError, setClientError] = useState("");
+  useActionToast(state, {
+    ok: { title: "Review published", description: "Thanks — it's live on this page now." },
+    errorTitle: "Couldn't publish review",
+  });
 
   function setRating(key: keyof Ratings, val: number) {
     setRatings((prev) => ({ ...prev, [key]: val }));

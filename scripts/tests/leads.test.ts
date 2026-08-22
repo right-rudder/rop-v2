@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { validateLead, buildGhlPayload, hashIp, LEAD_LIMITS } from "../../src/lib/leads.ts";
+import { validateLead, buildGhlPayload, hashIp, splitName, LEAD_LIMITS } from "../../src/lib/leads.ts";
 
 const programs = ["private-pilot", "instrument-rating"];
 const good = { name: "  Ada Lovelace ", email: "ada@example.com", phone: "", programSlug: "private-pilot", message: "Hi" };
@@ -60,4 +60,11 @@ test("hashIp: deterministic sha-256 hex, salt-sensitive, never the raw ip", () =
   assert.notEqual(a, hashIp("203.0.113.7", "other"));
   assert.notEqual(a, hashIp("203.0.113.8", "salt"));
   assert.ok(!a.includes("203.0.113.7"));
+});
+
+test("splitName: first token is the first name, the rest the last name", () => {
+  assert.deepEqual(splitName("Ada Lovelace"), { firstName: "Ada", lastName: "Lovelace" });
+  assert.deepEqual(splitName("  Ada   King  Lovelace "), { firstName: "Ada", lastName: "King Lovelace" });
+  assert.deepEqual(splitName("Ada"), { firstName: "Ada", lastName: "" });
+  assert.deepEqual(splitName(""), { firstName: "", lastName: "" });
 });

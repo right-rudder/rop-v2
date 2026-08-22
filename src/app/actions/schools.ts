@@ -1,5 +1,7 @@
 "use server";
 
+import { withFlash } from "@/lib/toast";
+
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -261,5 +263,5 @@ export async function updateSchool(
   revalidatePath(schoolHref(school));
   revalidatePath(`/schools/${school.slug}/edit`);
   // Land on the listing so the owner sees the saved result in place.
-  redirect(schoolHref(school));
+  redirect(withFlash(schoolHref(school), "school-updated"));
 }

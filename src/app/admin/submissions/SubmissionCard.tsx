@@ -5,6 +5,7 @@ import Link from "next/link";
 import { MapPin, Phone, Globe, Users, Plane, Check, X } from "lucide-react";
 import type { SchoolSubmission } from "@/lib/types";
 import { approveSubmission, rejectSubmission } from "@/app/actions/admin";
+import { useActionToast } from "@/components/ToastProvider";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -25,6 +26,15 @@ export function SubmissionCard({
     rejectSubmission,
     {},
   );
+
+  useActionToast(approveState, {
+    ok: (s) => ({ title: "Submission approved", description: s.message }),
+    errorTitle: "Couldn't approve submission",
+  });
+  useActionToast(rejectState, {
+    ok: { title: "Submission rejected" },
+    errorTitle: "Couldn't reject submission",
+  });
 
   const busy = approvePending || rejectPending;
   const error = approveState.error ?? rejectState.error;

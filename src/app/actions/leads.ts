@@ -10,10 +10,15 @@ import { getCurrentUser, isAdmin } from "@/lib/auth";
 import { getSchoolById, getLocationMaps, getProgramsBySlugs } from "@/lib/data";
 import { schoolHref } from "@/lib/utils";
 import { absoluteUrl } from "@/lib/site";
-import { validateLead, buildGhlPayload, hashIp } from "@/lib/leads";
+import { validateLead, buildGhlPayload, hashIp, splitName } from "@/lib/leads";
 import type { FlightSchool, LeadStatus } from "@/lib/types";
 
-export type LeadFormState = { error?: string; success?: boolean };
+export type LeadFormState = {
+  error?: string;
+  success?: boolean;
+  /** Set for guests: pre-fills the "create an account" prompt after sending */
+  signup?: { firstName: string; lastName: string; email: string };
+};
 
 const LEAD_STATUSES: readonly LeadStatus[] = ["new", "contacted", "closed"];
 
@@ -126,7 +131,9 @@ export async function submitLead(
   );
 
   revalidatePath("/admin/leads");
-  return { success: true };
+  const viewer = await getCurrentUser();
+  if (viewer) return { success: true };
+  return { success: true, signup: { ...splitName(lead.name), email: lead.email } };
 }
 
 export type LeadStatusState = { error?: string; success?: boolean };

@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { LIMITS, type User } from "@/lib/types";
 import { updateProfile } from "@/app/actions/profile";
+import { useActionToast } from "@/components/ToastProvider";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
 import { FormSection, choiceClass } from "@/components/ui/FormSection";
@@ -17,6 +18,7 @@ type Props = {
 
 export function EditProfileForm({ user, programs, backHref }: Props) {
   const [state, action, pending] = useActionState(updateProfile, {});
+  useActionToast(state, { errorTitle: "Couldn't save profile" });
   const held = new Set(user.pilotCertificates ?? []);
 
   return (

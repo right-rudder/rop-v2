@@ -10,6 +10,9 @@ import { getFavoriteSchoolIds } from "@/lib/data";
 import { FavoritesProvider } from "@/components/FavoritesProvider";
 import { CompareProvider } from "@/components/CompareProvider";
 import { CompareTray } from "@/components/CompareTray";
+import { ToastProvider } from "@/components/ToastProvider";
+import { Toaster } from "@/components/Toaster";
+import { FlashToast } from "@/components/FlashToast";
 
 const display = Bricolage_Grotesque({
   subsets: ["latin"],
@@ -67,14 +70,18 @@ export default async function RootLayout({
     >
       <body className="font-sans antialiased">
         <ThemeProvider>
+          <ToastProvider>
           <FavoritesProvider viewerId={viewer?.id ?? null} initialIds={favoriteIds}>
             <CompareProvider>
               <Navbar viewer={navViewer} />
               <main className="min-h-screen bg-paper">{children}</main>
               <Footer />
               <CompareTray />
+              <Toaster />
+              <FlashToast />
             </CompareProvider>
           </FavoritesProvider>
+          </ToastProvider>
         </ThemeProvider>
       </body>
     </html>

@@ -5,6 +5,7 @@ import { useActionState } from "react";
 import { usePathname } from "next/navigation";
 import { Trash2 } from "lucide-react";
 import type { ReviewFormState } from "@/app/actions/reviews";
+import { useActionToast } from "@/components/ToastProvider";
 
 /**
  * Two-step "Delete → Yes, delete / Cancel" control backed by a Server
@@ -30,6 +31,7 @@ export function ConfirmDeleteButton({
   const pathname = usePathname();
   const [confirming, setConfirming] = useState(false);
   const [state, formAction, pending] = useActionState(action, {});
+  useActionToast(state, { ok: { title: "Deleted" }, errorTitle: "Couldn't delete" });
 
   if (!confirming) {
     return (

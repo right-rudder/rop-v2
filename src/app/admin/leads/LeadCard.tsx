@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Mail, Phone, MapPin } from "lucide-react";
 import type { Lead, LeadStatus } from "@/lib/types";
 import { setLeadStatus } from "@/app/actions/leads";
+import { useActionToast } from "@/components/ToastProvider";
 import { Card } from "@/components/ui/Card";
 import { Chip } from "@/components/ui/Chip";
 import { Notice } from "@/components/ui/Notice";
@@ -25,6 +26,7 @@ export function LeadCard({
   programName?: string;
 }) {
   const [state, action, pending] = useActionState(setLeadStatus, {});
+  useActionToast(state, { ok: { title: "Lead updated" }, errorTitle: "Couldn't update lead" });
   const date = new Date(lead.createdAt).toLocaleString("en-US", {
     year: "numeric",
     month: "short",

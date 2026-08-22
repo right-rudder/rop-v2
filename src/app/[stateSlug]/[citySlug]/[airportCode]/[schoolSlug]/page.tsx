@@ -37,7 +37,7 @@ import ReviewForm from "@/components/ReviewForm";
 import { SchoolsMap } from "@/components/SchoolsMap";
 import { FavoriteButton } from "@/components/FavoriteButton";
 import { CompareButton } from "@/components/CompareButton";
-import { LeadForm } from "@/components/LeadForm";
+import { InquiryCta } from "@/components/InquiryCta";
 
 type Props = {
   params: Promise<{
@@ -219,6 +219,15 @@ export default async function SchoolDetailPage({ params }: Props) {
   const hasFleet =
     schoolAircraft.length > 0 || school.estimatedPlanes || school.estimatedInstructors;
 
+  // Pre-fill the request form for signed-in visitors
+  const leadViewer = viewer
+    ? {
+        name: [viewer.profile?.firstName, viewer.profile?.lastName].filter(Boolean).join(" "),
+        email: viewer.email ?? "",
+        phone: viewer.phone ?? "",
+      }
+    : null;
+
   return (
     <>
       <JsonLd data={jsonLd} />
@@ -287,16 +296,6 @@ export default async function SchoolDetailPage({ params }: Props) {
               <p className="max-w-prose text-[1.05rem] leading-relaxed text-muted">
                 {school.description}
               </p>
-            </section>
-
-            {/* Request information */}
-            <section id="inquire" className="scroll-mt-24">
-              <SectionTitle>Request information</SectionTitle>
-              <LeadForm
-                schoolId={school.id}
-                schoolName={school.name}
-                programs={schoolPrograms.map((p) => ({ slug: p.slug, shortName: p.shortName }))}
-              />
             </section>
 
             {/* Programs */}
@@ -542,6 +541,13 @@ export default async function SchoolDetailPage({ params }: Props) {
           </aside>
         </div>
       </Container>
+
+      {/* Closing CTA + request-information form */}
+      <InquiryCta
+        school={{ id: school.id, name: school.name, phone: school.phone }}
+        programs={schoolPrograms.map((p) => ({ slug: p.slug, shortName: p.shortName }))}
+        viewer={leadViewer}
+      />
     </>
   );
 }

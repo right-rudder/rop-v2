@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import { FLEET_RANGES, LIMITS, type FlightSchool } from "@/lib/types";
 import { SchoolContactsField } from "@/components/SchoolContactsField";
 import { updateSchool } from "@/app/actions/schools";
+import { useActionToast } from "@/components/ToastProvider";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
 import { ImageUploadField } from "@/components/ui/ImageUploadField";
@@ -33,6 +34,8 @@ export function EditSchoolForm({
   logoUrl,
 }: Props) {
   const [state, action, pending] = useActionState(updateSchool, {});
+  // Success redirects with a flash toast (see withFlash in the action)
+  useActionToast(state, { errorTitle: "Couldn't save listing" });
 
   return (
     <form action={action} className="space-y-8">
