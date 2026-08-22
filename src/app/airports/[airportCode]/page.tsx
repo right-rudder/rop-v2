@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Pencil } from "lucide-react";
 import {
   getAirportByCode,
   getCityBySlug,
@@ -15,6 +15,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Container } from "@/components/ui/Container";
+import { getCurrentUser, isAdmin } from "@/lib/auth";
 import { schoolHref } from "@/lib/utils";
 import { absoluteUrl } from "@/lib/site";
 
@@ -50,13 +51,17 @@ export default async function AirportDetailPage({ params }: Props) {
   const airport = await getAirportByCode(airportCode);
   if (!airport) notFound();
 
-  const [city, state, schools, { cityNameBySlug, stateBySlug }] =
+  const [city, state, schools, { cityNameBySlug, stateBySlug }, viewer] =
     await Promise.all([
       getCityBySlug(airport.citySlug),
       getStateBySlug(airport.stateSlug),
       getSchoolsByAirport(airport.icao),
       getLocationMaps(),
+      getCurrentUser(),
     ]);
+  // Airports have no per-listing owner — only admins may edit (the edit
+  // page 404s everyone else, so this just decides whether to show the link).
+  const canEdit = isAdmin(viewer);
 
   const itemListJsonLd = {
     "@context": "https://schema.org",
@@ -95,6 +100,18 @@ export default async function AirportDetailPage({ params }: Props) {
             </>
           }
           title={airport.name}
+          aside={
+            canEdit ? (
+              <Button
+                href={`/airports/${airport.icao.toLowerCase()}/edit`}
+                variant="secondary"
+                size="sm"
+              >
+                <Pencil size={14} />
+                Edit airport
+              </Button>
+            ) : undefined
+          }
           meta={
             <>
               <Badge tone="sky">ICAO {airport.icao}</Badge>
