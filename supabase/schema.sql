@@ -62,7 +62,12 @@ create table public.airports (
   faa_lid     text,
   city_slug   text not null references public.cities (slug),
   state_slug  text not null references public.states (slug),
-  description text
+  description text,
+  latitude    double precision,
+  longitude   double precision,
+  constraint airports_latitude_range  check (latitude  is null or latitude  between -90  and 90),
+  constraint airports_longitude_range check (longitude is null or longitude between -180 and 180),
+  constraint airports_coords_pair     check ((latitude is null) = (longitude is null))
 );
 
 -- ── Programs ──────────────────────────────────────────────────
@@ -117,10 +122,15 @@ create table public.flight_schools (
   estimated_planes      text,
   estimated_instructors text,
   managed_by            uuid references auth.users (id) on delete set null,
+  latitude              double precision,
+  longitude             double precision,
   constraint flight_schools_name_length        check (char_length(name) between 1 and 120),
   constraint flight_schools_description_length check (char_length(description) <= 5000),
   constraint flight_schools_website_format     check (website = '' or (char_length(website) <= 300 and website ~* '^https?://')),
-  constraint flight_schools_phone_length       check (char_length(phone) <= 40)
+  constraint flight_schools_phone_length       check (char_length(phone) <= 40),
+  constraint flight_schools_latitude_range  check (latitude  is null or latitude  between -90  and 90),
+  constraint flight_schools_longitude_range check (longitude is null or longitude between -180 and 180),
+  constraint flight_schools_coords_pair     check ((latitude is null) = (longitude is null))
 );
 
 -- ── School ↔ Programs (many-to-many) ─────────────────────────
