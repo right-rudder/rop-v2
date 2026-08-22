@@ -730,3 +730,23 @@ export async function getUsersByIds(ids: string[]): Promise<Record<string, User>
   }
   return byId;
 }
+
+// ── Favorites ──────────────────────────────────────────────────────────────────
+
+/** Ids of the schools a user has saved, newest first. RLS limits this to the caller's own rows. */
+export const getFavoriteSchoolIds = cache(async (userId: string): Promise<string[]> => {
+  const supabase = await createClient();
+  const res = await supabase
+    .from("favorites")
+    .select("school_id")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
+  return orThrow(res).map((r) => r.school_id);
+});
+
+/** Saved schools in saved order (newest first). */
+export async function getFavoriteSchools(userId: string): Promise<FlightSchool[]> {
+  const ids = await getFavoriteSchoolIds(userId);
+  const byId = await getSchoolsByIds(ids);
+  return ids.flatMap((id) => (byId[id] ? [byId[id]] : []));
+}
