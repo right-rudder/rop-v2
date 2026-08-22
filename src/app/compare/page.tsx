@@ -34,16 +34,9 @@ const dash = <span className="text-muted">—</span>;
 export default async function ComparePage({ searchParams }: Props) {
   const { ids: param } = await searchParams;
   const ids = parseCompareIds(param);
-  const [byId, programs, aircraft, { cityNameBySlug, stateBySlug }] = await Promise.all([
-    getSchoolsByIds(ids),
-    getPrograms(),
-    getTrainerAircraft(),
-    getLocationMaps(),
-  ]);
+  // Resolve the schools first: an empty or bogus URL should not load the catalog.
+  const byId = await getSchoolsByIds(ids);
   const schools = ids.flatMap((id) => (byId[id] ? [byId[id]] : []));
-
-  const locationOf = (s: FlightSchool) =>
-    `${cityNameBySlug[s.citySlug] ?? s.citySlug}, ${stateBySlug[s.stateSlug]?.abbreviation ?? s.stateSlug.toUpperCase()}`;
 
   if (schools.length < 2) {
     return (
@@ -60,6 +53,14 @@ export default async function ComparePage({ searchParams }: Props) {
       </div>
     );
   }
+
+  const [programs, aircraft, { cityNameBySlug, stateBySlug }] = await Promise.all([
+    getPrograms(),
+    getTrainerAircraft(),
+    getLocationMaps(),
+  ]);
+  const locationOf = (s: FlightSchool) =>
+    `${cityNameBySlug[s.citySlug] ?? s.citySlug}, ${stateBySlug[s.stateSlug]?.abbreviation ?? s.stateSlug.toUpperCase()}`;
 
   const picks: ComparePick[] = schools.map((s) => ({ id: s.id, name: s.name, href: schoolHref(s) }));
   const programRows = programs.filter((p) => schools.some((s) => s.programSlugs.includes(p.slug)));
