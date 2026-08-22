@@ -58,6 +58,7 @@ export function TopRatedExplorer({ schools }: Props) {
               {index + 1}
             </span>
             <SchoolCard
+              schoolId={school.id}
               name={school.name}
               location={school.location}
               airportCode={school.airportCode}

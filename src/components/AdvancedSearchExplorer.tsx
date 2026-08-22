@@ -11,6 +11,8 @@ import { Input } from "@/components/ui/Input";
 import { Stars } from "@/components/ui/Stars";
 import { Notice } from "@/components/ui/Notice";
 import { SchoolsMap } from "@/components/SchoolsMap";
+import { FavoriteButton } from "@/components/FavoriteButton";
+import { CompareButton } from "@/components/CompareButton";
 import type { LatLng } from "@/lib/types";
 import {
   RADIUS_OPTIONS,
@@ -867,8 +869,9 @@ export function AdvancedSearchExplorer({ schools, programs, aircraft, states, ci
             <>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 {visible.map((school) => (
-                  <Card key={school.id} href={school.href} className="flex h-full flex-col p-5">
-                    <p className="mb-1.5 flex items-center justify-between font-mono text-xs uppercase tracking-[0.12em] text-muted">
+                  <div key={school.id} className="relative h-full">
+                  <Card href={school.href} className="flex h-full flex-col p-5">
+                    <p className="mb-1.5 flex items-center justify-between pr-20 font-mono text-xs uppercase tracking-[0.12em] text-muted">
                       <span className="font-semibold text-sky">{school.airportCode}</span>
                       {school.distanceMiles !== undefined && (
                         <span className="text-accent-ink">{formatMiles(school.distanceMiles)}</span>
@@ -903,6 +906,11 @@ export function AdvancedSearchExplorer({ schools, programs, aircraft, states, ci
                       </div>
                     )}
                   </Card>
+                  <div className="absolute right-3 top-3 z-10 flex gap-1.5">
+                    <CompareButton id={school.id} name={school.name} href={school.href} />
+                    <FavoriteButton schoolId={school.id} path="/search" />
+                  </div>
+                  </div>
                 ))}
               </div>
 

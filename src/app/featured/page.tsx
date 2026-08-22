@@ -53,6 +53,7 @@ export default async function FeaturedSchoolsPage() {
               return (
                 <Reveal key={school.id} index={i % 6} className="h-full">
                   <SchoolCard
+                    schoolId={school.id}
                     name={school.name}
                     location={location}
                     airportCode={school.primaryAirportCode}

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ShieldCheck } from "lucide-react";
+import { ShieldCheck, Heart } from "lucide-react";
 import { logout } from "@/app/actions/auth";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/cn";
@@ -42,6 +42,18 @@ export function AuthButton({
 
   return (
     <div className={cn("flex items-center gap-2", mobile && "w-full flex-wrap gap-3")}>
+      <Link
+        href="/saved"
+        title="Saved schools"
+        onClick={onNavigate}
+        className={cn(
+          "inline-flex items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1.5 text-xs font-semibold text-ink transition-colors hover:border-ink/40",
+          mobile && "flex-1 justify-center",
+        )}
+      >
+        <Heart size={14} />
+        Saved
+      </Link>
       {viewer.isAdmin &&
         adminLinks.map((link) => (
           <Link

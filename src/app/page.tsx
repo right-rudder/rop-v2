@@ -181,6 +181,7 @@ export default async function Home() {
             return (
               <Reveal key={school.id} index={i} className="h-full">
                 <SchoolCard
+                  schoolId={school.id}
                   name={school.name}
                   location={indexed?.location ?? school.citySlug}
                   airportCode={school.primaryAirportCode}

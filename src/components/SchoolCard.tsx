@@ -1,6 +1,9 @@
 import { ArrowUpRight, MapPin } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Stars } from "@/components/ui/Stars";
+import { FavoriteButton } from "@/components/FavoriteButton";
+import { CompareButton } from "@/components/CompareButton";
+import { cn } from "@/lib/cn";
 
 type SchoolCardProps = {
   name: string;
@@ -10,6 +13,10 @@ type SchoolCardProps = {
   rating?: number;
   reviewCount?: number;
   href?: string; // when provided, the whole card becomes a link
+  /** When set, save + compare controls render top-right (as siblings of the link). */
+  schoolId?: string;
+  /** Page to re-render after saving; defaults to `href`. */
+  path?: string;
 };
 
 /**
@@ -23,12 +30,14 @@ export function SchoolCard({
   rating,
   reviewCount,
   href,
+  schoolId,
+  path,
 }: SchoolCardProps) {
   const hasReviews = rating !== undefined && (reviewCount ?? 0) > 0;
 
   const inner = (
     <>
-      <div className="mb-4 flex items-start justify-between gap-3">
+      <div className={cn("mb-4 flex items-start justify-between gap-3", schoolId && "pr-20")}>
         <p className="flex min-w-0 items-center gap-1.5 font-mono text-xs uppercase tracking-[0.12em] text-muted">
           {airportCode ? (
             <span className="font-semibold text-sky">{airportCode}</span>
@@ -63,12 +72,21 @@ export function SchoolCard({
 
   const cls = "flex h-full flex-col p-5";
 
-  if (href) {
-    return (
-      <Card href={href} className={cls}>
-        {inner}
-      </Card>
-    );
-  }
-  return <Card className={cls}>{inner}</Card>;
+  const card = href ? (
+    <Card href={href} className={cls}>
+      {inner}
+    </Card>
+  ) : (
+    <Card className={cls}>{inner}</Card>
+  );
+  if (!schoolId) return card;
+  return (
+    <div className="relative h-full">
+      {card}
+      <div className="absolute right-3 top-3 z-10 flex gap-1.5">
+        <CompareButton id={schoolId} name={name} href={href ?? "#"} />
+        <FavoriteButton schoolId={schoolId} path={path ?? href ?? "/"} />
+      </div>
+    </div>
+  );
 }

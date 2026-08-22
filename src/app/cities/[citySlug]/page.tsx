@@ -153,6 +153,7 @@ export default async function CityDetailPage({ params }: Props) {
                     : city.name;
                   return (
                     <SchoolCard
+                      schoolId={school.id}
                       key={school.id}
                       name={school.name}
                       location={locationLabel}

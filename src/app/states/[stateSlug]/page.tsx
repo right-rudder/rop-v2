@@ -130,6 +130,7 @@ export default async function StateDetailPage({ params }: Props) {
                   const cityName = cityNameBySlug[school.citySlug] ?? school.citySlug;
                   return (
                     <SchoolCard
+                      schoolId={school.id}
                       key={school.id}
                       name={school.name}
                       location={`${cityName}, ${state.abbreviation}`}
