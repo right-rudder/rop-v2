@@ -25,6 +25,17 @@ NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID=                 # optional Cloud map style id; d
 Without the key the rest of the site — including the near-me radius filter —
 works; only the map itself shows a notice.
 
+Lead capture ("Request information" on school pages) forwards each lead to a
+GoHighLevel workflow:
+
+```ini
+GHL_WEBHOOK_URL=<Inbound Webhook trigger URL from the GHL workflow>   # server-only
+LEAD_IP_SALT=<any random string>                                       # optional; hashes visitor IPs for rate limiting
+```
+
+Leads are always stored in `public.leads` and listed at `/admin/leads`; the
+webhook only adds the GHL hand-off. Without the URL nothing is sent.
+
 The app never uses the **service-role key** — every write goes through the
 user's session and RLS. Don't put it in `.env.local` (if an older copy of
 the file has it, delete the line; rotate the key in the dashboard if the
@@ -61,6 +72,8 @@ fresh installs):
   length/format constraints, explicit Data API grants, and a one-off
   recompute of `rating` / `review_count` from real reviews
 - `supabase/add-favorites.sql` — saved schools (`favorites` table, own-rows RLS)
+- `supabase/add-leads.sql` — lead capture (`leads` table, admin RLS, rate-limited
+  `submit_lead()` RPC); forwards to GoHighLevel via `GHL_WEBHOOK_URL`
 - `supabase/add-grant-hygiene.sql` — run after the above: drops the leftover
   `school_contacts` table, revokes RPC `EXECUTE` on trigger functions, and
   resets `anon` / `authenticated` table privileges — and the default privileges
