@@ -287,6 +287,7 @@ export type Database = {
           managed_by: string | null;
           latitude: number | null;
           longitude: number | null;
+          logo_path: string | null;
         };
         Insert: {
           id: string;
@@ -309,6 +310,7 @@ export type Database = {
           managed_by?: string | null;
           latitude?: number | null;
           longitude?: number | null;
+          logo_path?: string | null;
         };
         Update: {
           id?: string;
@@ -331,6 +333,7 @@ export type Database = {
           managed_by?: string | null;
           latitude?: number | null;
           longitude?: number | null;
+          logo_path?: string | null;
         };
         Relationships: [];
       };

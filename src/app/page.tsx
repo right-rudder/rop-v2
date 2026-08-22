@@ -185,6 +185,7 @@ export default async function Home() {
                   name={school.name}
                   location={indexed?.location ?? school.citySlug}
                   airportCode={school.primaryAirportCode}
+                  logoPath={school.logoPath}
                   rating={school.rating}
                   reviewCount={school.reviewCount}
                   href={schoolHref(school)}

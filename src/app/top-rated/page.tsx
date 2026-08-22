@@ -40,6 +40,7 @@ export default async function TopRatedPage() {
       airportCode: school.primaryAirportCode,
       location: cityName && state ? `${cityName}, ${state.abbreviation}` : school.citySlug,
       href: schoolHref(school),
+      logoPath: school.logoPath,
     };
   });
 

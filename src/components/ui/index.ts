@@ -1,6 +1,7 @@
 export { Button } from "./Button";
 export { Input, Textarea, Select, controlClass } from "./Input";
 export { Field } from "./Field";
+export { ImageUploadField } from "./ImageUploadField";
 export { Notice } from "./Notice";
 export { Card } from "./Card";
 export { Chip } from "./Chip";

@@ -53,6 +53,7 @@ export default async function SavedPage() {
                 name={school.name}
                 location={`${cityNameBySlug[school.citySlug] ?? school.citySlug}, ${stateBySlug[school.stateSlug]?.abbreviation ?? school.stateSlug.toUpperCase()}`}
                 airportCode={school.primaryAirportCode}
+                logoPath={school.logoPath}
                 rating={school.rating}
                 reviewCount={school.reviewCount}
                 href={schoolHref(school)}

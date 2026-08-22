@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { friendlyDbError } from "@/lib/supabase/errors";
+import { BUCKETS, uploadImage, removeImage } from "@/lib/supabase/storage";
 import { getCurrentUser, isAdmin } from "@/lib/auth";
 import { getSchoolById, getPrograms } from "@/lib/data";
 import { schoolHref, isHttpUrl, isAirportCode } from "@/lib/utils";
@@ -183,6 +184,25 @@ export async function updateSchool(
   const { fields } = parsed;
 
   const supabase = await createClient();
+
+  // Resolve the logo before touching the row: a rejected image must not leave
+  // the rest of the edit half-saved. `logoPath` stays undefined when the owner
+  // didn't touch the field, so the column is left alone.
+  let logoPath: string | null | undefined;
+  const upload = formData.get("logo");
+  if (upload instanceof File && upload.size > 0) {
+    const stored = await uploadImage({
+      client: supabase,
+      bucket: BUCKETS.schoolLogos,
+      folder: schoolId,
+      file: upload,
+    });
+    if ("error" in stored) return { error: stored.error };
+    logoPath = stored.path;
+  } else if (formData.get("removeLogo") === "on") {
+    logoPath = null;
+  }
+
   const { error } = await supabase
     .from("flight_schools")
     .update({
@@ -194,12 +214,25 @@ export async function updateSchool(
       estimated_planes: fields.estimatedPlanes,
       estimated_instructors: fields.estimatedInstructors,
       contacts: fields.contacts,
+      ...(logoPath !== undefined ? { logo_path: logoPath } : {}),
       // Featuring a listing is an admin call, not the owner's — the
       // protect_flight_school_columns trigger enforces this in the DB too
       ...(admin ? { featured: formData.get("featured") === "on" } : {}),
     })
     .eq("id", schoolId);
-  if (error) return { error: friendlyDbError(error) };
+  if (error) {
+    // Nothing points at the object we just stored, so don't leave it behind.
+    if (logoPath) await removeImage(supabase, BUCKETS.schoolLogos, logoPath);
+    return { error: friendlyDbError(error) };
+  }
+
+  // The row now points somewhere else, so the old object is unreachable. Do
+  // this here, not after the program sync below: that has its own early
+  // returns, and every one of them would leak the replaced object.
+  // Best-effort — an orphan is not worth failing a saved edit over.
+  if (logoPath !== undefined && school.logoPath && school.logoPath !== logoPath) {
+    await removeImage(supabase, BUCKETS.schoolLogos, school.logoPath);
+  }
 
   // Sync program links without an empty intermediate state: add the checked
   // set first (skipping rows that already exist), then drop the unchecked rest.

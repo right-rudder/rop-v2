@@ -81,6 +81,9 @@ fresh installs):
 - `supabase/add-favorites.sql` — saved schools (`favorites` table, own-rows RLS)
 - `supabase/add-leads.sql` — lead capture (`leads` table, admin RLS, rate-limited
   server-only `submit_lead()`); forwards to GoHighLevel via `GHL_WEBHOOK_URL`
+- `supabase/add-storage-school-logos.sql` — the public `school-logos` Storage
+  bucket (2MB, PNG/JPEG/WebP), owner-scoped `storage.objects` policies, and
+  `flight_schools.logo_path`
 - `supabase/add-grant-hygiene.sql` — run after the above: drops the leftover
   `school_contacts` table, revokes RPC `EXECUTE` on trigger functions, and
   resets `anon` / `authenticated` table privileges — and the default privileges

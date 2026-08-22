@@ -7,6 +7,7 @@ import { SchoolContactsField } from "@/components/SchoolContactsField";
 import { updateSchool } from "@/app/actions/schools";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
+import { ImageUploadField } from "@/components/ui/ImageUploadField";
 import { FormSection, choiceClass } from "@/components/ui/FormSection";
 import { Input, Select, Textarea } from "@/components/ui/Input";
 import { Notice } from "@/components/ui/Notice";
@@ -18,6 +19,8 @@ type Props = {
   programs: { slug: string; shortName: string }[];
   viewerIsAdmin: boolean;
   backHref: string;
+  /** Public URL of the saved logo, resolved server-side */
+  logoUrl?: string;
 };
 
 export function EditSchoolForm({
@@ -27,6 +30,7 @@ export function EditSchoolForm({
   programs,
   viewerIsAdmin,
   backHref,
+  logoUrl,
 }: Props) {
   const [state, action, pending] = useActionState(updateSchool, {});
 
@@ -87,6 +91,14 @@ export function EditSchoolForm({
             />
           </Field>
         </div>
+
+        <ImageUploadField
+          name="logo"
+          label="Logo"
+          hint="PNG, JPEG, or WebP, up to 2MB. Square images look best."
+          currentUrl={logoUrl}
+          alt={`${school.name} logo`}
+        />
 
         {viewerIsAdmin && (
           <label className="flex cursor-pointer items-center gap-2.5 text-sm font-semibold text-ink">

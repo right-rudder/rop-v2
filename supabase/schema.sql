@@ -124,10 +124,12 @@ create table public.flight_schools (
   managed_by            uuid references auth.users (id) on delete set null,
   latitude              double precision,
   longitude             double precision,
+  logo_path             text,
   constraint flight_schools_name_length        check (char_length(name) between 1 and 120),
   constraint flight_schools_description_length check (char_length(description) <= 5000),
   constraint flight_schools_website_format     check (website = '' or (char_length(website) <= 300 and website ~* '^https?://')),
   constraint flight_schools_phone_length       check (char_length(phone) <= 40),
+  constraint flight_schools_logo_path_length   check (logo_path is null or char_length(logo_path) <= 200),
   constraint flight_schools_latitude_range  check (latitude  is null or latitude  between -90  and 90),
   constraint flight_schools_longitude_range check (longitude is null or longitude between -180 and 180),
   constraint flight_schools_coords_pair     check ((latitude is null) = (longitude is null))
@@ -605,3 +607,71 @@ begin
     revoke execute on function public.rls_auto_enable() from public, anon, authenticated;
   end if;
 end $$;
+
+-- ============================================================
+-- Storage: school logos
+-- ============================================================
+-- Public `school-logos` bucket. Objects are named `<schoolId>/<uuid>.<ext>`,
+-- so the first path segment IS the ownership key. Reads need no policy —
+-- the bucket is public and /object/public/** bypasses RLS.
+--
+-- SVG is excluded on purpose: it can carry script, and next/image refuses
+-- it unless dangerouslyAllowSVG is set. These limits are the real
+-- enforcement; src/lib/images.ts mirrors them for a friendlier error.
+
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('school-logos', 'school-logos', true, 2097152,
+        array['image/png', 'image/jpeg', 'image/webp'])
+on conflict (id) do update set
+  public             = excluded.public,
+  file_size_limit    = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
+
+create policy "School logo insert" on storage.objects
+  for insert to authenticated
+  with check (
+    bucket_id = 'school-logos'
+    and exists (
+      -- `objects.name` MUST stay qualified: flight_schools also has a
+      -- `name` column, and a bare `name` binds to the inner table.
+      select 1 from public.flight_schools fs
+      where fs.id = (storage.foldername(objects.name))[1]
+        and (fs.managed_by = (select auth.uid()) or (select public.is_admin()))
+    )
+  );
+
+create policy "School logo update" on storage.objects
+  for update to authenticated
+  using (
+    bucket_id = 'school-logos'
+    and exists (
+      -- `objects.name` MUST stay qualified: flight_schools also has a
+      -- `name` column, and a bare `name` binds to the inner table.
+      select 1 from public.flight_schools fs
+      where fs.id = (storage.foldername(objects.name))[1]
+        and (fs.managed_by = (select auth.uid()) or (select public.is_admin()))
+    )
+  )
+  with check (
+    bucket_id = 'school-logos'
+    and exists (
+      -- `objects.name` MUST stay qualified: flight_schools also has a
+      -- `name` column, and a bare `name` binds to the inner table.
+      select 1 from public.flight_schools fs
+      where fs.id = (storage.foldername(objects.name))[1]
+        and (fs.managed_by = (select auth.uid()) or (select public.is_admin()))
+    )
+  );
+
+create policy "School logo delete" on storage.objects
+  for delete to authenticated
+  using (
+    bucket_id = 'school-logos'
+    and exists (
+      -- `objects.name` MUST stay qualified: flight_schools also has a
+      -- `name` column, and a bare `name` binds to the inner table.
+      select 1 from public.flight_schools fs
+      where fs.id = (storage.foldername(objects.name))[1]
+        and (fs.managed_by = (select auth.uid()) or (select public.is_admin()))
+    )
+  );

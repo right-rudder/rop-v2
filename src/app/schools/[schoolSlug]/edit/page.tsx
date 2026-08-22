@@ -8,6 +8,7 @@ import {
 } from "@/lib/data";
 import { getCurrentUser, isAdmin } from "@/lib/auth";
 import { schoolHref } from "@/lib/utils";
+import { BUCKETS, publicImageUrl } from "@/lib/supabase/storage";
 import { EditSchoolForm } from "./EditSchoolForm";
 import { PageHero } from "@/components/PageHero";
 import { Container } from "@/components/ui/Container";
@@ -68,6 +69,9 @@ export default async function EditSchoolPage({ params }: Props) {
           }))}
           viewerIsAdmin={isAdmin(viewer)}
           backHref={schoolHref(school)}
+          logoUrl={
+            school.logoPath ? publicImageUrl(BUCKETS.schoolLogos, school.logoPath) : undefined
+          }
         />
       </Container>
     </div>

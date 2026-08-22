@@ -3,6 +3,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ExternalLink, Mail, MapPin, Phone, Plane, Send, Users } from "lucide-react";
 import { PageHero } from "@/components/PageHero";
+import { SchoolLogo } from "@/components/SchoolLogo";
+import { BUCKETS, publicImageUrl } from "@/lib/supabase/storage-url";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -184,6 +186,9 @@ export default async function SchoolDetailPage({ params }: Props) {
     description: school.description,
     telephone: school.phone || undefined,
     url: school.website || undefined,
+    ...(school.logoPath
+      ? { image: publicImageUrl(BUCKETS.schoolLogos, school.logoPath) }
+      : {}),
     address: {
       "@type": "PostalAddress",
       addressLocality: city?.name ?? school.citySlug,
@@ -240,6 +245,7 @@ export default async function SchoolDetailPage({ params }: Props) {
           </>
         }
         title={school.name}
+        leading={<SchoolLogo name={school.name} logoPath={school.logoPath} size="lg" />}
         meta={
           school.reviewCount > 0 ? (
             <Stars value={school.rating} count={school.reviewCount} size={18} />

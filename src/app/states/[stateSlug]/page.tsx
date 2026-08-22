@@ -135,6 +135,7 @@ export default async function StateDetailPage({ params }: Props) {
                       name={school.name}
                       location={`${cityName}, ${state.abbreviation}`}
                       airportCode={school.primaryAirportCode}
+                      logoPath={school.logoPath}
                       rating={school.rating}
                       reviewCount={school.reviewCount}
                       href={schoolHref(school)}
