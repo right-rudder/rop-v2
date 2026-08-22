@@ -1,3 +1,6 @@
+/** WGS-84 coordinate pair (decimal degrees). */
+export type LatLng = { lat: number; lng: number };
+
 export type State = {
   id: string;
   name: string;
@@ -30,6 +33,8 @@ export type Airport = {
   faaLid: string | null;
   /** Short paragraph describing the airport for the detail page */
   description?: string;
+  /** Airport reference point; drives near-me search and the map */
+  coords?: LatLng;
 };
 
 export type ContactPerson = {
@@ -140,6 +145,8 @@ export type FlightSchool = {
   estimatedInstructors?: FleetRange;
   /** Phase 2+: id of the registered user who claimed/manages this listing */
   managedBy?: string;
+  /** Optional per-school override of the airport position (hangar/office) */
+  coords?: LatLng;
 };
 
 export type Review = {

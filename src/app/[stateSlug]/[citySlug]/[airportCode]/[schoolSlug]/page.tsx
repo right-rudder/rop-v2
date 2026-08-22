@@ -32,6 +32,7 @@ import { absoluteUrl } from "@/lib/site";
 import { JsonLd } from "@/components/JsonLd";
 import ReviewsSection from "@/components/ReviewsSection";
 import ReviewForm from "@/components/ReviewForm";
+import { SchoolsMap } from "@/components/SchoolsMap";
 
 type Props = {
   params: Promise<{
@@ -166,6 +167,13 @@ export default async function SchoolDetailPage({ params }: Props) {
   };
 
   // JSON-LD LocalBusiness structured data
+  // Map position: the school's own override, else its primary airport (same rule as /search).
+  const coords = school.coords ?? primaryAirport?.coords;
+  const mapsUrl = coords
+    ? `https://www.google.com/maps/search/?api=1&query=${coords.lat},${coords.lng}`
+    : null;
+  const hasMapsKey = Boolean(process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY);
+
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "LocalBusiness",
@@ -179,6 +187,9 @@ export default async function SchoolDetailPage({ params }: Props) {
       addressRegion: state?.abbreviation ?? school.stateSlug,
       addressCountry: "US",
     },
+    ...(coords
+      ? { geo: { "@type": "GeoCoordinates", latitude: coords.lat, longitude: coords.lng } }
+      : {}),
     // Google rejects AggregateRating with zero reviews — omit it until there are some
     ...(school.reviewCount > 0
       ? {
@@ -403,6 +414,39 @@ export default async function SchoolDetailPage({ params }: Props) {
               <Eyebrow accent className="mb-5">
                 Contact &amp; location
               </Eyebrow>
+              {coords && mapsUrl && (
+                <div className="mb-6">
+                  {hasMapsKey && (
+                    <SchoolsMap
+                      height="compact"
+                      zoom={13}
+                      className="mb-2.5"
+                      schools={[
+                        {
+                          id: school.id,
+                          name: school.name,
+                          href: schoolHref(school),
+                          airportCode: school.primaryAirportCode,
+                          location: locationLabel,
+                          rating: school.rating,
+                          reviewCount: school.reviewCount,
+                          coords,
+                        },
+                      ]}
+                    />
+                  )}
+                  <a
+                    href={mapsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-sm font-semibold text-accent-ink hover:underline"
+                  >
+                    <MapPin size={14} aria-hidden />
+                    Open in Google Maps
+                    <ExternalLink size={13} aria-hidden />
+                  </a>
+                </div>
+              )}
               <dl className="space-y-5">
                 {primaryAirport && (
                   <div>

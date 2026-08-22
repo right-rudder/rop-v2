@@ -104,6 +104,8 @@ export type Database = {
           city_slug: string;
           state_slug: string;
           description: string | null;
+          latitude: number | null;
+          longitude: number | null;
         };
         Insert: {
           id: string;
@@ -114,6 +116,8 @@ export type Database = {
           city_slug: string;
           state_slug: string;
           description?: string | null;
+          latitude?: number | null;
+          longitude?: number | null;
         };
         Update: {
           id?: string;
@@ -124,6 +128,8 @@ export type Database = {
           city_slug?: string;
           state_slug?: string;
           description?: string | null;
+          latitude?: number | null;
+          longitude?: number | null;
         };
         Relationships: [];
       };
@@ -231,6 +237,8 @@ export type Database = {
           estimated_planes: string | null;
           estimated_instructors: string | null;
           managed_by: string | null;
+          latitude: number | null;
+          longitude: number | null;
         };
         Insert: {
           id: string;
@@ -251,6 +259,8 @@ export type Database = {
           estimated_planes?: string | null;
           estimated_instructors?: string | null;
           managed_by?: string | null;
+          latitude?: number | null;
+          longitude?: number | null;
         };
         Update: {
           id?: string;
@@ -271,6 +281,8 @@ export type Database = {
           estimated_planes?: string | null;
           estimated_instructors?: string | null;
           managed_by?: string | null;
+          latitude?: number | null;
+          longitude?: number | null;
         };
         Relationships: [];
       };
