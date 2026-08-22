@@ -1,12 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser, isAdmin } from "@/lib/auth";
 
 export type AirportFormState = {
   error?: string;
-  success?: boolean;
 };
 
 export async function updateAirport(
@@ -43,7 +43,9 @@ export async function updateAirport(
   if (error) return { error: error.message };
   if (!data) return { error: "Airport not found (or update was blocked)." };
 
-  revalidatePath(`/airports/${data.icao.toLowerCase()}`);
-  revalidatePath(`/airports/${data.icao.toLowerCase()}/edit`);
-  return { success: true };
+  const href = `/airports/${data.icao.toLowerCase()}`;
+  revalidatePath(href);
+  revalidatePath(`${href}/edit`);
+  // Land on the airport page so the editor sees the saved result in place.
+  redirect(href);
 }

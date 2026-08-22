@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { friendlyDbError } from "@/lib/supabase/errors";
 import { BUCKETS, uploadImage, removeImage } from "@/lib/supabase/storage";
@@ -259,5 +260,6 @@ export async function updateSchool(
 
   revalidatePath(schoolHref(school));
   revalidatePath(`/schools/${school.slug}/edit`);
-  return { success: true };
+  // Land on the listing so the owner sees the saved result in place.
+  redirect(schoolHref(school));
 }

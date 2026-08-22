@@ -1,7 +1,6 @@
 "use client";
 
 import { useActionState } from "react";
-import Link from "next/link";
 import type { Airport } from "@/lib/types";
 import { updateAirport } from "@/app/actions/airports";
 import { Button } from "@/components/ui/Button";
@@ -23,15 +22,6 @@ export function EditAirportForm({ airport, cityName, stateName }: Props) {
   return (
     <form action={action} className="space-y-8">
       <input type="hidden" name="airportId" value={airport.id} />
-
-      {state.success && (
-        <Notice tone="ok">
-          Changes saved.{" "}
-          <Link href={backHref} className="font-semibold underline underline-offset-2">
-            View airport
-          </Link>
-        </Notice>
-      )}
 
       {/* Identifiers */}
       <FormSection

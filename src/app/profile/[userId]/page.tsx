@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ShieldCheck } from "lucide-react";
+import { Pencil, ShieldCheck } from "lucide-react";
 import {
   getUserById,
   getReviewsByUser,
@@ -12,6 +12,7 @@ import {
   getPrograms,
   getLocationMaps,
 } from "@/lib/data";
+import { getCurrentUser } from "@/lib/auth";
 import { schoolHref } from "@/lib/utils";
 import { PageHero } from "@/components/PageHero";
 import { Badge } from "@/components/ui/Badge";
@@ -61,14 +62,16 @@ export default async function ProfilePage({ params }: Props) {
   const user = await getUserById(userId);
   if (!user) notFound();
 
-  const [reviews, userComments, managedSchools, allPrograms, locationMaps] =
+  const [viewer, reviews, userComments, managedSchools, allPrograms, locationMaps] =
     await Promise.all([
+      getCurrentUser(),
       getReviewsByUser(userId),
       getCommentsByUser(userId),
       getSchoolsManagedByUser(userId),
       getPrograms(),
       getLocationMaps(),
     ]);
+  const isOwner = viewer?.id === user.id;
   const { cityNameBySlug, stateBySlug } = locationMaps;
   const programShortNames = Object.fromEntries(
     allPrograms.map((p) => [p.slug, p.shortName]),
@@ -111,6 +114,14 @@ export default async function ProfilePage({ params }: Props) {
         }
         title={`${user.firstName} ${user.lastName}`}
         description={user.bio}
+        aside={
+          isOwner ? (
+            <Button href={`/profile/${user.id}/edit`} variant="secondary" size="sm">
+              <Pencil size={14} />
+              Edit profile
+            </Button>
+          ) : undefined
+        }
         meta={
           user.pilotCertificates && user.pilotCertificates.length > 0 ? (
             <div className="flex flex-wrap gap-2">
