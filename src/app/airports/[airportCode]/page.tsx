@@ -129,6 +129,7 @@ export default async function AirportDetailPage({ params }: Props) {
                   const schoolState = stateBySlug[school.stateSlug];
                   return (
                     <SchoolCard
+                      schoolId={school.id}
                       key={school.id}
                       name={school.name}
                       location={

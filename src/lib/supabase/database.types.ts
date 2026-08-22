@@ -133,6 +133,12 @@ export type Database = {
         };
         Relationships: [];
       };
+      favorites: {
+        Row: { user_id: string; school_id: string; created_at: string };
+        Insert: { user_id: string; school_id: string; created_at?: string };
+        Update: { user_id?: string; school_id?: string; created_at?: string };
+        Relationships: [];
+      };
       programs: {
         Row: {
           id: string;

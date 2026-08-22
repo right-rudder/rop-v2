@@ -33,6 +33,8 @@ import { JsonLd } from "@/components/JsonLd";
 import ReviewsSection from "@/components/ReviewsSection";
 import ReviewForm from "@/components/ReviewForm";
 import { SchoolsMap } from "@/components/SchoolsMap";
+import { FavoriteButton } from "@/components/FavoriteButton";
+import { CompareButton } from "@/components/CompareButton";
 
 type Props = {
   params: Promise<{
@@ -245,8 +247,9 @@ export default async function SchoolDetailPage({ params }: Props) {
           )
         }
         aside={
-          (school.website || school.phone) && (
-            <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap gap-3">
+              <FavoriteButton schoolId={school.id} path={schoolHref(school)} size="md" showLabel />
+              <CompareButton id={school.id} name={school.name} href={schoolHref(school)} size="md" showLabel />
               {school.website && (
                 <Button href={school.website} target="_blank" rel="noopener noreferrer">
                   Visit website
@@ -259,8 +262,7 @@ export default async function SchoolDetailPage({ params }: Props) {
                   {school.phone}
                 </Button>
               )}
-            </div>
-          )
+          </div>
         }
       />
 

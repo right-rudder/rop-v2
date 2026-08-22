@@ -6,6 +6,10 @@ import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { BASE_URL } from "@/lib/site";
 import { getCurrentUser, isAdmin } from "@/lib/auth";
+import { getFavoriteSchoolIds } from "@/lib/data";
+import { FavoritesProvider } from "@/components/FavoritesProvider";
+import { CompareProvider } from "@/components/CompareProvider";
+import { CompareTray } from "@/components/CompareTray";
 
 const display = Bricolage_Grotesque({
   subsets: ["latin"],
@@ -52,6 +56,8 @@ export default async function RootLayout({
   // that also call getCurrentUser() don't pay for a second lookup.
   const viewer = await getCurrentUser();
   const navViewer = viewer ? { id: viewer.id, isAdmin: isAdmin(viewer) } : null;
+  // Saved-school ids, seeded once here so every card's heart reads context.
+  const favoriteIds = viewer ? await getFavoriteSchoolIds(viewer.id) : [];
 
   return (
     <html
@@ -61,9 +67,14 @@ export default async function RootLayout({
     >
       <body className="font-sans antialiased">
         <ThemeProvider>
-          <Navbar viewer={navViewer} />
-          <main className="min-h-screen bg-paper">{children}</main>
-          <Footer />
+          <FavoritesProvider viewerId={viewer?.id ?? null} initialIds={favoriteIds}>
+            <CompareProvider>
+              <Navbar viewer={navViewer} />
+              <main className="min-h-screen bg-paper">{children}</main>
+              <Footer />
+              <CompareTray />
+            </CompareProvider>
+          </FavoritesProvider>
         </ThemeProvider>
       </body>
     </html>
