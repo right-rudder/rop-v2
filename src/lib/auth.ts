@@ -1,12 +1,15 @@
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { getUserById } from "@/lib/data";
-import type { User } from "@/lib/types";
+import { LIMITS, type User } from "@/lib/types";
 
 export type CurrentUser = {
   id: string;
   email?: string;
-  /** Phone given at signup (auth metadata); profiles has no phone column */
+  /**
+   * Phone given at signup (auth metadata); profiles has no phone column.
+   * Dropped when over LIMITS.phone so a prefilled lead form can't fail validation.
+   */
   phone?: string;
   /** The public.profiles row; null if the trigger hasn't created one */
   profile: User | null;
@@ -25,11 +28,12 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   if (!user) return null;
 
   const profile = (await getUserById(user.id)) ?? null;
-  const phone = user.user_metadata?.phone;
+  const rawPhone = user.user_metadata?.phone;
+  const phone = typeof rawPhone === "string" ? rawPhone.trim() : "";
   return {
     id: user.id,
     email: user.email,
-    phone: typeof phone === "string" && phone.trim() ? phone.trim() : undefined,
+    phone: phone && phone.length <= LIMITS.phone ? phone : undefined,
     profile,
   };
 });

@@ -1,6 +1,6 @@
 /**
- * Pure helpers for the global toast queue. No imports — scripts/tests runs
- * this file directly under `node --test`. The React side lives in
+ * Pure helpers for the global toast queue. No imports — the tests in
+ * scripts/tests run this file directly under `node --test`. The React side lives in
  * src/components/ToastProvider.tsx.
  */
 export type ToastTone = "ok" | "error" | "info";
@@ -67,14 +67,26 @@ export function removeToast(list: readonly Toast[], id: string): Toast[] {
    ------------------------------------------------------------------ */
 export const FLASH_PARAM = "toast";
 
-export const FLASH_TOASTS: Record<string, ToastInput> = {
+// `satisfies` (not an annotation) keeps the literal keys so withFlash only
+// accepts registered codes.
+export const FLASH_TOASTS = {
   "school-updated": { tone: "ok", title: "Listing saved", description: "Your changes are live." },
   "airport-updated": { tone: "ok", title: "Airport saved", description: "Your changes are live." },
   "profile-updated": { tone: "ok", title: "Profile saved" },
-};
+} satisfies Record<string, ToastInput>;
+
+export type FlashCode = keyof typeof FLASH_TOASTS;
+
+/**
+ * Copy for a code from the URL, or undefined. Own keys only: the object has
+ * Object.prototype, so `?toast=constructor` would otherwise be truthy.
+ */
+export function getFlashToast(code: string): ToastInput | undefined {
+  return Object.hasOwn(FLASH_TOASTS, code) ? FLASH_TOASTS[code as FlashCode] : undefined;
+}
 
 /** `/path` → `/path?toast=code`, respecting an existing query string and hash. */
-export function withFlash(path: string, code: keyof typeof FLASH_TOASTS & string): string {
+export function withFlash(path: string, code: FlashCode): string {
   const hashAt = path.indexOf("#");
   const base = hashAt === -1 ? path : path.slice(0, hashAt);
   const hash = hashAt === -1 ? "" : path.slice(hashAt);

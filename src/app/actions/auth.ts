@@ -53,6 +53,10 @@ export async function signup(
   if (firstName.length > LIMITS.personName || lastName.length > LIMITS.personName) {
     return { error: `Names must be ${LIMITS.personName} characters or fewer.` };
   }
+  const phone = field(formData, "phone");
+  if (phone.length > LIMITS.phone) {
+    return { error: `Phone numbers can be at most ${LIMITS.phone} characters.` };
+  }
   if (password.length < MIN_PASSWORD_LENGTH) {
     return { error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters.` };
   }
@@ -70,7 +74,7 @@ export async function signup(
       data: {
         first_name: firstName,
         last_name: lastName,
-        phone: field(formData, "phone"),
+        phone,
       },
     },
   });

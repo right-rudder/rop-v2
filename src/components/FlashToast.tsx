@@ -3,7 +3,7 @@
 import { Suspense, useEffect } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useToast } from "@/components/ToastProvider";
-import { FLASH_PARAM, FLASH_TOASTS } from "@/lib/toast";
+import { FLASH_PARAM, getFlashToast } from "@/lib/toast";
 
 /**
  * Turns `?toast=<code>` (left by a redirecting server action via withFlash)
@@ -28,12 +28,15 @@ function FlashToastReader() {
 
   useEffect(() => {
     if (!code) return;
-    const input = FLASH_TOASTS[code];
+    const input = getFlashToast(code);
     if (input) toast.toast(input);
     const rest = new URLSearchParams(params);
     rest.delete(FLASH_PARAM);
     const query = rest.toString();
-    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+    // Keep the fragment: withFlash preserves it so a redirect can still land
+    // on an anchor (e.g. "#inquire"), and usePathname doesn't carry it.
+    const hash = window.location.hash;
+    router.replace(`${pathname}${query ? `?${query}` : ""}${hash}`, { scroll: false });
   }, [code, params, pathname, router, toast]);
 
   return null;

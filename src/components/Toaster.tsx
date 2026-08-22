@@ -26,22 +26,28 @@ export function Toaster() {
       className="pointer-events-none fixed inset-x-4 top-20 z-50 flex flex-col items-end gap-2.5 sm:inset-x-auto sm:right-6 sm:w-full sm:max-w-sm"
     >
       {toasts.map((t) => (
-        <ToastItem key={t.id} toast={t} onDismiss={() => dismiss(t.id)} />
+        <ToastItem key={t.id} toast={t} dismiss={dismiss} />
       ))}
     </div>
   );
 }
 
-function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }) {
+/**
+ * `dismiss` is the provider's stable callback (not an inline closure): it is
+ * a dependency of the timer effect, so a changing identity would restart
+ * every toast's countdown whenever the queue re-rendered.
+ */
+function ToastItem({ toast, dismiss }: { toast: Toast; dismiss: (id: string) => void }) {
   const [paused, setPaused] = useState(false);
   const { bar, icon, Icon } = tones[toast.tone];
+  const { id, duration } = toast;
 
   // Auto-dismiss; hovering or focusing the toast holds it open.
   useEffect(() => {
     if (paused) return;
-    const t = window.setTimeout(onDismiss, toast.duration);
+    const t = window.setTimeout(() => dismiss(id), duration);
     return () => window.clearTimeout(t);
-  }, [paused, toast.duration, onDismiss]);
+  }, [paused, id, duration, dismiss]);
 
   return (
     <div
@@ -65,7 +71,7 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }
       </div>
       <button
         type="button"
-        onClick={onDismiss}
+        onClick={() => dismiss(id)}
         aria-label="Dismiss notification"
         className="-mr-1 -mt-1 rounded-lg p-1.5 text-muted transition-colors hover:bg-surface-2 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
       >

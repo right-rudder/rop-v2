@@ -7,6 +7,7 @@ import {
   TOAST_MAX,
   TOAST_DURATION,
   withFlash,
+  getFlashToast,
   FLASH_TOASTS,
   FLASH_PARAM,
 } from "../../src/lib/toast.ts";
@@ -71,7 +72,7 @@ test("FLASH_PARAM is the query key", () => {
 
 test("withFlash: appends the flash code, joining with ? or & as needed", () => {
   assert.equal(withFlash("/profile/abc", "profile-updated"), "/profile/abc?toast=profile-updated");
-  assert.equal(withFlash("/login?message=x", "password-updated"), "/login?message=x&toast=password-updated");
+  assert.equal(withFlash("/login?message=x", "profile-updated"), "/login?message=x&toast=profile-updated");
   assert.equal(withFlash("/a#inquire", "school-updated"), "/a?toast=school-updated#inquire");
 });
 
@@ -84,5 +85,12 @@ test("FLASH_TOASTS: every code used by withFlash has copy with an ok tone", () =
   assert.ok("school-updated" in FLASH_TOASTS);
   assert.ok("airport-updated" in FLASH_TOASTS);
   assert.ok("profile-updated" in FLASH_TOASTS);
-  assert.equal(FLASH_TOASTS["not-a-code"], undefined);
+});
+
+test("getFlashToast: registered codes only — never inherited Object.prototype keys", () => {
+  assert.deepEqual(getFlashToast("profile-updated"), FLASH_TOASTS["profile-updated"]);
+  assert.equal(getFlashToast("not-a-code"), undefined);
+  assert.equal(getFlashToast("constructor"), undefined);
+  assert.equal(getFlashToast("__proto__"), undefined);
+  assert.equal(getFlashToast("toString"), undefined);
 });

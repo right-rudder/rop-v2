@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useActionState } from "react";
 import { signup } from "@/app/actions/auth";
+import { LIMITS } from "@/lib/types";
 import { useActionToast } from "@/components/ToastProvider";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
@@ -74,7 +75,14 @@ export function SignupForm({ defaults, next }: Props = {}) {
       </Field>
 
       <Field label="Phone number" htmlFor="phone" hint="Optional">
-        <Input id="phone" name="phone" type="tel" autoComplete="tel" placeholder="(123) 456-6789" />
+        <Input
+          id="phone"
+          name="phone"
+          type="tel"
+          autoComplete="tel"
+          maxLength={LIMITS.phone}
+          placeholder="(123) 456-6789"
+        />
       </Field>
 
       <Field label="Password" htmlFor="password">
