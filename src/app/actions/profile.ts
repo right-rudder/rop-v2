@@ -26,6 +26,9 @@ export async function updateProfile(
 ): Promise<ProfileFormState> {
   const viewer = await getCurrentUser();
   if (!viewer) return { error: "You must be logged in to edit your profile." };
+  // The profiles row is created by a trigger on signup; if it's missing there
+  // is nothing to update, so say so instead of redirecting after a no-op.
+  if (!viewer.profile) return { error: "Profile not found. Please sign out and back in." };
 
   const catalog = (await getPrograms()).map((p) => p.slug);
   const parsed = validateProfile(
@@ -43,7 +46,9 @@ export async function updateProfile(
   const { value } = parsed;
 
   const supabase = await createClient();
-  const { error } = await supabase
+  // Select the updated row back: a 0-row update (row gone, or blocked by RLS)
+  // is not an error to PostgREST, and must not redirect as if it saved.
+  const { data, error } = await supabase
     .from("profiles")
     .update({
       first_name: value.firstName,
@@ -51,8 +56,11 @@ export async function updateProfile(
       bio: value.bio,
       pilot_certificates: value.pilotCertificates,
     })
-    .eq("id", viewer.id);
+    .eq("id", viewer.id)
+    .select("id")
+    .maybeSingle();
   if (error) return { error: friendlyDbError(error) };
+  if (!data) return { error: "Profile not found (or the update was blocked)." };
 
   revalidatePath(`/profile/${viewer.id}`);
   revalidatePath(`/profile/${viewer.id}/edit`);
