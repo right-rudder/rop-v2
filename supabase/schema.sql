@@ -208,6 +208,15 @@ create table public.comments (
   constraint comments_body_length check (char_length(body) between 1 and 2000)
 );
 
+-- ── Favorites (saved schools) ─────────────────────────────────
+create table public.favorites (
+  user_id    uuid not null references auth.users (id) on delete cascade,
+  school_id  text not null references public.flight_schools (id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (user_id, school_id)
+);
+create index favorites_school_id_idx on public.favorites (school_id);
+
 -- ============================================================
 -- Row Level Security
 -- ============================================================
@@ -224,6 +233,7 @@ alter table public.school_aircraft enable row level security;
 alter table public.reviews        enable row level security;
 alter table public.comments       enable row level security;
 alter table public.school_submissions enable row level security;
+alter table public.favorites     enable row level security;
 
 -- Public read for catalog / browse tables
 create policy "Public read" on public.states          for select using (true);
@@ -265,6 +275,14 @@ create policy "Owner update" on public.comments
   using ((select auth.uid()) = user_id)
   with check ((select auth.uid()) = user_id);
 create policy "Owner delete" on public.comments
+  for delete to authenticated using ((select auth.uid()) = user_id);
+
+-- Favorites: own rows only, toggled by insert/delete (no update)
+create policy "Own favorites read" on public.favorites
+  for select to authenticated using ((select auth.uid()) = user_id);
+create policy "Own favorites insert" on public.favorites
+  for insert to authenticated with check ((select auth.uid()) = user_id);
+create policy "Own favorites delete" on public.favorites
   for delete to authenticated using ((select auth.uid()) = user_id);
 
 -- Flight schools: managed_by owner can update (content columns only —
@@ -477,6 +495,7 @@ grant select on
   public.school_aircraft, public.reviews, public.comments, public.profiles
   to anon, authenticated;
 grant select on public.school_submissions to authenticated;
+grant select, insert, delete on public.favorites to authenticated;
 
 -- authenticated: writes only where a policy exists
 grant insert, update, delete on public.reviews  to authenticated;
