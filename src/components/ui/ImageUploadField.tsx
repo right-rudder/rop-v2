@@ -20,8 +20,9 @@ type Props = {
 
 /**
  * File picker with a live preview, submitted as part of the surrounding
- * <form> (which needs encType="multipart/form-data"). Checking size and type
- * here is a courtesy — the server action and the bucket both re-check.
+ * <form>. Don't set encType on that form: React sets multipart/form-data
+ * itself for function actions and warns if you specify it. Checking size and
+ * type here is a courtesy — the server action and the bucket both re-check.
  */
 export function ImageUploadField({ name, label, hint, currentUrl, alt = "" }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);

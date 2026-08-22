@@ -35,7 +35,7 @@ export function EditSchoolForm({
   const [state, action, pending] = useActionState(updateSchool, {});
 
   return (
-    <form action={action} encType="multipart/form-data" className="space-y-8">
+    <form action={action} className="space-y-8">
       <input type="hidden" name="schoolId" value={school.id} />
 
       {state.success && (
