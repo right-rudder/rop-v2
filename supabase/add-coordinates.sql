@@ -20,6 +20,11 @@ alter table public.flight_schools
   add column if not exists latitude  double precision,
   add column if not exists longitude double precision;
 
+-- A partial pair (only one of latitude / longitude set) would violate the
+-- *_coords_pair constraints below; treat it as "no position".
+update public.airports       set latitude = null, longitude = null where (latitude is null) <> (longitude is null);
+update public.flight_schools set latitude = null, longitude = null where (latitude is null) <> (longitude is null);
+
 alter table public.airports
   drop constraint if exists airports_latitude_range,
   drop constraint if exists airports_longitude_range,

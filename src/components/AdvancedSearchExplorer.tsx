@@ -267,7 +267,7 @@ export function AdvancedSearchExplorer({ schools, programs, aircraft, states, ci
   const [sortBy, setSortBy] = useState<SortField>(() => {
     const param = searchParams.get("sort");
     if (param === "name") return "name";
-    if (param === "distance") return "distance";
+    if (param === "distance" && origin) return "distance";
     return "rating";
   });
 
@@ -481,6 +481,7 @@ export function AdvancedSearchExplorer({ schools, programs, aircraft, states, ci
     setRadius(DEFAULT_RADIUS);
     setOriginQuery("");
     setGeoStatus("idle");
+    setView("list");
     if (sortBy === "distance") {
       setSortBy("rating");
       setSortDir("desc");
@@ -492,7 +493,11 @@ export function AdvancedSearchExplorer({ schools, programs, aircraft, states, ci
     return [...filtered].sort((a, b) => {
       let cmp: number;
       if (sortBy === "name") cmp = a.name.localeCompare(b.name);
-      else if (sortBy === "distance") cmp = (a.distanceMiles ?? Infinity) - (b.distanceMiles ?? Infinity);
+      else if (sortBy === "distance") {
+        const da = a.distanceMiles ?? Infinity;
+        const db = b.distanceMiles ?? Infinity;
+        cmp = da === db ? 0 : da - db; // both missing → equal, never NaN
+      }
       else cmp = a.rating - b.rating;
       return sortDir === "asc" ? cmp : -cmp;
     });
