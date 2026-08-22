@@ -3,6 +3,7 @@ export { Input, Textarea, Select, controlClass } from "./Input";
 export { Field } from "./Field";
 export { ImageUploadField } from "./ImageUploadField";
 export { Notice } from "./Notice";
+export { Switch } from "./Switch";
 export { Card } from "./Card";
 export { Chip } from "./Chip";
 export { Badge } from "./Badge";
