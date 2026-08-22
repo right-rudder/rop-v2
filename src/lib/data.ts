@@ -161,6 +161,7 @@ function toSchool(row: SchoolRowWithJoins): FlightSchool {
       (row.estimated_instructors as FleetRange | null) ?? undefined,
     managedBy: row.managed_by ?? undefined,
     coords: toCoords(row.latitude, row.longitude),
+    logoPath: row.logo_path ?? undefined,
   };
 }
 

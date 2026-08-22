@@ -147,6 +147,11 @@ export type FlightSchool = {
   managedBy?: string;
   /** Optional per-school override of the airport position (hangar/office) */
   coords?: LatLng;
+  /**
+   * Object path in the `school-logos` Storage bucket (`<schoolId>/<uuid>.<ext>`),
+   * not a URL — resolve it with publicImageUrl() from lib/supabase/storage.
+   */
+  logoPath?: string;
 };
 
 export type Review = {

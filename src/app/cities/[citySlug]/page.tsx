@@ -158,6 +158,7 @@ export default async function CityDetailPage({ params }: Props) {
                       name={school.name}
                       location={locationLabel}
                       airportCode={school.primaryAirportCode}
+                      logoPath={school.logoPath}
                       rating={school.rating}
                       reviewCount={school.reviewCount}
                       href={schoolHref(school)}

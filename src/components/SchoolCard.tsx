@@ -3,6 +3,7 @@ import { Card } from "@/components/ui/Card";
 import { Stars } from "@/components/ui/Stars";
 import { FavoriteButton } from "@/components/FavoriteButton";
 import { CompareButton } from "@/components/CompareButton";
+import { SchoolLogo } from "@/components/SchoolLogo";
 import { cn } from "@/lib/cn";
 
 type SchoolCardProps = {
@@ -17,11 +18,15 @@ type SchoolCardProps = {
   schoolId?: string;
   /** Page to re-render after saving; defaults to `href`. */
   path?: string;
+  /** Object path in the school-logos bucket; the mark is omitted without one. */
+  logoPath?: string;
 };
 
 /**
  * Listing card. No fake thumbnail: the identifying data (airport code, city)
  * is the image — set in the mono "chart" voice above a display-face name.
+ * A school's real logo sits beside the name when it has uploaded one; cards
+ * without one keep the original type-only layout.
  */
 export function SchoolCard({
   name,
@@ -32,6 +37,7 @@ export function SchoolCard({
   href,
   schoolId,
   path,
+  logoPath,
 }: SchoolCardProps) {
   const hasReviews = rating !== undefined && (reviewCount ?? 0) > 0;
 
@@ -56,9 +62,12 @@ export function SchoolCard({
         )}
       </div>
 
-      <h3 className="mb-5 line-clamp-2 font-display text-xl font-bold leading-tight tracking-tight text-ink">
-        {name}
-      </h3>
+      <div className="mb-5 flex items-start gap-3">
+        {logoPath && <SchoolLogo name={name} logoPath={logoPath} size="sm" />}
+        <h3 className="line-clamp-2 font-display text-xl font-bold leading-tight tracking-tight text-ink">
+          {name}
+        </h3>
+      </div>
 
       <div className="mt-auto flex items-center justify-between border-t border-line pt-4">
         {hasReviews ? (

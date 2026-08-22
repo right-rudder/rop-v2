@@ -57,6 +57,7 @@ export default async function FeaturedSchoolsPage() {
                     name={school.name}
                     location={location}
                     airportCode={school.primaryAirportCode}
+                    logoPath={school.logoPath}
                     rating={school.rating}
                     reviewCount={school.reviewCount}
                     href={schoolHref(school)}

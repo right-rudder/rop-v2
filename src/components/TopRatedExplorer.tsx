@@ -18,6 +18,7 @@ export type TopRatedItem = {
   href: string;
   rating: number;
   reviewCount: number;
+  logoPath?: string;
 };
 
 type Props = {
@@ -62,6 +63,7 @@ export function TopRatedExplorer({ schools }: Props) {
               name={school.name}
               location={school.location}
               airportCode={school.airportCode}
+              logoPath={school.logoPath}
               rating={school.rating}
               reviewCount={school.reviewCount}
               href={school.href}
