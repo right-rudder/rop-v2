@@ -142,7 +142,7 @@ export type Database = {
       leads: {
         Row: {
           id: string;
-          school_id: string;
+          school_id: string | null;
           name: string;
           email: string;
           phone: string;
@@ -155,7 +155,7 @@ export type Database = {
         };
         Insert: {
           id?: string;
-          school_id: string;
+          school_id?: string | null;
           name: string;
           email: string;
           phone?: string;
@@ -168,7 +168,7 @@ export type Database = {
         };
         Update: {
           id?: string;
-          school_id?: string;
+          school_id?: string | null;
           name?: string;
           email?: string;
           phone?: string;

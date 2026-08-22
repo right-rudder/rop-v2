@@ -755,7 +755,12 @@ export async function getFavoriteSchools(userId: string): Promise<FlightSchool[]
 
 // ── Leads ──────────────────────────────────────────────────────────────────────
 
-function toLead(row: Tables<"leads">): Lead {
+/** Everything an admin needs — never ip_hash. */
+const LEAD_SELECT =
+  "id, school_id, name, email, phone, program_slug, message, source_path, status, created_at";
+type LeadRow = Omit<Tables<"leads">, "ip_hash">;
+
+function toLead(row: LeadRow): Lead {
   return {
     id: row.id,
     schoolId: row.school_id,
@@ -775,7 +780,7 @@ export async function getLeads(): Promise<Lead[]> {
   const supabase = await createClient();
   const res = await supabase
     .from("leads")
-    .select("*")
+    .select(LEAD_SELECT)
     .order("created_at", { ascending: false });
   return orThrow(res).map(toLead);
 }

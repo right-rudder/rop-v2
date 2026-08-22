@@ -3,6 +3,7 @@
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { friendlyDbError } from "@/lib/supabase/errors";
 import { safeInternalPath } from "@/lib/safe-path";
 import { getCurrentUser, isAdmin } from "@/lib/auth";
@@ -79,8 +80,16 @@ export async function submitLead(
     process.env.LEAD_IP_SALT || process.env.NEXT_PUBLIC_SITE_URL || "",
   );
 
-  const supabase = await createClient();
-  const { data: leadId, error } = await supabase.rpc("submit_lead", {
+  // submit_lead is server-only (service role): Data API roles cannot call
+  // it, so the fingerprint and honeypot can't be bypassed by a direct caller.
+  let service: ReturnType<typeof createServiceClient>;
+  try {
+    service = createServiceClient();
+  } catch (e) {
+    console.error("[leads]", e instanceof Error ? e.message : e);
+    return { error: "Lead capture isn't configured on this server yet. Please use the school's website or phone instead." };
+  }
+  const { data: leadId, error } = await service.rpc("submit_lead", {
     p_school_id: school.id,
     p_name: lead.name,
     p_email: lead.email,

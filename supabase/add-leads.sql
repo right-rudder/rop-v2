@@ -1,17 +1,20 @@
 -- ============================================================
 -- Leads ("Request information" on school pages)
 --
--- Visitors never insert directly: public.submit_lead() (SECURITY
--- DEFINER, fixed search_path) validates, rate-limits and inserts.
--- Admins read / update status via RLS. Forwarding to GoHighLevel
--- happens in the app (GHL_WEBHOOK_URL); the row is the record.
+-- Visitors never insert directly: public.submit_lead() validates,
+-- rate-limits and inserts, and only the server (service role) may call
+-- it — the app's server action computes the IP fingerprint, so a direct
+-- Data API caller cannot choose their own. Admins read / update status
+-- via RLS. Forwarding to GoHighLevel happens in the app
+-- (GHL_WEBHOOK_URL); the row is the record, so deleting a school keeps
+-- its leads (school_id becomes null).
 --
 -- Idempotent — safe to run on an existing database. New installs get
 -- this from schema.sql. Run in: Supabase Dashboard > SQL Editor
 -- ============================================================
 create table if not exists public.leads (
   id           uuid primary key default gen_random_uuid(),
-  school_id    text not null references public.flight_schools (id) on delete cascade,
+  school_id    text references public.flight_schools (id) on delete set null,
   name         text not null,
   email        text not null,
   phone        text not null default '',
@@ -25,11 +28,21 @@ create table if not exists public.leads (
   constraint leads_email_format   check (char_length(email) <= 254 and email ~* '^[^@\s]+@[^@\s]+\.[^@\s]+$'),
   constraint leads_phone_length   check (char_length(phone) <= 40),
   constraint leads_message_length check (char_length(message) <= 2000),
-  constraint leads_source_length  check (char_length(source_path) <= 300)
+  constraint leads_source_length  check (char_length(source_path) <= 300),
+  constraint leads_ip_hash_format check (ip_hash ~ '^[0-9a-f]{64}$')
 );
 create index if not exists leads_school_created_idx on public.leads (school_id, created_at desc);
 create index if not exists leads_ip_created_idx     on public.leads (ip_hash, created_at desc);
 create index if not exists leads_email_school_idx   on public.leads (lower(email), school_id, created_at desc);
+
+-- Existing databases created from the first version of this patch:
+-- retain leads when a school is removed, and pin the fingerprint format.
+alter table public.leads alter column school_id drop not null;
+alter table public.leads drop constraint if exists leads_school_id_fkey;
+alter table public.leads add constraint leads_school_id_fkey
+  foreign key (school_id) references public.flight_schools (id) on delete set null;
+alter table public.leads drop constraint if exists leads_ip_hash_format;
+alter table public.leads add constraint leads_ip_hash_format check (ip_hash ~ '^[0-9a-f]{64}$');
 
 alter table public.leads enable row level security;
 
@@ -45,9 +58,10 @@ revoke all on public.leads from anon, authenticated;
 grant select, update (status) on public.leads to authenticated;
 
 -- ── submit_lead: the only write path ─────────────────────────
--- Callers must insert a row they can never read, hence SECURITY
--- DEFINER. No caller-controlled identifiers; fixed search_path;
--- user-safe errors use errcode P0001 and are shown verbatim.
+-- Server-only: executable by service_role (the app's server action),
+-- never by the Data API roles, so the rate-limit fingerprint is always
+-- computed server-side. SECURITY INVOKER — service_role already holds
+-- the table privileges. User-safe errors use errcode P0001.
 create or replace function public.submit_lead(
   p_school_id    text,
   p_name         text,
@@ -59,7 +73,7 @@ create or replace function public.submit_lead(
   p_ip_hash      text
 ) returns uuid
 language plpgsql
-security definer
+security invoker
 set search_path = public
 as $$
 declare
@@ -68,7 +82,7 @@ begin
   if not exists (select 1 from public.flight_schools where id = p_school_id) then
     raise exception 'Unknown school' using errcode = 'P0001';
   end if;
-  if coalesce(p_ip_hash, '') = '' then
+  if p_ip_hash !~ '^[0-9a-f]{64}$' then
     raise exception 'Missing request fingerprint' using errcode = 'P0001';
   end if;
   if (select count(*) from public.leads
@@ -91,5 +105,5 @@ begin
 end;
 $$;
 
-revoke execute on function public.submit_lead(text, text, text, text, text, text, text, text) from public;
-grant  execute on function public.submit_lead(text, text, text, text, text, text, text, text) to anon, authenticated;
+revoke execute on function public.submit_lead(text, text, text, text, text, text, text, text) from public, anon, authenticated;
+grant  execute on function public.submit_lead(text, text, text, text, text, text, text, text) to service_role;

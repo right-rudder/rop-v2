@@ -66,7 +66,7 @@ export function LeadCard({
         </form>
       </div>
 
-      <dl className="grid gap-3 text-sm sm:grid-cols-2">
+      <div className="grid gap-3 text-sm sm:grid-cols-2">
         <div className="flex items-center gap-2">
           <Mail size={14} className="shrink-0 text-muted" aria-hidden />
           <a href={`mailto:${lead.email}`} className="break-all font-semibold text-accent-ink hover:underline">{lead.email}</a>
@@ -78,12 +78,12 @@ export function LeadCard({
           </div>
         )}
         {programName && (
-          <div className="sm:col-span-2">
-            <dt className="text-xs text-muted">Interested in</dt>
-            <dd className="font-semibold text-ink">{programName}</dd>
-          </div>
+          <p className="sm:col-span-2">
+            <span className="block text-xs text-muted">Interested in</span>
+            <span className="font-semibold text-ink">{programName}</span>
+          </p>
         )}
-      </dl>
+      </div>
 
       {lead.message && (
         <p className="whitespace-pre-line rounded-xl bg-surface-2 px-4 py-3 text-sm leading-relaxed text-ink">{lead.message}</p>

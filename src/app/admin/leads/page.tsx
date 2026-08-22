@@ -28,7 +28,7 @@ export default async function AdminLeadsPage() {
   if (!isAdmin(viewer)) notFound();
 
   const [leads, programs] = await Promise.all([getLeads(), getPrograms()]);
-  const schoolsById = await getSchoolsByIds(leads.map((l) => l.schoolId));
+  const schoolsById = await getSchoolsByIds(leads.flatMap((l) => (l.schoolId ? [l.schoolId] : [])));
   const programNames = Object.fromEntries(programs.map((p) => [p.slug, p.shortName]));
   const byStatus = (status: LeadStatus): Lead[] => leads.filter((l) => l.status === status);
   const newCount = byStatus("new").length;
@@ -64,7 +64,7 @@ export default async function AdminLeadsPage() {
               ) : (
                 <div className="space-y-5">
                   {items.map((lead) => {
-                    const school = schoolsById[lead.schoolId];
+                    const school = lead.schoolId ? schoolsById[lead.schoolId] : undefined;
                     return (
                       <LeadCard
                         key={lead.id}

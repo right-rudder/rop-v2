@@ -183,7 +183,8 @@ export type LeadStatus = "new" | "contacted" | "closed";
 /** A "Request information" submission from a school page (see submit_lead in the DB) */
 export type Lead = {
   id: string;
-  schoolId: string;
+  /** null once the school has been removed — the lead is kept as a record */
+  schoolId: string | null;
   name: string;
   email: string;
   phone: string;

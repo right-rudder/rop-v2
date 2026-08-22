@@ -218,10 +218,11 @@ create table public.favorites (
 create index favorites_school_id_idx on public.favorites (school_id);
 
 -- ── Leads ("Request information") ────────────────────────────
--- Inserted only through public.submit_lead() below; admins read / update.
+-- Inserted only through public.submit_lead() below (server-only);
+-- admins read / update. Deleting a school keeps its leads (school_id → null).
 create table public.leads (
   id           uuid primary key default gen_random_uuid(),
-  school_id    text not null references public.flight_schools (id) on delete cascade,
+  school_id    text references public.flight_schools (id) on delete set null,
   name         text not null,
   email        text not null,
   phone        text not null default '',
@@ -235,7 +236,8 @@ create table public.leads (
   constraint leads_email_format   check (char_length(email) <= 254 and email ~* '^[^@\s]+@[^@\s]+\.[^@\s]+$'),
   constraint leads_phone_length   check (char_length(phone) <= 40),
   constraint leads_message_length check (char_length(message) <= 2000),
-  constraint leads_source_length  check (char_length(source_path) <= 300)
+  constraint leads_source_length  check (char_length(source_path) <= 300),
+  constraint leads_ip_hash_format check (ip_hash ~ '^[0-9a-f]{64}$')
 );
 create index leads_school_created_idx on public.leads (school_id, created_at desc);
 create index leads_ip_created_idx     on public.leads (ip_hash, created_at desc);
@@ -503,9 +505,10 @@ create trigger on_review_change
 -- ============================================================
 -- submit_lead — the only write path into public.leads
 -- ============================================================
--- Callers must insert a row they can never read, hence SECURITY
--- DEFINER. No caller-controlled identifiers; fixed search_path;
--- user-safe errors use errcode P0001 and are shown verbatim.
+-- Server-only: executable by service_role (the app's server action),
+-- never by the Data API roles, so the rate-limit fingerprint is always
+-- computed server-side. SECURITY INVOKER — service_role already holds
+-- the table privileges. User-safe errors use errcode P0001.
 create or replace function public.submit_lead(
   p_school_id    text,
   p_name         text,
@@ -517,7 +520,7 @@ create or replace function public.submit_lead(
   p_ip_hash      text
 ) returns uuid
 language plpgsql
-security definer
+security invoker
 set search_path = public
 as $$
 declare
@@ -526,7 +529,7 @@ begin
   if not exists (select 1 from public.flight_schools where id = p_school_id) then
     raise exception 'Unknown school' using errcode = 'P0001';
   end if;
-  if coalesce(p_ip_hash, '') = '' then
+  if p_ip_hash !~ '^[0-9a-f]{64}$' then
     raise exception 'Missing request fingerprint' using errcode = 'P0001';
   end if;
   if (select count(*) from public.leads
@@ -548,7 +551,8 @@ begin
   return v_id;
 end;
 $$;
-revoke execute on function public.submit_lead(text, text, text, text, text, text, text, text) from public;
+revoke execute on function public.submit_lead(text, text, text, text, text, text, text, text) from public, anon, authenticated;
+grant  execute on function public.submit_lead(text, text, text, text, text, text, text, text) to service_role;
 
 -- ============================================================
 -- Data API grants
@@ -589,7 +593,6 @@ grant update (first_name, last_name, bio, pilot_certificates)
   on public.profiles to authenticated;
 
 grant execute on function public.is_admin() to anon, authenticated;
-grant execute on function public.submit_lead(text, text, text, text, text, text, text, text) to anon, authenticated;
 -- Trigger functions are not an API: keep them out of /rest/v1/rpc.
 -- (Triggers still fire — EXECUTE is not checked for the calling role.)
 revoke execute on function public.handle_new_user()               from public, anon, authenticated;
