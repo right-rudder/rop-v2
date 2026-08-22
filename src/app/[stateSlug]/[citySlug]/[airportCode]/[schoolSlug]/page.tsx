@@ -1,7 +1,7 @@
 import { notFound, permanentRedirect } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ExternalLink, Mail, MapPin, Phone, Plane, Users } from "lucide-react";
+import { ExternalLink, Mail, MapPin, Phone, Plane, Send, Users } from "lucide-react";
 import { PageHero } from "@/components/PageHero";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -35,6 +35,7 @@ import ReviewForm from "@/components/ReviewForm";
 import { SchoolsMap } from "@/components/SchoolsMap";
 import { FavoriteButton } from "@/components/FavoriteButton";
 import { CompareButton } from "@/components/CompareButton";
+import { LeadForm } from "@/components/LeadForm";
 
 type Props = {
   params: Promise<{
@@ -248,10 +249,14 @@ export default async function SchoolDetailPage({ params }: Props) {
         }
         aside={
           <div className="flex flex-wrap gap-3">
+              <Button href="#inquire">
+                <Send size={15} aria-hidden />
+                Request info
+              </Button>
               <FavoriteButton schoolId={school.id} path={schoolHref(school)} size="md" showLabel />
               <CompareButton id={school.id} name={school.name} href={schoolHref(school)} size="md" showLabel />
               {school.website && (
-                <Button href={school.website} target="_blank" rel="noopener noreferrer">
+                <Button href={school.website} target="_blank" rel="noopener noreferrer" variant="secondary">
                   Visit website
                   <ExternalLink size={15} />
                 </Button>
@@ -276,6 +281,16 @@ export default async function SchoolDetailPage({ params }: Props) {
               <p className="max-w-prose text-[1.05rem] leading-relaxed text-muted">
                 {school.description}
               </p>
+            </section>
+
+            {/* Request information */}
+            <section id="inquire" className="scroll-mt-24">
+              <SectionTitle>Request information</SectionTitle>
+              <LeadForm
+                schoolId={school.id}
+                schoolName={school.name}
+                programs={schoolPrograms.map((p) => ({ slug: p.slug, shortName: p.shortName }))}
+              />
             </section>
 
             {/* Programs */}
@@ -499,13 +514,18 @@ export default async function SchoolDetailPage({ params }: Props) {
                   </div>
                 )}
               </dl>
+              <Button href="#inquire" full className="mt-7">
+                <Send size={15} aria-hidden />
+                Request info
+              </Button>
               {school.website && (
                 <Button
                   href={school.website}
                   target="_blank"
                   rel="noopener noreferrer"
+                  variant="secondary"
                   full
-                  className="mt-7"
+                  className="mt-3"
                 >
                   Visit website
                   <ExternalLink size={15} />
