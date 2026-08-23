@@ -89,7 +89,7 @@ export const programs: Program[] = [
     slug: "mei",
     name: "Multi-Engine Instructor",
     shortName: "MEI",
-    sortOrder: 6.5,
+    sortOrder: 7,
     description:
       "The Multi-Engine Instructor (MEI) rating is an add-on to the CFI certificate that authorizes providing flight instruction in multi-engine aircraft. Candidates must already hold a CFI certificate and a multi-engine rating. Training focuses on teaching engine-out procedures, asymmetric thrust management, and the systems knowledge unique to light twins. The MEI is a valuable credential for instructors at schools with multi-engine training programs and is a common step on the path toward turbine and airline employment.",
     faaPart: "both",
@@ -102,7 +102,7 @@ export const programs: Program[] = [
     slug: "multi-engine",
     name: "Multi-Engine Rating",
     shortName: "Multi-Engine",
-    sortOrder: 7,
+    sortOrder: 8,
     description:
       "The Multi-Engine Rating (MEL) is an add-on rating that authorizes operation of aircraft with more than one engine. It does not require a minimum number of flight hours — practical performance standards are the measure. Training focuses on asymmetric thrust management, engine-out procedures, systems knowledge, and the V-speed profiles unique to multi-engine aircraft. Most commercial and airline training tracks include a multi-engine rating.",
     faaPart: "both",
@@ -115,7 +115,7 @@ export const programs: Program[] = [
     slug: "atp",
     name: "Airline Transport Pilot Certificate",
     shortName: "ATP",
-    sortOrder: 8,
+    sortOrder: 9,
     description:
       "The Airline Transport Pilot (ATP) certificate is the highest level of FAA pilot certification and is required to serve as captain (PIC) of a Part 121 airliner. Under current FAA regulations, most candidates need 1,500 total flight hours, though military-trained pilots qualify at 750 hours and Part 141 graduates qualify at 1,000 hours. ATP candidates must hold a commercial certificate and instrument rating, pass the ATP written exam, and complete the ATP Certification Training Program (ATP CTP) before the checkride.",
     faaPart: "both",
@@ -143,7 +143,7 @@ export const programs: Program[] = [
     slug: "discovery-flight",
     name: "Discovery Flight",
     shortName: "Discovery Flight",
-    sortOrder: 9,
+    sortOrder: 10,
     description:
       "A discovery flight is an introductory lesson designed for people curious about learning to fly. Typically 30–60 minutes, you'll take the controls under the supervision of a CFI and experience the basics of aircraft control firsthand. Discovery flights are offered by most flight schools, often at a discounted introductory rate, and count as your first logbook entry if you later pursue a certificate.",
     typicalDuration: "30–60 minutes",
@@ -153,7 +153,7 @@ export const programs: Program[] = [
     slug: "ground-school",
     name: "Ground School",
     shortName: "Ground School",
-    sortOrder: 10,
+    sortOrder: 11,
     description:
       "Ground school covers the academic knowledge required to pass FAA written knowledge exams. Topics include aerodynamics, aircraft systems, weather, navigation, FARs and AIM, and airspace. Ground school may be delivered in-person at a flight school, online, or as part of an accelerated weekend course. Many flight schools recommend completing ground school concurrently with or before beginning flight training for maximum efficiency.",
     typicalDuration: "4–12 weeks",
@@ -163,7 +163,7 @@ export const programs: Program[] = [
     slug: "seaplane-rating",
     name: "Seaplane Rating",
     shortName: "Seaplane Rating",
-    sortOrder: 11,
+    sortOrder: 12,
     description:
       "The Seaplane (Single-Engine Sea, SES) rating is an add-on to your existing certificate that authorizes flight in floatplanes and flying boats. Training covers water operations, docking, step taxi, glassy water landings, and takeoff/landing technique unique to amphibious and floatplane aircraft. The rating has no hour minimum and can be completed in as few as 5–10 hours at a seaplane base.",
     certificate: "Seaplane Rating (added to existing certificate)",
@@ -175,7 +175,7 @@ export const programs: Program[] = [
     slug: "tailwheel",
     name: "Tailwheel Endorsement",
     shortName: "Tailwheel",
-    sortOrder: 12,
+    sortOrder: 13,
     description:
       "The tailwheel (conventional landing gear) endorsement authorizes flight in aircraft where the third wheel is at the tail rather than the nose. Tailwheel aircraft require more precise ground handling technique due to their tendency toward ground loops. The endorsement requires demonstration of normal and crosswind takeoffs and landings, and wheel landings to the satisfaction of a CFI. No minimum hours are required.",
     certificate: "Tailwheel Endorsement (logbook entry)",
@@ -187,7 +187,7 @@ export const programs: Program[] = [
     slug: "high-performance",
     name: "High Performance Endorsement",
     shortName: "High Performance",
-    sortOrder: 13,
+    sortOrder: 14,
     description:
       "The high-performance endorsement is required before acting as PIC of any aircraft with an engine rated at more than 200 horsepower. Training focuses on the additional systems, speeds, and performance considerations of more powerful aircraft. Common aircraft requiring this endorsement include the Cessna 182 Skylane and Beechcraft Bonanza.",
     certificate: "High Performance Endorsement (logbook entry)",
@@ -199,7 +199,7 @@ export const programs: Program[] = [
     slug: "complex-endorsement",
     name: "Complex Aircraft Endorsement",
     shortName: "Complex",
-    sortOrder: 14,
+    sortOrder: 15,
     description:
       "The complex aircraft endorsement is required before acting as PIC of any aircraft with retractable landing gear, flaps, AND a controllable-pitch propeller. It is required for Commercial Pilot training (FAR 61.129) unless using an Advanced Avionics Aircraft. Training covers retractable gear procedures, constant-speed propeller operation, emergency extension procedures, and appropriate V-speeds.",
     certificate: "Complex Aircraft Endorsement (logbook entry)",

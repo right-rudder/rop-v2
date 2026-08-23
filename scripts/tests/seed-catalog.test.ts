@@ -178,3 +178,28 @@ test("only cities that host an airport or a school are imported", () => {
 test("all 50 states are present", () => {
   assert.equal(catalog.states.length, 50);
 });
+
+test("integer columns hold integers — the JSON API will not round for us", () => {
+  // programs.sort_order / minimum_hours and trainer_aircraft.sort_order /
+  // engine_count are `int`. seed.sql used to hide a fractional value here
+  // (mei had sortOrder 6.5, which Postgres rounded into a tie with
+  // multi-engine); inserting the same row as JSON fails outright with
+  // "invalid input syntax for type integer".
+  for (const p of programs) {
+    assert.ok(Number.isInteger(p.sortOrder), `programs.sort_order not an integer: ${p.slug} = ${p.sortOrder}`);
+    if (p.minimumHours !== undefined) {
+      assert.ok(Number.isInteger(p.minimumHours), `programs.minimum_hours not an integer: ${p.slug}`);
+    }
+  }
+  for (const a of trainerAircraft) {
+    assert.ok(Number.isInteger(a.sortOrder), `trainer_aircraft.sort_order not an integer: ${a.slug}`);
+    assert.ok(Number.isInteger(a.engineCount), `trainer_aircraft.engine_count not an integer: ${a.slug}`);
+  }
+});
+
+test("sort_order is unique within each catalog, so display order is stable", () => {
+  const programOrders = programs.map((p) => p.sortOrder);
+  assert.equal(new Set(programOrders).size, programOrders.length, "duplicate programs.sort_order");
+  const aircraftOrders = trainerAircraft.map((a) => a.sortOrder);
+  assert.equal(new Set(aircraftOrders).size, aircraftOrders.length, "duplicate trainer_aircraft.sort_order");
+});

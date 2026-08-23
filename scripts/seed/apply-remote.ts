@@ -56,14 +56,26 @@ if (!DRY_RUN && (!BASE || !KEY)) {
   );
 }
 
+/**
+ * Editorial reference data lives in the repo and survives reset-catalog.sql,
+ * so these must converge on the committed values rather than being skipped as
+ * duplicates. The imported catalog is inserted into empty tables, where
+ * ignoring duplicates is the safer choice (it never overwrites an owner edit).
+ */
+const UPSERT = new Set(["states", "programs", "trainer_aircraft"]);
+
 async function insert(table: string, rows: Record<string, unknown>[]): Promise<void> {
   const size = BATCH[table] ?? DEFAULT_BATCH;
+  const resolution = UPSERT.has(table) ? "merge-duplicates" : "ignore-duplicates";
   if (rows.length === 0) {
     process.stdout.write(`  ${table.padEnd(17)} 0\n`);
     return;
   }
   if (DRY_RUN) {
-    process.stdout.write(`  ${table.padEnd(17)} ${rows.length} rows in ${Math.ceil(rows.length / size)} batches\n`);
+    const mode = UPSERT.has(table) ? "upsert" : "insert";
+    process.stdout.write(
+      `  ${table.padEnd(17)} ${String(rows.length).padStart(5)} rows, ${Math.ceil(rows.length / size)} batches (${mode})\n`,
+    );
     return;
   }
   let done = 0;
@@ -75,8 +87,7 @@ async function insert(table: string, rows: Record<string, unknown>[]): Promise<v
         apikey: KEY,
         Authorization: `Bearer ${KEY}`,
         "Content-Type": "application/json",
-        // Mirrors seed.sql's `on conflict do nothing`, so re-running is a no-op.
-        Prefer: "return=minimal,resolution=ignore-duplicates",
+        Prefer: `return=minimal,resolution=${resolution}`,
       },
       body: JSON.stringify(batch),
     });
