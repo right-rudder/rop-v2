@@ -93,8 +93,17 @@ npx supabase login && npx supabase link      # once per machine
    `auth.users`, `profiles`, `school_submissions` and `leads`.
 2. `npx supabase db push --include-seed --linked`
 
-Do the two together: between them the site has an empty catalog. Afterwards,
-regenerate the types and re-dump the snapshot:
+Do the two together: between them the site has an empty catalog.
+
+`reset-catalog.sql` leaves Storage alone — Supabase guards `storage.objects`
+and `storage.buckets` with a `BEFORE DELETE` trigger (`storage.protect_delete`),
+so logo files can only be removed through the Storage API. The script's last
+query lists the objects left orphaned; clear them in **Storage → school-logos**
+or with `npx supabase storage rm -r ss:///school-logos --linked`. Leaving them
+costs a few KB and breaks nothing — the app resolves logos through
+`flight_schools.logo_path`, which the reset removes.
+
+Afterwards, regenerate the types and re-dump the snapshot:
 
 ```sh
 npx supabase gen types typescript --linked > src/lib/supabase/database.types.ts

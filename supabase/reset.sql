@@ -34,9 +34,11 @@ drop function if exists public.protect_flight_school_columns() cascade;
 drop function if exists public.is_admin()                      cascade;
 drop function if exists public.submit_lead(text, text, text, text, text, text, text, text) cascade;
 
--- Storage: the bucket's objects and the policies that gate writes to it.
-delete from storage.objects where bucket_id = 'school-logos';
+-- Storage: only the policies can be dropped from SQL. Supabase guards
+-- storage.objects and storage.buckets with a BEFORE DELETE trigger
+-- (storage.protect_delete), so the files and the bucket itself have to go
+-- through the Storage API — delete them in Storage → school-logos in the
+-- dashboard, or with `npx supabase storage rm -r ss:///school-logos --linked`.
 drop policy if exists "School logo insert" on storage.objects;
 drop policy if exists "School logo update" on storage.objects;
 drop policy if exists "School logo delete" on storage.objects;
-delete from storage.buckets where id = 'school-logos';
