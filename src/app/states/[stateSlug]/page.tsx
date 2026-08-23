@@ -14,7 +14,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { Chip } from "@/components/ui/Chip";
 import { Container } from "@/components/ui/Container";
 import { schoolHref } from "@/lib/utils";
-import { absoluteUrl } from "@/lib/site";
+import { breadcrumbJsonLd, schoolListJsonLd } from "@/lib/structured-data";
 
 type Props = { params: Promise<{ stateSlug: string }> };
 
@@ -49,18 +49,10 @@ export default async function StateDetailPage({ params }: Props) {
     stateCities.map((c) => [c.slug, c.name]),
   );
 
-  const itemListJsonLd = {
-    "@context": "https://schema.org",
-    "@type": "ItemList",
-    name: `Flight Schools in ${state.name}`,
-    numberOfItems: stateSchools.length,
-    itemListElement: stateSchools.map((school, i) => ({
-      "@type": "ListItem",
-      position: i + 1,
-      name: school.name,
-      url: absoluteUrl(schoolHref(school)),
-    })),
-  };
+  const itemListJsonLd = schoolListJsonLd(`Flight Schools in ${state.name}`, stateSchools);
+  const breadcrumbs = breadcrumbJsonLd([
+    { name: `${state.name} Flight Schools`, path: `/states/${state.slug}` },
+  ]);
 
   const meta = [
     `${state.schoolCount} schools`,
@@ -70,6 +62,7 @@ export default async function StateDetailPage({ params }: Props) {
 
   return (
     <>
+      <JsonLd data={breadcrumbs} />
       <JsonLd data={itemListJsonLd} />
       <div className="pb-20">
         <PageHero

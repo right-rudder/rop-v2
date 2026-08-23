@@ -28,6 +28,8 @@ import {
   getStates,
 } from "@/lib/data";
 import { schoolHref } from "@/lib/utils";
+import { JsonLd } from "@/components/JsonLd";
+import { organizationJsonLd, websiteJsonLd } from "@/lib/structured-data";
 
 export const metadata: Metadata = {
   // The home page is the brand — don't let the layout template append it again
@@ -123,6 +125,8 @@ export default async function Home() {
 
   return (
     <div>
+      <JsonLd data={websiteJsonLd()} />
+      <JsonLd data={organizationJsonLd()} />
       {/* Hero — no overflow-hidden on the section: the search dropdown must be
           able to extend past the hero's bottom edge. The motif is clipped in
           its own wrapper instead. */}
