@@ -9,6 +9,7 @@ const {
   breadcrumbJsonLd,
   schoolListJsonLd,
   schoolJsonLd,
+  faqJsonLd,
 } = await import("../../src/lib/structured-data.ts");
 
 const school = {
@@ -111,4 +112,17 @@ test("schoolJsonLd omits what it cannot vouch for", () => {
   assert.equal("image" in ld, false);
   assert.equal(ld.url, undefined);
   assert.equal(ld.telephone, undefined);
+});
+
+test("faqJsonLd builds a FAQPage from question/answer pairs", () => {
+  const ld = faqJsonLd([
+    { q: "How many hours does a private pilot license take?", a: "At least 40 under Part 61." },
+    { q: "How much does it cost?", a: "It varies." },
+  ]);
+  assert.equal(ld["@type"], "FAQPage");
+  assert.equal(ld.mainEntity.length, 2);
+  assert.equal(ld.mainEntity[0]["@type"], "Question");
+  assert.equal(ld.mainEntity[0].name, "How many hours does a private pilot license take?");
+  assert.equal(ld.mainEntity[0].acceptedAnswer["@type"], "Answer");
+  assert.equal(ld.mainEntity[0].acceptedAnswer.text, "At least 40 under Part 61.");
 });

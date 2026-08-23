@@ -10,6 +10,7 @@ const browse = [
   { href: "/programs", label: "Programs" },
   { href: "/aircraft", label: "Aircraft" },
   { href: "/search", label: "Advanced search" },
+  { href: "/near-me", label: "Near me" },
 ];
 
 const account = [

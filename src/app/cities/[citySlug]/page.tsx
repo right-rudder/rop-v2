@@ -16,6 +16,7 @@ import { Chip } from "@/components/ui/Chip";
 import { Container } from "@/components/ui/Container";
 import { schoolHref } from "@/lib/utils";
 import { breadcrumbJsonLd, schoolListJsonLd } from "@/lib/structured-data";
+import { CITY_INTROS } from "@/content/location-intros";
 
 type Props = { params: Promise<{ citySlug: string }> };
 
@@ -62,6 +63,7 @@ export default async function CityDetailPage({ params }: Props) {
     ...(state ? [{ name: `${state.name} Flight Schools`, path: `/states/${state.slug}` }] : []),
     { name: `${city.name} Flight Schools`, path: `/cities/${city.slug}` },
   ]);
+  const intro = CITY_INTROS[city.slug] ?? [];
 
   const meta = [
     `${citySchools.length} ${citySchools.length === 1 ? "school" : "schools"}`,
@@ -101,6 +103,17 @@ export default async function CityDetailPage({ params }: Props) {
         />
 
         <Container size="default" className="space-y-14 py-12">
+          {intro.length > 0 && (
+            <section>
+              <h2 className={h2}>Learning to fly in {city.name}</h2>
+              <div className="max-w-prose space-y-4 text-[1.05rem] leading-relaxed text-muted">
+                {intro.map((paragraph) => (
+                  <p key={paragraph.slice(0, 40)}>{paragraph}</p>
+                ))}
+              </div>
+            </section>
+          )}
+
           {/* Nearby / metro cities */}
           {nearbyCities.length > 0 && (
             <section>
