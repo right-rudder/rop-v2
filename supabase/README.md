@@ -84,10 +84,22 @@ is something to find.
 
 For a database that already has accounts you want to keep (the normal case):
 
+```sh
+npx supabase login && npx supabase link      # once per machine
+```
+
 1. Run `supabase/reset-catalog.sql` in **SQL Editor**. It deletes schools,
    airports, cities and everything cascading off a school, and keeps
    `auth.users`, `profiles`, `school_submissions` and `leads`.
 2. `npx supabase db push --include-seed --linked`
+
+Do the two together: between them the site has an empty catalog. Afterwards,
+regenerate the types and re-dump the snapshot:
+
+```sh
+npx supabase gen types typescript --linked > src/lib/supabase/database.types.ts
+npx supabase db dump --linked -f supabase/schema.sql
+```
 
 For a brand-new project, run in **SQL Editor**: `supabase/schema.sql`, then
 `supabase/seed.sql`. (`supabase/reset.sql` is the full teardown — it drops
