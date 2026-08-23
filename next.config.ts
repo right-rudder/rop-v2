@@ -9,7 +9,29 @@ const supabaseUrl = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL || "https://sup
 // refuse the logo.
 const supabaseProtocol = supabaseUrl.protocol === "http:" ? "http" : "https";
 
+/**
+ * Baseline security headers on every response. Deliberately no
+ * Content-Security-Policy yet: one needs allow-lists for Google Maps,
+ * Supabase and the inline JSON-LD, and should ship report-only first.
+ */
+const securityHeaders = [
+  // Two years, subdomains included. Add "; preload" after submitting to hstspreload.org.
+  { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" },
+  { key: "X-Content-Type-Options", value: "nosniff" },
+  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+  { key: "X-Frame-Options", value: "DENY" },
+  // Geolocation stays available to our own origin: /search and /near-me use it.
+  {
+    key: "Permissions-Policy",
+    value: "geolocation=(self), camera=(), microphone=(), payment=(), usb=(), interest-cohort=()",
+  },
+];
+
 const nextConfig: NextConfig = {
+  poweredByHeader: false,
+  async headers() {
+    return [{ source: "/(.*)", headers: securityHeaders }];
+  },
   images: {
     remotePatterns: [
       {

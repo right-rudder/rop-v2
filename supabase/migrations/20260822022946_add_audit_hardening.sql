@@ -1,28 +1,4 @@
--- ============================================================
--- Audit hardening
---
--- 1. flight_schools column protection: listing owners may edit their
---    listing's content, but only admins may change ranking, placement,
---    identity and ownership columns (featured, rating, review_count, id,
---    slug, primary_airport_code, city_slug, state_slug, organization_id,
---    managed_by). Enforced by a BEFORE UPDATE trigger so it applies to
---    direct Data API calls, not just the app's forms.
--- 2. school_submissions are always created as 'pending'.
--- 3. Length / format CHECK constraints on free-text columns (mirrored
---    by src/lib/limits.ts in the app).
--- 4. Profile trigger trims and caps names taken from signup metadata.
--- 5. Rating trigger also refreshes the old school when a review moves.
--- 6. RLS policy hygiene: `to authenticated` + `(select auth.uid())`.
--- 7. Explicit Data API grants — newer Supabase projects no longer
---    expose tables automatically — plus least-privilege revokes.
--- 8. One-off repair: recompute rating / review_count from real reviews
---    (earlier seeds shipped placeholder values).
---
--- Idempotent — safe to run on an existing database. New installs get
--- all of this from schema.sql. If applying old patches in order, run
--- this LAST.
--- Run in: Supabase Dashboard > SQL Editor
--- ============================================================
+-- Audit hardening (mirrors supabase/add-audit-hardening.sql)
 
 -- ── 1. Protected columns on flight_schools ───────────────────
 create or replace function public.protect_flight_school_columns()
@@ -71,7 +47,6 @@ create policy "Authenticated insert" on public.school_submissions
   with check ((select auth.uid()) = submitted_by and status = 'pending');
 
 -- ── 3. Length / format constraints ───────────────────────────
--- drop + add keeps this idempotent; existing rows are re-validated.
 alter table public.reviews drop constraint if exists reviews_body_length;
 alter table public.reviews add constraint reviews_body_length
   check (char_length(body) between 1 and 5000);
@@ -146,7 +121,6 @@ as $$
       review_count = (select count(*) from public.reviews r where r.school_id = target_school)
   where fs.id = target_school;
 $$;
--- Internal helper — only the trigger below may call it.
 revoke execute on function public.recompute_school_rating(text) from public, anon, authenticated;
 
 create or replace function public.refresh_school_rating()
@@ -187,9 +161,6 @@ create policy "Own submissions read" on public.school_submissions
   for select to authenticated using ((select auth.uid()) = submitted_by);
 
 -- ── 7. Data API grants ───────────────────────────────────────
--- Newer Supabase projects no longer expose tables to the Data API
--- automatically, so state the intended privileges explicitly. RLS
--- policies still decide which rows each role can touch.
 grant usage on schema public to anon, authenticated;
 
 grant select on

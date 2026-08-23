@@ -4,7 +4,7 @@
  * helper and by scripts/tests; relative imports only.
  *
  * IMAGE_LIMITS must stay in sync with the school-logos bucket's
- * file_size_limit / allowed_mime_types in supabase/add-storage-school-logos.sql.
+ * file_size_limit / allowed_mime_types in supabase/migrations/20260822054342_add_storage_school_logos.sql.
  */
 import { randomUUID } from "node:crypto";
 

@@ -43,3 +43,6 @@ next-env.d.ts
 #MD Files
 NOTES/*
 CLAUDE.md
+# supabase cli
+supabase/.branches
+supabase/.temp

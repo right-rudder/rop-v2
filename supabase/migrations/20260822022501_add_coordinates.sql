@@ -1,17 +1,4 @@
--- ============================================================
--- Coordinates for airports and flight schools
---
--- airports.latitude/longitude      — airport reference point; drives
---                                     "near me" search and the map.
--- flight_schools.latitude/longitude — optional per-school override
---                                     (hangar/office). Owners may edit
---                                     it; it is NOT a protected column.
--- Effective school position = school override, else its airport.
---
--- Idempotent — safe to run on an existing database. New installs get
--- this from schema.sql. Run in: Supabase Dashboard > SQL Editor
--- ============================================================
-
+-- Coordinates for airports and flight schools (mirrors supabase/add-coordinates.sql)
 alter table public.airports
   add column if not exists latitude  double precision,
   add column if not exists longitude double precision;
@@ -19,11 +6,6 @@ alter table public.airports
 alter table public.flight_schools
   add column if not exists latitude  double precision,
   add column if not exists longitude double precision;
-
--- A partial pair (only one of latitude / longitude set) would violate the
--- *_coords_pair constraints below; treat it as "no position".
-update public.airports       set latitude = null, longitude = null where (latitude is null) <> (longitude is null);
-update public.flight_schools set latitude = null, longitude = null where (latitude is null) <> (longitude is null);
 
 alter table public.airports
   drop constraint if exists airports_latitude_range,
@@ -43,8 +25,6 @@ alter table public.flight_schools
   add constraint flight_schools_longitude_range check (longitude is null or longitude between -180 and 180),
   add constraint flight_schools_coords_pair     check ((latitude is null) = (longitude is null));
 
--- Backfill the seeded airports (airport reference points, FAA data).
--- Only fills rows that have no coordinates yet.
 update public.airports as a
 set latitude = v.lat, longitude = v.lng
 from (values

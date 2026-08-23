@@ -1,11 +1,4 @@
--- ============================================================
--- Favorites (saved schools)
---
--- One row per (user, school). Users see and toggle only their own
--- rows; nothing is public. Idempotent — safe to run on an existing
--- database. New installs get this from schema.sql.
--- Run in: Supabase Dashboard > SQL Editor
--- ============================================================
+-- Favorites (saved schools) — mirrors supabase/add-favorites.sql
 create table if not exists public.favorites (
   user_id    uuid not null references auth.users (id) on delete cascade,
   school_id  text not null references public.flight_schools (id) on delete cascade,
