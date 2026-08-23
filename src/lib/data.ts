@@ -126,7 +126,7 @@ function toCity(row: Tables<"cities">): City {
 
 /**
  * Both values must be real numbers. Also guards the window before
- * supabase/add-coordinates.sql has been applied, when the columns are
+ * the coordinates migration has been applied, when the columns are
  * simply absent from the row (undefined).
  */
 function toCoords(lat: number | null | undefined, lng: number | null | undefined): LatLng | undefined {

@@ -61,11 +61,9 @@ create policy "School logo insert" on storage.objects
   with check (
     bucket_id = 'school-logos'
     and exists (
-      -- `objects.name` MUST stay qualified: flight_schools also has a
-      -- `name` column, and a bare `name` binds to the inner table.
-      select 1 from public.flight_schools fs
-      where fs.id = (storage.foldername(objects.name))[1]
-        and (fs.managed_by = (select auth.uid()) or (select public.is_admin()))
+      select 1 from public.flight_schools s
+      where s.id = (storage.foldername(name))[1]
+        and (s.managed_by = (select auth.uid()) or (select public.is_admin()))
     )
   );
 
@@ -75,21 +73,17 @@ create policy "School logo update" on storage.objects
   using (
     bucket_id = 'school-logos'
     and exists (
-      -- `objects.name` MUST stay qualified: flight_schools also has a
-      -- `name` column, and a bare `name` binds to the inner table.
-      select 1 from public.flight_schools fs
-      where fs.id = (storage.foldername(objects.name))[1]
-        and (fs.managed_by = (select auth.uid()) or (select public.is_admin()))
+      select 1 from public.flight_schools s
+      where s.id = (storage.foldername(name))[1]
+        and (s.managed_by = (select auth.uid()) or (select public.is_admin()))
     )
   )
   with check (
     bucket_id = 'school-logos'
     and exists (
-      -- `objects.name` MUST stay qualified: flight_schools also has a
-      -- `name` column, and a bare `name` binds to the inner table.
-      select 1 from public.flight_schools fs
-      where fs.id = (storage.foldername(objects.name))[1]
-        and (fs.managed_by = (select auth.uid()) or (select public.is_admin()))
+      select 1 from public.flight_schools s
+      where s.id = (storage.foldername(name))[1]
+        and (s.managed_by = (select auth.uid()) or (select public.is_admin()))
     )
   );
 
@@ -99,10 +93,8 @@ create policy "School logo delete" on storage.objects
   using (
     bucket_id = 'school-logos'
     and exists (
-      -- `objects.name` MUST stay qualified: flight_schools also has a
-      -- `name` column, and a bare `name` binds to the inner table.
-      select 1 from public.flight_schools fs
-      where fs.id = (storage.foldername(objects.name))[1]
-        and (fs.managed_by = (select auth.uid()) or (select public.is_admin()))
+      select 1 from public.flight_schools s
+      where s.id = (storage.foldername(name))[1]
+        and (s.managed_by = (select auth.uid()) or (select public.is_admin()))
     )
   );

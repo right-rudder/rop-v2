@@ -1,0 +1,4 @@
+# Supabase CLI project config. `supabase link` fills in the rest on first use;
+# only the project ref is fixed here so `supabase db push` / `db pull` /
+# `migration list` target the right project.
+project_id = "ywqvhrslzpocxcbkhlxm"

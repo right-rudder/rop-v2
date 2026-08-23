@@ -55,7 +55,8 @@ In **SQL Editor**, run in order:
 1. `supabase/reset.sql` — only if the project already has tables from an
    older schema version (drops all app tables; does not touch auth.users)
 2. `supabase/schema.sql` — tables, constraints, RLS policies, grants,
-   profile trigger, rating trigger, column-protection trigger
+   profile trigger, rating trigger, column-protection trigger (a snapshot of
+   `supabase/migrations/`, which is the canonical history — see below)
 3. `supabase/seed.sql` — catalog data (states, cities, airports, programs,
    aircraft, schools). Regenerate anytime with `node scripts/generate-seed.ts`
    (it reads `src/lib/mock-data.ts`).
@@ -65,30 +66,32 @@ In **SQL Editor**, run in order:
 > school starts at 0 reviews — `rating` / `review_count` are owned by the
 > `refresh_school_rating` trigger and only move when real reviews are posted.
 
-If your database was created from an older `schema.sql`, don't reset — run the
-idempotent patch files instead (each one is also folded into `schema.sql` for
-fresh installs):
+### Migrations (the source of truth for schema changes)
 
-- `supabase/add-school-submissions.sql` — "Add a School" submissions table
-- `supabase/add-admin-policies.sql` — admin RLS policies + owner-policy hardening
-- `supabase/add-one-review-per-user.sql` — one review per user per school
-  (de-dupes keeping the newest, unique index, drops owner review edits)
-- `supabase/add-audit-hardening.sql` — run **last**: owners can no longer
-  change `featured` / rating / placement / ownership columns on their
-  listing (BEFORE UPDATE trigger), submissions always start `pending`,
-  length/format constraints, explicit Data API grants, and a one-off
-  recompute of `rating` / `review_count` from real reviews
-- `supabase/add-favorites.sql` — saved schools (`favorites` table, own-rows RLS)
-- `supabase/add-leads.sql` — lead capture (`leads` table, admin RLS, rate-limited
-  server-only `submit_lead()`); forwards to GoHighLevel via `GHL_WEBHOOK_URL`
-- `supabase/add-storage-school-logos.sql` — the public `school-logos` Storage
-  bucket (2MB, PNG/JPEG/WebP), owner-scoped `storage.objects` policies, and
-  `flight_schools.logo_path`
-- `supabase/add-grant-hygiene.sql` — run after the above: drops the leftover
-  `school_contacts` table, revokes RPC `EXECUTE` on trigger functions, and
-  resets `anon` / `authenticated` table privileges — and the default privileges
-  for future tables / functions — to exactly what the app needs (the defaults
-  granted ALL, incl. TRUNCATE / REFERENCES / TRIGGER)
+`supabase/migrations/` holds the database history in Supabase CLI format —
+one timestamped file per change, matching the project's applied history
+exactly (`supabase migration list` shows local and remote side by side):
+
+- `20260709000000_baseline.sql` — the schema as it stood when history began
+  (tables, RLS, grants, triggers, the July patches folded in)
+- every later file — one applied change: coordinates, audit hardening, grant
+  hygiene, favorites, leads (+ hardening), the `school-logos` bucket (+ policy
+  fix), indexes
+
+To change the schema:
+
+```sh
+npx supabase login && npx supabase link          # once per machine
+npx supabase migration new add_thing             # creates supabase/migrations/<ts>_add_thing.sql
+# write the SQL (idempotent where practical), then:
+npx supabase db push                             # applies pending migrations to the linked project
+npx supabase gen types typescript --linked > src/lib/supabase/database.types.ts
+```
+
+`schema.sql` stays as a single-file snapshot for people who set up through
+the dashboard's SQL editor; regenerate it after a migration with
+`npx supabase db dump --linked -f supabase/schema.sql` rather than editing
+both by hand. `seed.sql` is picked up automatically by `supabase db reset`.
 
 ### Data API exposure
 
@@ -124,13 +127,13 @@ to `/`.)
 Recommended: enable **CAPTCHA** (Turnstile/hCaptcha) under
 **Authentication → Attack Protection** for signups and password resets.
 
-## 4. Regenerate DB types (optional, once the project exists)
+## 4. Regenerate DB types
 
-`src/lib/supabase/database.types.ts` is hand-written to match
-`schema.sql`. Once the project is live you can regenerate it:
+`src/lib/supabase/database.types.ts` must match the live schema; regenerate
+it after every migration:
 
 ```sh
-npx supabase gen types typescript --project-id <project-ref> > src/lib/supabase/database.types.ts
+npx supabase gen types typescript --project-id ywqvhrslzpocxcbkhlxm > src/lib/supabase/database.types.ts
 ```
 
 ## Verify

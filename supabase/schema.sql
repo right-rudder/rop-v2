@@ -248,7 +248,7 @@ create index leads_email_school_idx   on public.leads (lower(email), school_id, 
 -- ── Indexes ──────────────────────────────────────────────────
 -- Postgres does not index foreign-key columns on its own; these cover
 -- every filter / join / count embed the app issues. Kept in sync with
--- supabase/add-indexes.sql (the idempotent patch for existing databases).
+-- supabase/migrations/20260823021737_add_indexes.sql.
 
 -- Catalog hierarchy (states → cities → airports → schools)
 create index cities_state_slug_idx
