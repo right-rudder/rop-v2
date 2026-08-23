@@ -51,13 +51,21 @@ export default function OpenGraphImage() {
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-            <svg width="40" height="40" viewBox="0 0 32 32" fill="none">
-              <g stroke="#e0246e" strokeWidth="2.75" strokeLinecap="round">
-                <circle cx="16" cy="16" r="7" />
-                <line x1="16" y1="1.5" x2="16" y2="6" />
-                <line x1="16" y1="26" x2="16" y2="30.5" />
-                <line x1="1.5" y1="16" x2="6" y2="16" />
-                <line x1="26" y1="16" x2="30.5" y2="16" />
+            {/* The radar mark (components/ui/Logo.tsx) */}
+            <svg width="44" height="44" viewBox="0 0 32 32" fill="none">
+              <g stroke="#e0246e" strokeLinecap="round">
+                <circle cx="16" cy="16" r="14.5" strokeWidth="1.5" opacity="0.9" />
+                <circle cx="16" cy="16" r="10" strokeWidth="1.25" strokeDasharray="1.5 3" opacity="0.55" />
+                <path d="M16 16 L16 1.5 A14.5 14.5 0 0 1 28.6 8.8 Z" fill="#e0246e" stroke="none" opacity="0.22" />
+                <line x1="16" y1="16" x2="28.6" y2="8.8" strokeWidth="1.5" opacity="0.9" />
+                <circle cx="23.5" cy="20.5" r="1.9" fill="#e0246e" stroke="none" />
+                <g strokeWidth="2.4">
+                  <circle cx="16" cy="16" r="4.2" />
+                  <line x1="16" y1="8.5" x2="16" y2="10.6" />
+                  <line x1="16" y1="21.4" x2="16" y2="23.5" />
+                  <line x1="8.5" y1="16" x2="10.6" y2="16" />
+                  <line x1="21.4" y1="16" x2="23.5" y2="16" />
+                </g>
               </g>
             </svg>
             <span style={{ fontSize: 30, fontWeight: 700, letterSpacing: -0.5 }}>

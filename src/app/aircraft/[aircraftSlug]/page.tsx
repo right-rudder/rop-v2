@@ -16,6 +16,8 @@ import { Card } from "@/components/ui/Card";
 import { Chip } from "@/components/ui/Chip";
 import { Container } from "@/components/ui/Container";
 import { schoolHref } from "@/lib/utils";
+import { JsonLd } from "@/components/JsonLd";
+import { breadcrumbJsonLd, schoolListJsonLd } from "@/lib/structured-data";
 import { metaDescription } from "@/lib/seo";
 
 type Props = { params: Promise<{ aircraftSlug: string }> };
@@ -78,6 +80,12 @@ export default async function AircraftDetailPage({ params }: Props) {
   });
 
   const engines = aircraft.engineCount === 1 ? "Single engine" : `${aircraft.engineCount} engines`;
+  const breadcrumbs = breadcrumbJsonLd([
+    { name: "Trainer Aircraft", path: "/aircraft" },
+    { name: aircraft.displayName, path: `/aircraft/${aircraft.slug}` },
+  ]);
+  const schoolList = schoolListJsonLd(`Schools flying the ${aircraft.displayName}`, rawSchools);
+
   const specs = [
     { Icon: Layers, label: "Category", value: categoryLabels[aircraft.category] },
     { Icon: Plane, label: "Engines", value: engines },
@@ -86,6 +94,8 @@ export default async function AircraftDetailPage({ params }: Props) {
 
   return (
     <div className="pb-20">
+      <JsonLd data={breadcrumbs} />
+      <JsonLd data={schoolList} />
       <PageHero
         back={{ href: "/aircraft", label: "All aircraft" }}
         eyebrow={

@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/Button";
 import { Container } from "@/components/ui/Container";
 import { getCurrentUser, isAdmin } from "@/lib/auth";
 import { schoolHref } from "@/lib/utils";
-import { absoluteUrl } from "@/lib/site";
+import { breadcrumbJsonLd, schoolListJsonLd } from "@/lib/structured-data";
 import { metaDescription, thinPageRobots } from "@/lib/seo";
 
 type Props = { params: Promise<{ airportCode: string }> };
@@ -65,24 +65,22 @@ export default async function AirportDetailPage({ params }: Props) {
   // page 404s everyone else, so this just decides whether to show the link).
   const canEdit = isAdmin(viewer);
 
-  const itemListJsonLd = {
-    "@context": "https://schema.org",
-    "@type": "ItemList",
-    name: `Flight Schools at ${airport.icao} – ${airport.name}`,
-    numberOfItems: schools.length,
-    itemListElement: schools.map((school, i) => ({
-      "@type": "ListItem",
-      position: i + 1,
-      name: school.name,
-      url: absoluteUrl(schoolHref(school)),
-    })),
-  };
+  const itemListJsonLd = schoolListJsonLd(
+    `Flight Schools at ${airport.icao} – ${airport.name}`,
+    schools,
+  );
+  const breadcrumbs = breadcrumbJsonLd([
+    ...(state ? [{ name: `${state.name} Flight Schools`, path: `/states/${state.slug}` }] : []),
+    ...(city ? [{ name: `${city.name} Flight Schools`, path: `/cities/${city.slug}` }] : []),
+    { name: `${airport.icao} Flight Schools`, path: `/airports/${airport.icao.toLowerCase()}` },
+  ]);
 
   const place =
     city?.name && state?.name ? `${city.name}, ${state.name}` : (state?.name ?? "");
 
   return (
     <>
+      <JsonLd data={breadcrumbs} />
       <JsonLd data={itemListJsonLd} />
       <div className="pb-20">
         <PageHero

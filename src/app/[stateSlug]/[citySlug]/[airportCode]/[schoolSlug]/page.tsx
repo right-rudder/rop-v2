@@ -4,7 +4,6 @@ import Link from "next/link";
 import { ExternalLink, Mail, MapPin, Phone, Plane, Send, Users } from "lucide-react";
 import { PageHero } from "@/components/PageHero";
 import { SchoolLogo } from "@/components/SchoolLogo";
-import { BUCKETS, publicImageUrl } from "@/lib/supabase/storage-url";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -30,7 +29,7 @@ import {
 } from "@/lib/data";
 import { getCurrentUser, isAdmin } from "@/lib/auth";
 import { schoolHref } from "@/lib/utils";
-import { absoluteUrl } from "@/lib/site";
+import { breadcrumbJsonLd, schoolJsonLd } from "@/lib/structured-data";
 import { metaDescription } from "@/lib/seo";
 import { JsonLd } from "@/components/JsonLd";
 import ReviewsSection from "@/components/ReviewsSection";
@@ -144,33 +143,15 @@ export default async function SchoolDetailPage({ params }: Props) {
     }));
   }
 
-  // JSON-LD BreadcrumbList structured data
-  const breadcrumbJsonLd = {
-    "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-    itemListElement: [
-      { "@type": "ListItem", position: 1, name: "Home", item: absoluteUrl("/") },
-      {
-        "@type": "ListItem",
-        position: 2,
-        name: `${state?.name ?? school.stateSlug} Flight Schools`,
-        item: absoluteUrl(`/states/${school.stateSlug}`),
-      },
-      {
-        "@type": "ListItem",
-        position: 3,
-        name: `${city?.name ?? school.citySlug} Flight Schools`,
-        item: absoluteUrl(`/cities/${school.citySlug}`),
-      },
-      {
-        "@type": "ListItem",
-        position: 4,
-        name: `${primaryAirport?.icao ?? school.primaryAirportCode} Flight Schools`,
-        item: absoluteUrl(`/airports/${school.primaryAirportCode.toLowerCase()}`),
-      },
-      { "@type": "ListItem", position: 5, name: school.name, item: absoluteUrl(canonicalPath) },
-    ],
-  };
+  const breadcrumbs = breadcrumbJsonLd([
+    { name: `${state?.name ?? school.stateSlug} Flight Schools`, path: `/states/${school.stateSlug}` },
+    { name: `${city?.name ?? school.citySlug} Flight Schools`, path: `/cities/${school.citySlug}` },
+    {
+      name: `${primaryAirport?.icao ?? school.primaryAirportCode} Flight Schools`,
+      path: `/airports/${school.primaryAirportCode.toLowerCase()}`,
+    },
+    { name: school.name, path: canonicalPath },
+  ]);
 
   // JSON-LD LocalBusiness structured data
   // Map position: the school's own override, else its primary airport (same rule as /search).
@@ -180,38 +161,13 @@ export default async function SchoolDetailPage({ params }: Props) {
     : null;
   const hasMapsKey = Boolean(process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY);
 
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "LocalBusiness",
-    name: school.name,
-    description: school.description,
-    telephone: school.phone || undefined,
-    url: school.website || undefined,
-    ...(school.logoPath
-      ? { image: publicImageUrl(BUCKETS.schoolLogos, school.logoPath) }
-      : {}),
-    address: {
-      "@type": "PostalAddress",
-      addressLocality: city?.name ?? school.citySlug,
-      addressRegion: state?.abbreviation ?? school.stateSlug,
-      addressCountry: "US",
-    },
-    ...(coords
-      ? { geo: { "@type": "GeoCoordinates", latitude: coords.lat, longitude: coords.lng } }
-      : {}),
-    // Google rejects AggregateRating with zero reviews — omit it until there are some
-    ...(school.reviewCount > 0
-      ? {
-          aggregateRating: {
-            "@type": "AggregateRating",
-            ratingValue: school.rating.toFixed(1),
-            reviewCount: school.reviewCount,
-            bestRating: 5,
-            worstRating: 1,
-          },
-        }
-      : {}),
-  };
+  const jsonLd = schoolJsonLd({
+    school,
+    cityName: city?.name ?? school.citySlug,
+    stateAbbreviation: state?.abbreviation ?? school.stateSlug,
+    coords,
+    programs: schoolPrograms,
+  });
 
   const locationLabel = `${city?.name ?? school.citySlug}, ${state?.abbreviation ?? school.stateSlug}`;
   const faaLabel = school.faaPart
@@ -232,7 +188,7 @@ export default async function SchoolDetailPage({ params }: Props) {
   return (
     <>
       <JsonLd data={jsonLd} />
-      <JsonLd data={breadcrumbJsonLd} />
+      <JsonLd data={breadcrumbs} />
 
       <PageHero
         back={{

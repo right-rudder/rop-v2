@@ -15,6 +15,8 @@ import { Card } from "@/components/ui/Card";
 import { Chip } from "@/components/ui/Chip";
 import { Container } from "@/components/ui/Container";
 import { schoolHref } from "@/lib/utils";
+import { JsonLd } from "@/components/JsonLd";
+import { breadcrumbJsonLd, schoolListJsonLd } from "@/lib/structured-data";
 import { metaDescription } from "@/lib/seo";
 
 type Props = { params: Promise<{ programSlug: string }> };
@@ -68,6 +70,12 @@ export default async function ProgramDetailPage({ params }: Props) {
     };
   });
 
+  const breadcrumbs = breadcrumbJsonLd([
+    { name: "Flight Training Programs", path: "/programs" },
+    { name: program.name, path: `/programs/${program.slug}` },
+  ]);
+  const schoolList = schoolListJsonLd(`Schools offering ${program.shortName}`, rawSchools);
+
   const facts = [
     program.certificate && {
       Icon: Award,
@@ -88,6 +96,8 @@ export default async function ProgramDetailPage({ params }: Props) {
 
   return (
     <div className="pb-20">
+      <JsonLd data={breadcrumbs} />
+      <JsonLd data={schoolList} />
       <PageHero
         back={{ href: "/programs", label: "All programs" }}
         eyebrow={

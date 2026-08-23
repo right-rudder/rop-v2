@@ -15,7 +15,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { Chip } from "@/components/ui/Chip";
 import { Container } from "@/components/ui/Container";
 import { schoolHref } from "@/lib/utils";
-import { absoluteUrl } from "@/lib/site";
+import { breadcrumbJsonLd, schoolListJsonLd } from "@/lib/structured-data";
 import { countNoun, thinPageRobots } from "@/lib/seo";
 
 type Props = { params: Promise<{ citySlug: string }> };
@@ -56,18 +56,14 @@ export default async function CityDetailPage({ params }: Props) {
     getCitiesBySlugs(city.nearbyCitySlugs),
   ]);
 
-  const itemListJsonLd = {
-    "@context": "https://schema.org",
-    "@type": "ItemList",
-    name: `Flight Schools in ${city.name}, ${city.stateAbbreviation}`,
-    numberOfItems: citySchools.length,
-    itemListElement: citySchools.map((school, i) => ({
-      "@type": "ListItem",
-      position: i + 1,
-      name: school.name,
-      url: absoluteUrl(schoolHref(school)),
-    })),
-  };
+  const itemListJsonLd = schoolListJsonLd(
+    `Flight Schools in ${city.name}, ${city.stateAbbreviation}`,
+    citySchools,
+  );
+  const breadcrumbs = breadcrumbJsonLd([
+    ...(state ? [{ name: `${state.name} Flight Schools`, path: `/states/${state.slug}` }] : []),
+    { name: `${city.name} Flight Schools`, path: `/cities/${city.slug}` },
+  ]);
 
   const meta = [
     `${citySchools.length} ${citySchools.length === 1 ? "school" : "schools"}`,
@@ -79,6 +75,7 @@ export default async function CityDetailPage({ params }: Props) {
 
   return (
     <>
+      <JsonLd data={breadcrumbs} />
       <JsonLd data={itemListJsonLd} />
       <div className="pb-20">
         <PageHero
