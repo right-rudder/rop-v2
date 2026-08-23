@@ -3,14 +3,18 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser, isAdmin } from "@/lib/auth";
+// Approval creates catalog rows, so every existence check here uses the
+// fresh `load*` readers: a cached "not found" would produce a duplicate
+// city, a second airport insert, or a slug collision.
 import {
   getStates,
-  getCityBySlug,
-  getAirportByCode,
-  getSchoolBySlug,
-  getSchoolsManagedByUser,
+  loadCityBySlug,
+  loadAirportByCode,
+  loadSchoolBySlug,
+  loadSchoolsManagedByUser,
   getSchoolSubmissionById,
   getPrograms,
+  invalidateCatalog,
 } from "@/lib/data";
 import { slugify } from "@/lib/utils";
 import type { SchoolSubmission, State } from "@/lib/types";
@@ -37,12 +41,12 @@ async function resolveCitySlug(
   const supabase = await createClient();
   const baseSlug = slugify(cityName);
 
-  const existing = await getCityBySlug(baseSlug);
+  const existing = await loadCityBySlug(baseSlug);
   if (existing && existing.stateSlug === state.slug) return existing.slug;
 
   // Slug taken by a same-named city in another state, or city doesn't exist yet
   const slug = existing ? `${baseSlug}-${state.id}` : baseSlug;
-  const collision = existing ? await getCityBySlug(slug) : undefined;
+  const collision = existing ? await loadCityBySlug(slug) : null;
   if (collision) return collision.slug;
 
   const { error } = await supabase.from("cities").insert({
@@ -63,7 +67,7 @@ async function resolveAirportIcao(
   state: State,
 ): Promise<string> {
   const supabase = await createClient();
-  const existing = await getAirportByCode(code);
+  const existing = await loadAirportByCode(code);
   if (existing) return existing.icao;
 
   const icao = code.toUpperCase();
@@ -89,7 +93,7 @@ async function resolveAirportIcao(
 async function uniqueSchoolSlug(name: string): Promise<string> {
   const base = slugify(name);
   let slug = base;
-  for (let i = 2; await getSchoolBySlug(slug); i++) {
+  for (let i = 2; await loadSchoolBySlug(slug); i++) {
     slug = `${base}-${i}`;
   }
   return slug;
@@ -109,7 +113,7 @@ async function createSchoolFromSubmission(
 
   // Re-approving after a partial failure must not create a duplicate listing
   const alreadyCreated = (
-    await getSchoolsManagedByUser(submission.submittedBy)
+    await loadSchoolsManagedByUser(submission.submittedBy)
   ).find((s) => s.name === submission.name);
 
   let schoolId: string;
@@ -196,6 +200,9 @@ export async function approveSubmission(
     schoolId = await createSchoolFromSubmission(submission);
   } catch (e) {
     return { error: e instanceof Error ? e.message : "Approval failed." };
+  } finally {
+    // A city, airport or school row may exist even when a later step threw
+    invalidateCatalog();
   }
 
   // Conditional update: if another admin approved in the meantime, the

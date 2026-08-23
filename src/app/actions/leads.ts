@@ -7,7 +7,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { friendlyDbError } from "@/lib/supabase/errors";
 import { safeInternalPath } from "@/lib/safe-path";
 import { getCurrentUser, isAdmin } from "@/lib/auth";
-import { getSchoolById, getLocationMaps, getProgramsBySlugs } from "@/lib/data";
+import { loadSchoolById, getLocationMaps, getProgramsBySlugs } from "@/lib/data";
 import { schoolHref } from "@/lib/utils";
 import { absoluteUrl } from "@/lib/site";
 import { validateLead, buildGhlPayload, hashIp, splitName } from "@/lib/leads";
@@ -63,7 +63,7 @@ export async function submitLead(
   if (field(formData, "company_website").trim()) return { success: true };
 
   const schoolId = field(formData, "schoolId").trim();
-  const school: FlightSchool | undefined = schoolId ? await getSchoolById(schoolId) : undefined;
+  const school: FlightSchool | undefined = schoolId ? await loadSchoolById(schoolId) : undefined;
   if (!school) return { error: "Missing school." };
 
   const validation = validateLead(

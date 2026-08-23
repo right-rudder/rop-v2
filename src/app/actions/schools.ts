@@ -8,7 +8,7 @@ import { createClient } from "@/lib/supabase/server";
 import { friendlyDbError } from "@/lib/supabase/errors";
 import { BUCKETS, uploadImage, removeImage } from "@/lib/supabase/storage";
 import { getCurrentUser, isAdmin } from "@/lib/auth";
-import { getSchoolById, getPrograms } from "@/lib/data";
+import { loadSchoolById, getPrograms, invalidateCatalog } from "@/lib/data";
 import { schoolHref, isHttpUrl, isAirportCode } from "@/lib/utils";
 import {
   FLEET_RANGES,
@@ -174,7 +174,7 @@ export async function updateSchool(
   if (!viewer) return { error: "You must be logged in." };
 
   const schoolId = field(formData, "schoolId");
-  const school = schoolId ? await getSchoolById(schoolId) : undefined;
+  const school = schoolId ? await loadSchoolById(schoolId) : undefined;
   if (!school) return { error: "School not found." };
 
   const admin = isAdmin(viewer);
@@ -237,28 +237,34 @@ export async function updateSchool(
     await removeImage(supabase, BUCKETS.schoolLogos, school.logoPath);
   }
 
-  // Sync program links without an empty intermediate state: add the checked
-  // set first (skipping rows that already exist), then drop the unchecked rest.
-  const catalog = new Set((await getPrograms()).map((p) => p.slug));
-  const selected = formData
-    .getAll("programs")
-    .filter((p): p is string => typeof p === "string" && catalog.has(p));
+  // The row is already changed, so the cached catalog is stale from here on
+  // whatever happens to the program sync below — hence the finally.
+  try {
+    // Sync program links without an empty intermediate state: add the checked
+    // set first (skipping rows that already exist), then drop the unchecked rest.
+    const catalog = new Set((await getPrograms()).map((p) => p.slug));
+    const selected = formData
+      .getAll("programs")
+      .filter((p): p is string => typeof p === "string" && catalog.has(p));
 
-  if (selected.length > 0) {
-    const { error: linkError } = await supabase.from("school_programs").upsert(
-      selected.map((program_slug) => ({ school_id: schoolId, program_slug })),
-      { onConflict: "school_id,program_slug", ignoreDuplicates: true },
-    );
-    if (linkError) return { error: friendlyDbError(linkError) };
-  }
+    if (selected.length > 0) {
+      const { error: linkError } = await supabase.from("school_programs").upsert(
+        selected.map((program_slug) => ({ school_id: schoolId, program_slug })),
+        { onConflict: "school_id,program_slug", ignoreDuplicates: true },
+      );
+      if (linkError) return { error: friendlyDbError(linkError) };
+    }
 
-  let removal = supabase.from("school_programs").delete().eq("school_id", schoolId);
-  if (selected.length > 0) {
-    // Catalog slugs are [a-z0-9-], so no quoting is needed in the filter
-    removal = removal.not("program_slug", "in", `(${selected.join(",")})`);
+    let removal = supabase.from("school_programs").delete().eq("school_id", schoolId);
+    if (selected.length > 0) {
+      // Catalog slugs are [a-z0-9-], so no quoting is needed in the filter
+      removal = removal.not("program_slug", "in", `(${selected.join(",")})`);
+    }
+    const { error: clearError } = await removal;
+    if (clearError) return { error: friendlyDbError(clearError) };
+  } finally {
+    invalidateCatalog();
   }
-  const { error: clearError } = await removal;
-  if (clearError) return { error: friendlyDbError(clearError) };
 
   revalidatePath(schoolHref(school));
   revalidatePath(`/schools/${school.slug}/edit`);
