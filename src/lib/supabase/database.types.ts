@@ -288,6 +288,15 @@ export type Database = {
           latitude: number | null;
           longitude: number | null;
           logo_path: string | null;
+          school_types: string[];
+          va_approved: boolean | null;
+          visa_types: string[];
+          dormitory: boolean | null;
+          dpe_on_site: boolean | null;
+          in_house_maintenance: boolean | null;
+          hours: string | null;
+          address: string | null;
+          training_tags: string[];
         };
         Insert: {
           id: string;
@@ -311,6 +320,15 @@ export type Database = {
           latitude?: number | null;
           longitude?: number | null;
           logo_path?: string | null;
+          school_types?: string[];
+          va_approved?: boolean | null;
+          visa_types?: string[];
+          dormitory?: boolean | null;
+          dpe_on_site?: boolean | null;
+          in_house_maintenance?: boolean | null;
+          hours?: string | null;
+          address?: string | null;
+          training_tags?: string[];
         };
         Update: {
           id?: string;
@@ -334,6 +352,15 @@ export type Database = {
           latitude?: number | null;
           longitude?: number | null;
           logo_path?: string | null;
+          school_types?: string[];
+          va_approved?: boolean | null;
+          visa_types?: string[];
+          dormitory?: boolean | null;
+          dpe_on_site?: boolean | null;
+          in_house_maintenance?: boolean | null;
+          hours?: string | null;
+          address?: string | null;
+          training_tags?: string[];
         };
         Relationships: [];
       };

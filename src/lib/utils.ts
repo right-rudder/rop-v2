@@ -26,7 +26,9 @@ export function slugToTitle(slug: string): string {
 
 /** 3–4 character alphanumeric airport identifier (ICAO / IATA / FAA LID), any case */
 export function isAirportCode(code: string): boolean {
-  return /^[A-Za-z0-9]{3,4}$/.test(code);
+  // Mirrors AIRPORT_CODE in lib/geo.ts — that module deliberately has no
+  // runtime imports, so the rule is stated in both places. Keep them in step.
+  return /^[a-z0-9-]{3,8}$/i.test(code);
 }
 
 /** Absolute http(s) URL — the only kind we store or link to */

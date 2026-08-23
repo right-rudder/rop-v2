@@ -6,6 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "seed:fetch": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/seed/fetch-sheet.ts",
+    "seed:build": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/seed/write-seed.ts",
+    "seed:check": "npm run seed:build && git diff --exit-code -- supabase/seed.sql",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test 'scripts/tests/**/*.test.ts'"

@@ -43,5 +43,10 @@ jobs:
       - name: Unit tests
         run: npm test
 
+      # The committed seed.sql must match the committed CSVs: a hand-edit to
+      # either one would otherwise ship a database that does not match its source.
+      - name: Seed is in sync with data/catalog
+        run: npm run seed:check
+
       - name: Build
         run: npm run build

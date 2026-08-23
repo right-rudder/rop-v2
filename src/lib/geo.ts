@@ -5,8 +5,16 @@
  */
 import type { LatLng } from "./types";
 
-/** Same rule as utils.isAirportCode; kept local so this module has no runtime imports (node --test cannot resolve extension-less TS imports). */
-const AIRPORT_CODE = /^[a-z0-9]{3,4}$/i;
+/**
+ * Same rule as utils.isAirportCode; kept local so this module has no runtime
+ * imports (node --test cannot resolve extension-less TS imports).
+ *
+ * An airport's public identifier: a 4-letter ICAO code (KFFZ), a 3- or
+ * 4-character FAA local identifier (01J, 43CO), or the "US-1234" placeholder
+ * OurAirports assigns to fields with no published code. Distinct from the
+ * `near` param's other forms — "lat,lng" has a comma and "city:<slug>" a colon.
+ */
+export const AIRPORT_CODE = /^[a-z0-9-]{3,8}$/i;
 
 export const RADIUS_OPTIONS = [25, 50, 100, 250] as const;
 export type Radius = (typeof RADIUS_OPTIONS)[number];

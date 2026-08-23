@@ -1,0 +1,6 @@
+# Generated from the "FSF - Seed Data" spreadsheet by `npm run seed:fetch` /
+# `npm run seed:build`. Collapsed in diffs and excluded from language stats so
+# a catalog refresh does not bury the reviewable changes in a PR.
+data/catalog/*.csv          linguist-generated -diff
+data/catalog/reports/*.csv  linguist-generated -diff
+supabase/seed.sql           linguist-generated -diff

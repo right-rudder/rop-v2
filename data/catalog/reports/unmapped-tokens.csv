@@ -1,0 +1,70 @@
+token,slug,rows
+Single Engine,single-engine,1440
+Simulator,simulator,737
+Recreational Pilot,recreational-pilot,611
+Biennial Flight Review,biennial-flight-review,554
+Computerized Testing,computerized-testing,481
+Emergency Maneuvers,emergency-maneuvers,396
+Mountain Flying,mountain-flying,375
+Instrument Proficiency Check,instrument-proficiency-check,367
+Upset Recovery,upset-recovery,329
+Examiner,examiner,307
+Annual Recurrent Training,annual-recurrent-training,305
+Advanced Aviation Training Device (AATD),advanced-aviation-training-device-aatd,273
+Procedures Trainer,procedures-trainer,252
+Rotary Wing,rotary-wing,233
+G1000,g1000,221
+Glass Cockpit Transition,glass-cockpit-transition,209
+Turbine,turbine,200
+Aerobatic,aerobatic,198
+Time Building Programs,time-building-programs,177
+Flight Instructor Sport CFIS,flight-instructor-sport-cfis,170
+Light Sport,light-sport,151
+Spin Training,spin-training,142
+Cirrus,cirrus,122
+Aviation College Degrees and Certifications,aviation-college-degrees-and-certifications,111
+Helicopter,helicopter,109
+Flight Training Device (FTD),flight-training-device-ftd,106
+Drone/UAS,drone-uas,99
+Part 107 Drone Testing,part-107-drone-testing,95
+Drone,drone,89
+High Altitude,high-altitude,77
+Helicopter to Fixed-Wing Transition,helicopter-to-fixed-wing-transition,75
+Basic Aviation Training Device (BATD),basic-aviation-training-device-batd,74
+Formation,formation,72
+Companion Co-Pilot,companion-co-pilot,71
+Glider,glider,52
+Aicraft Maintenance Training,aircraft-maintenance-training,43
+Backcountry Training,backcountry-training,39
+Ultralight,ultralight,38
+Aerial Photography,aerial-photography,38
+Full Flight Simulator (FFS),full-flight-simulator-ffs,33
+Airplane Flight Training,airplane-flight-training,29
+Air Traffic Controller Training,air-traffic-controller-training,17
+Aircraft Dispatcher Training,aircraft-dispatcher-training,14
+Helicopter Flight Training,helicopter-flight-training,9
+IPC check,instrument-proficiency-check,9
+Gyroplane,gyroplane,6
+Ski Training,ski-training,6
+Aircraft Maintenance Training,aircraft-maintenance-training,5
+IFS Certifications,ifs-certifications,5
+Banner Towing,banner-towing,4
+Flight Attendant Training,flight-attendant-training,4
+Kitfox Type Training,kitfox-type-training,4
+Lighter Than Air,lighter-than-air,3
+A320 type,a320-type,2
+A330 type,a330-type,2
+B737NG,b737ng,2
+B747,b747,2
+HondaJet,hondajet,2
+Cessna Citation,cessna-citation,2
+Phenon 100,phenon-100,2
+ATP-CTP Course,atp-ctp-course,2
+Redbird FMX,redbird-fmx,2
+Airbus 320,airbus-320,2
+Aviation Associate Degree and certifications,aviation-associate-degree-and-certifications,2
+Aerospace Degrees and Certifications,aerospace-degrees-and-certifications,1
+Air Attack,air-attack,1
+None of above,none-of-above,1
+Airline Transport Pilot Certificate SEL,airline-transport-pilot-certificate-sel,1
+UAV Training,uav-training,1

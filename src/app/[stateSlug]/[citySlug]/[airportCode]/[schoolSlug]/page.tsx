@@ -1,7 +1,21 @@
 import { notFound, permanentRedirect } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ExternalLink, Mail, MapPin, Phone, Plane, Send, Users } from "lucide-react";
+import {
+  BedDouble,
+  ClipboardCheck,
+  Clock,
+  ExternalLink,
+  GraduationCap,
+  Globe,
+  Mail,
+  MapPin,
+  Phone,
+  Plane,
+  Send,
+  Users,
+  Wrench,
+} from "lucide-react";
 import { PageHero } from "@/components/PageHero";
 import { SchoolLogo } from "@/components/SchoolLogo";
 import { Badge } from "@/components/ui/Badge";
@@ -176,6 +190,52 @@ export default async function SchoolDetailPage({ params }: Props) {
   const hasFleet =
     schoolAircraft.length > 0 || school.estimatedPlanes || school.estimatedInstructors;
 
+  // Facts from the catalog import. Each is tri-state: undefined means the
+  // source did not say, which is not the same as "no" — so only render a row
+  // when there is something to state.
+  const trainingDetails: { icon: React.ReactNode; label: string; value: string }[] = [];
+  if (school.vaApproved !== undefined) {
+    trainingDetails.push({
+      icon: <GraduationCap size={16} />,
+      label: "VA benefits",
+      value: school.vaApproved ? "Approved for VA education benefits" : "Not VA approved",
+    });
+  }
+  if (school.visaTypes.length > 0) {
+    trainingDetails.push({
+      icon: <Globe size={16} />,
+      label: "International students",
+      value: `${school.visaTypes.join(" and ")} student visas`,
+    });
+  }
+  if (school.dormitory === true) {
+    trainingDetails.push({
+      icon: <BedDouble size={16} />,
+      label: "Housing",
+      value: "On-site student housing",
+    });
+  }
+  if (school.dpeOnSite === true) {
+    trainingDetails.push({
+      icon: <ClipboardCheck size={16} />,
+      label: "Checkrides",
+      value: "Designated Pilot Examiner on site",
+    });
+  }
+  if (school.inHouseMaintenance === true) {
+    trainingDetails.push({
+      icon: <Wrench size={16} />,
+      label: "Maintenance",
+      value: "In-house aircraft maintenance",
+    });
+  }
+  if (school.hours) {
+    trainingDetails.push({ icon: <Clock size={16} />, label: "Hours", value: school.hours });
+  }
+  if (school.address) {
+    trainingDetails.push({ icon: <MapPin size={16} />, label: "Address", value: school.address });
+  }
+
   // Pre-fill the request form for signed-in visitors
   const leadViewer = viewer
     ? {
@@ -297,6 +357,24 @@ export default async function SchoolDetailPage({ params }: Props) {
                       </div>
                     </div>
                   )}
+                </Card>
+              </section>
+            )}
+
+            {/* Training details — facts carried by the catalog import */}
+            {trainingDetails.length > 0 && (
+              <section>
+                <SectionTitle>Training details</SectionTitle>
+                <Card className="divide-y divide-line">
+                  {trainingDetails.map((detail) => (
+                    <div key={detail.label} className="flex items-start gap-3 p-4">
+                      <span className="mt-0.5 shrink-0 text-muted">{detail.icon}</span>
+                      <div>
+                        <Eyebrow>{detail.label}</Eyebrow>
+                        <p className="text-sm text-ink">{detail.value}</p>
+                      </div>
+                    </div>
+                  ))}
                 </Card>
               </section>
             )}
