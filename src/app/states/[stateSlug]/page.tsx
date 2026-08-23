@@ -15,6 +15,7 @@ import { Chip } from "@/components/ui/Chip";
 import { Container } from "@/components/ui/Container";
 import { schoolHref } from "@/lib/utils";
 import { breadcrumbJsonLd, schoolListJsonLd } from "@/lib/structured-data";
+import { STATE_INTROS } from "@/content/location-intros";
 import { countNoun, thinPageRobots } from "@/lib/seo";
 
 type Props = { params: Promise<{ stateSlug: string }> };
@@ -52,6 +53,7 @@ export default async function StateDetailPage({ params }: Props) {
   );
 
   const itemListJsonLd = schoolListJsonLd(`Flight Schools in ${state.name}`, stateSchools);
+  const intro = STATE_INTROS[state.slug] ?? [];
   const breadcrumbs = breadcrumbJsonLd([
     { name: `${state.name} Flight Schools`, path: `/states/${state.slug}` },
   ]);
@@ -84,6 +86,17 @@ export default async function StateDetailPage({ params }: Props) {
         />
 
         <Container size="default" className="space-y-14 py-12">
+          {intro.length > 0 && (
+            <section>
+              <h2 className={h2}>Learning to fly in {state.name}</h2>
+              <div className="max-w-prose space-y-4 text-[1.05rem] leading-relaxed text-muted">
+                {intro.map((paragraph) => (
+                  <p key={paragraph.slice(0, 40)}>{paragraph}</p>
+                ))}
+              </div>
+            </section>
+          )}
+
           {/* Cities */}
           {stateCities.length > 0 && (
             <section>

@@ -65,6 +65,21 @@ export function breadcrumbJsonLd(trail: Crumb[]) {
   };
 }
 
+export type Faq = { q: string; a: string };
+
+/** FAQPage for a visible question/answer list — the answers must be on the page too. */
+export function faqJsonLd(items: Faq[]) {
+  return {
+    "@context": SCHEMA,
+    "@type": "FAQPage",
+    mainEntity: items.map((item) => ({
+      "@type": "Question",
+      name: item.q,
+      acceptedAnswer: { "@type": "Answer", text: item.a },
+    })),
+  };
+}
+
 type SchoolRef = Pick<FlightSchool, "name" | "stateSlug" | "citySlug" | "primaryAirportCode" | "slug">;
 
 /** ItemList of schools on a browse page, by canonical URL. */

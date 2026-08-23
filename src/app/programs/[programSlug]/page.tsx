@@ -16,7 +16,9 @@ import { Chip } from "@/components/ui/Chip";
 import { Container } from "@/components/ui/Container";
 import { schoolHref } from "@/lib/utils";
 import { JsonLd } from "@/components/JsonLd";
-import { breadcrumbJsonLd, schoolListJsonLd } from "@/lib/structured-data";
+import { breadcrumbJsonLd, faqJsonLd, schoolListJsonLd } from "@/lib/structured-data";
+import { PROGRAM_FAQS } from "@/content/program-faqs";
+import { FaqList } from "@/components/FaqList";
 import { metaDescription } from "@/lib/seo";
 
 type Props = { params: Promise<{ programSlug: string }> };
@@ -75,6 +77,7 @@ export default async function ProgramDetailPage({ params }: Props) {
     { name: program.name, path: `/programs/${program.slug}` },
   ]);
   const schoolList = schoolListJsonLd(`Schools offering ${program.shortName}`, rawSchools);
+  const faqs = PROGRAM_FAQS[program.slug] ?? [];
 
   const facts = [
     program.certificate && {
@@ -98,6 +101,7 @@ export default async function ProgramDetailPage({ params }: Props) {
     <div className="pb-20">
       <JsonLd data={breadcrumbs} />
       <JsonLd data={schoolList} />
+      {faqs.length > 0 && <JsonLd data={faqJsonLd(faqs)} />}
       <PageHero
         back={{ href: "/programs", label: "All programs" }}
         eyebrow={
@@ -169,6 +173,13 @@ export default async function ProgramDetailPage({ params }: Props) {
 
         {/* Schools offering this program */}
         <SchoolsExplorer schools={schools} heading={`Schools offering ${program.shortName}`} />
+
+        {faqs.length > 0 && (
+          <section>
+            <h2 className={h2}>{program.shortName} — frequently asked questions</h2>
+            <FaqList items={faqs} />
+          </section>
+        )}
       </Container>
     </div>
   );
