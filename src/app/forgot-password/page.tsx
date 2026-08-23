@@ -5,6 +5,7 @@ import { AuthShell } from "@/components/AuthShell";
 export const metadata: Metadata = {
   title: "Forgot Password",
   description: "Reset your Flight School Finder account password.",
+  robots: { index: false },
 };
 
 export default function ForgotPasswordPage() {

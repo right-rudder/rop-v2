@@ -17,10 +17,14 @@ export const metadata: Metadata = {
   title: "Search Flight Schools",
   description:
     "Filter USA flight schools by location, state, airport code, aircraft fleet, programs offered, and FAA Part 61 or Part 141 certification — or search within a radius of where you are.",
+  // Filters live in the query string; every combination is the same page
+  alternates: { canonical: "/search" },
   openGraph: {
     title: "Search Flight Schools",
     description:
       "Filter by state, airport, aircraft, programs, and training type to find your ideal flight school.",
+    url: "/search",
+    type: "website",
   },
 };
 
