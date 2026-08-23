@@ -17,6 +17,7 @@ import { Container } from "@/components/ui/Container";
 import { schoolHref } from "@/lib/utils";
 import { JsonLd } from "@/components/JsonLd";
 import { breadcrumbJsonLd, schoolListJsonLd } from "@/lib/structured-data";
+import { metaDescription } from "@/lib/seo";
 
 type Props = { params: Promise<{ programSlug: string }> };
 
@@ -26,7 +27,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!program) return { title: "Program Not Found" };
 
   const title = `${program.name} – Flight Training Requirements & Schools`;
-  const description = program.description.slice(0, 160);
+  const description = metaDescription(program.description);
   const canonical = `/programs/${programSlug}`;
   return {
     title,

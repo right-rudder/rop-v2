@@ -7,6 +7,7 @@ import { AuthShell } from "@/components/AuthShell";
 export const metadata: Metadata = {
   title: "Update Password",
   description: "Choose a new password for your Flight School Finder account.",
+  robots: { index: false },
 };
 
 export default async function UpdatePasswordPage() {

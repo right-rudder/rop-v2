@@ -1,8 +1,8 @@
 import type { MetadataRoute } from "next";
 import {
   getStates,
-  getCities,
-  getAirports,
+  getCitiesWithCounts,
+  getAirportsWithSchoolCounts,
   getFlightSchools,
   getPrograms,
   getTrainerAircraft,
@@ -10,19 +10,34 @@ import {
 import { schoolHref } from "@/lib/utils";
 import { absoluteUrl } from "@/lib/site";
 
-// Rendered per request — the sitemap reads live rows from Supabase
+// Rendered per request rather than prerendered at build: that keeps `next
+// build` from needing Supabase credentials. The catalog getters are served
+// from the cross-request cache, so a warm hit costs no database queries.
 export const dynamic = "force-dynamic";
 
+/**
+ * Only locations that list at least one school. With a small catalog most
+ * states, cities and airports would otherwise be near-empty template pages —
+ * thin content that dilutes the crawl budget. Their pages send `noindex`
+ * until they have a listing (see thinPageRobots), so the sitemap must not
+ * advertise them either.
+ */
+const listed = <T extends { schoolCount: number }>(rows: T[]): T[] =>
+  rows.filter((row) => row.schoolCount > 0);
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [states, cities, airports, flightSchools, programs, aircraft] =
+  const [allStates, allCities, allAirports, flightSchools, programs, aircraft] =
     await Promise.all([
       getStates(),
-      getCities(),
-      getAirports(),
+      getCitiesWithCounts(),
+      getAirportsWithSchoolCounts(),
       getFlightSchools(),
       getPrograms(),
       getTrainerAircraft(),
     ]);
+  const states = listed(allStates);
+  const cities = listed(allCities);
+  const airports = listed(allAirports);
 
   const staticRoutes: MetadataRoute.Sitemap = [
     { url: absoluteUrl("/"), changeFrequency: "weekly", priority: 1 },

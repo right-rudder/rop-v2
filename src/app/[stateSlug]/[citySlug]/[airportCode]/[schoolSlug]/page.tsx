@@ -30,6 +30,7 @@ import {
 import { getCurrentUser, isAdmin } from "@/lib/auth";
 import { schoolHref } from "@/lib/utils";
 import { breadcrumbJsonLd, schoolJsonLd } from "@/lib/structured-data";
+import { metaDescription } from "@/lib/seo";
 import { JsonLd } from "@/components/JsonLd";
 import ReviewsSection from "@/components/ReviewsSection";
 import ReviewForm from "@/components/ReviewForm";
@@ -56,7 +57,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     getStateBySlug(school.stateSlug),
   ]);
   const title = `${school.name} – Flight School in ${city?.name ?? ""}, ${state?.abbreviation ?? ""}`;
-  const description = school.description.slice(0, 160);
+  const description = metaDescription(school.description);
   const canonical = schoolHref(school);
   return {
     title,

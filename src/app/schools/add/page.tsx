@@ -10,6 +10,7 @@ export const metadata: Metadata = {
   title: "Add a Flight School",
   description:
     "Submit your flight school to be listed on Flight School Finder. Reach students searching for flight training near them.",
+  robots: { index: false },
 };
 
 export default async function AddSchoolPage() {
