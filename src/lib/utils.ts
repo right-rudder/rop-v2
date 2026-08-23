@@ -13,7 +13,11 @@ export function slugify(str: string): string {
     .toLowerCase()
     .replace(/[^a-z0-9\s-]/g, "")
     .trim()
-    .replace(/\s+/g, "-");
+    .replace(/\s+/g, "-")
+    // A name like "AeroDynamic Aviation - Monterey" turns the " - " into three
+    // hyphens; collapse runs and trim the ends so the URL stays readable.
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
 }
 
 /** Convert a slug back to a title-cased display string: "st-louis" → "St Louis" */

@@ -43,6 +43,16 @@ test("slugify", () => {
   assert.equal(slugify("  St. Louis  "), "st-louis");
 });
 
+test("slugify collapses hyphen runs and never leaves a dangling hyphen", () => {
+  // " - " becomes three hyphens before collapsing: stripping the spaces around
+  // an existing hyphen is what produces the run.
+  assert.equal(slugify("AeroDynamic Aviation - Monterey"), "aerodynamic-aviation-monterey");
+  assert.equal(slugify("CableAir - School of Flight"), "cableair-school-of-flight");
+  assert.equal(slugify("- Leading and trailing -"), "leading-and-trailing");
+  assert.equal(slugify("Wings // Things"), "wings-things");
+  assert.equal(slugify("A -- B"), "a-b");
+});
+
 test("schoolHref lowercases the airport code", () => {
   const href = schoolHref({
     id: "x",
