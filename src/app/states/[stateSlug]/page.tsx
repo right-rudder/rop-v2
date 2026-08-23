@@ -16,6 +16,7 @@ import { Container } from "@/components/ui/Container";
 import { schoolHref } from "@/lib/utils";
 import { breadcrumbJsonLd, schoolListJsonLd } from "@/lib/structured-data";
 import { STATE_INTROS } from "@/content/location-intros";
+import { countNoun, thinPageRobots } from "@/lib/seo";
 
 type Props = { params: Promise<{ stateSlug: string }> };
 
@@ -24,13 +25,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const state = await getStateBySlug(stateSlug);
   if (!state) return { title: "State Not Found" };
   const title = `Flight Schools in ${state.name}`;
-  const description = `Find flight schools in ${state.name}. Browse ${state.schoolCount} schools across ${state.airportCount} airports.`;
+  const description = `Find flight schools in ${state.name}. Browse ${countNoun(state.schoolCount, "school")} across ${countNoun(state.airportCount, "airport")}.`;
   return {
     title,
     description,
     alternates: { canonical: `/states/${stateSlug}` },
     openGraph: { title, description, url: `/states/${stateSlug}`, type: "website" },
     twitter: { title, description },
+    robots: thinPageRobots(state.schoolCount),
   };
 }
 

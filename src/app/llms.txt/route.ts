@@ -7,13 +7,15 @@ import {
 } from "@/lib/data";
 import { absoluteUrl, SITE_NAME } from "@/lib/site";
 import { schoolHref } from "@/lib/utils";
+import { mdInline } from "@/lib/markdown";
 
 // Rendered per request, like the sitemap: it reads live rows, and prerendering
 // it at build would make `next build` need Supabase credentials.
 export const dynamic = "force-dynamic";
 
+/** One list line. Label and note may be user-supplied (school names), so they're escaped. */
 const md = (label: string, path: string, note?: string) =>
-  `- [${label}](${absoluteUrl(path)})${note ? `: ${note}` : ""}`;
+  `- [${mdInline(label)}](${absoluteUrl(path)})${note ? `: ${mdInline(note)}` : ""}`;
 
 /**
  * /llms.txt — a Markdown map of the site for AI crawlers and assistants

@@ -18,6 +18,7 @@ import { Container } from "@/components/ui/Container";
 import { getCurrentUser, isAdmin } from "@/lib/auth";
 import { schoolHref } from "@/lib/utils";
 import { breadcrumbJsonLd, schoolListJsonLd } from "@/lib/structured-data";
+import { metaDescription, thinPageRobots } from "@/lib/seo";
 
 type Props = { params: Promise<{ airportCode: string }> };
 
@@ -32,7 +33,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   ]);
   const fallbackDesc = `Find ${schools.length} flight school${schools.length !== 1 ? "s" : ""} at ${airport.name} (${airport.icao}) in ${city?.name ?? ""}, ${state?.name ?? ""}.`;
   const description = airport.description
-    ? airport.description.slice(0, 160)
+    ? metaDescription(airport.description)
     : fallbackDesc;
   const title = `Flight Schools at ${airport.icao} – ${airport.name}`;
   return {
@@ -41,6 +42,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     alternates: { canonical: `/airports/${airport.icao.toLowerCase()}` },
     openGraph: { title, description, url: `/airports/${airport.icao.toLowerCase()}`, type: "website" },
     twitter: { title, description },
+    robots: thinPageRobots(schools.length),
   };
 }
 

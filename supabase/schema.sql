@@ -245,6 +245,65 @@ create index leads_school_created_idx on public.leads (school_id, created_at des
 create index leads_ip_created_idx     on public.leads (ip_hash, created_at desc);
 create index leads_email_school_idx   on public.leads (lower(email), school_id, created_at desc);
 
+-- ── Indexes ──────────────────────────────────────────────────
+-- Postgres does not index foreign-key columns on its own; these cover
+-- every filter / join / count embed the app issues. Kept in sync with
+-- supabase/add-indexes.sql (the idempotent patch for existing databases).
+
+-- Catalog hierarchy (states → cities → airports → schools)
+create index cities_state_slug_idx
+  on public.cities (state_slug);
+create index airports_city_slug_idx
+  on public.airports (city_slug);
+create index airports_state_slug_idx
+  on public.airports (state_slug);
+
+-- flight_schools: every list page filters on exactly one of these
+create index flight_schools_state_slug_idx
+  on public.flight_schools (state_slug);
+create index flight_schools_city_slug_idx
+  on public.flight_schools (city_slug);
+create index flight_schools_primary_airport_code_idx
+  on public.flight_schools (primary_airport_code);
+-- Partial: most rows have no owner / brand / feature flag, so the index
+-- only carries the rows the query can return.
+create index flight_schools_managed_by_idx
+  on public.flight_schools (managed_by) where managed_by is not null;
+create index flight_schools_organization_id_idx
+  on public.flight_schools (organization_id) where organization_id is not null;
+create index flight_schools_featured_idx
+  on public.flight_schools (name) where featured;
+
+-- Join tables: the primary key covers (school_id, …); the reverse lookup
+-- (schools offering a program / flying an aircraft) needs its own.
+create index school_programs_program_slug_idx
+  on public.school_programs (program_slug);
+create index school_aircraft_aircraft_slug_idx
+  on public.school_aircraft (aircraft_slug);
+
+-- Reviews & comments: (school_id, user_id) already covers the per-school
+-- read; profile pages and the moderation queue need these.
+create index reviews_user_id_idx
+  on public.reviews (user_id);
+create index reviews_created_at_idx
+  on public.reviews (created_at desc);
+create index comments_review_id_idx
+  on public.comments (review_id);
+create index comments_user_id_idx
+  on public.comments (user_id);
+create index comments_created_at_idx
+  on public.comments (created_at desc);
+
+-- Admin queues
+create index school_submissions_submitted_by_idx
+  on public.school_submissions (submitted_by);
+create index school_submissions_status_created_idx
+  on public.school_submissions (status, created_at desc);
+create index leads_program_slug_idx
+  on public.leads (program_slug) where program_slug is not null;
+create index leads_new_idx
+  on public.leads (created_at desc) where status = 'new';
+
 -- ============================================================
 -- Row Level Security
 -- ============================================================

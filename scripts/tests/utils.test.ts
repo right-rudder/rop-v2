@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { isHttpUrl, isAirportCode, slugify, schoolHref } from "../../src/lib/utils.ts";
+import { isHttpUrl, isAirportCode, slugify, schoolHref, pickAirportMatch } from "../../src/lib/utils.ts";
 
 test("isHttpUrl accepts only http(s) URLs", () => {
   assert.equal(isHttpUrl("https://example.com"), true);
@@ -44,4 +44,16 @@ test("schoolHref lowercases the airport code", () => {
     phone: "",
   });
   assert.equal(href, "/arizona/mesa/kffz/x-school");
+});
+
+test("pickAirportMatch prefers the ICAO hit over alternate identifiers", () => {
+  const rows = [
+    { icao: "KABC", iata: "FFZ", faa_lid: null },
+    { icao: "KFFZ", iata: "MSC", faa_lid: "FFZ" },
+  ];
+  // FFZ is KABC's IATA and KFFZ's FAA LID — neither is an ICAO match, so the
+  // first row (callers order by icao) wins.
+  assert.equal(pickAirportMatch(rows, "FFZ"), rows[0]);
+  assert.equal(pickAirportMatch(rows, "KFFZ"), rows[1]);
+  assert.equal(pickAirportMatch([], "KFFZ"), undefined);
 });

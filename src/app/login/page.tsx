@@ -8,6 +8,7 @@ export const metadata: Metadata = {
   title: "Log In",
   description:
     "Log in to your Flight School Finder account to manage listings, respond to reviews, and more.",
+  robots: { index: false },
 };
 
 // Query-string codes → copy. Codes only: never echo free text from the URL.

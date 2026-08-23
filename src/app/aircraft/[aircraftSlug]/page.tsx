@@ -18,6 +18,7 @@ import { Container } from "@/components/ui/Container";
 import { schoolHref } from "@/lib/utils";
 import { JsonLd } from "@/components/JsonLd";
 import { breadcrumbJsonLd, schoolListJsonLd } from "@/lib/structured-data";
+import { metaDescription } from "@/lib/seo";
 
 type Props = { params: Promise<{ aircraftSlug: string }> };
 
@@ -35,7 +36,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!aircraft) return { title: "Aircraft Not Found" };
 
   const title = `${aircraft.displayName} – Flight Training Aircraft`;
-  const description = aircraft.description.slice(0, 160);
+  const description = metaDescription(aircraft.description);
   const canonical = `/aircraft/${aircraftSlug}`;
   return {
     title,

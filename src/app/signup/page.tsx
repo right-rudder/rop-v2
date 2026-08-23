@@ -10,6 +10,7 @@ export const metadata: Metadata = {
   title: "Sign Up",
   description:
     "Create a free Flight School Finder account to add or manage flight school listings, respond to reviews, and connect with students.",
+  robots: { index: false },
 };
 
 type Props = {
