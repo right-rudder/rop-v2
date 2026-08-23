@@ -84,14 +84,40 @@ is something to find.
 
 For a database that already has accounts you want to keep (the normal case):
 
-```sh
-npx supabase login && npx supabase link      # once per machine
-```
-
 1. Run `supabase/reset-catalog.sql` in **SQL Editor**. It deletes schools,
    airports, cities and everything cascading off a school, and keeps
    `auth.users`, `profiles`, `school_submissions` and `leads`.
-2. `npx supabase db push --include-seed --linked`
+2. Load the catalog:
+
+   ```sh
+   npm run seed:apply              # add --dry-run first to see the plan
+   ```
+
+   This writes the same rows `seed.sql` contains, over the Data API, using the
+   `SUPABASE_SERVICE_ROLE_KEY` already in `.env.local`. It is idempotent
+   (`resolution=ignore-duplicates`), so a partial run can just be repeated, and
+   it reads the row counts back from the server when it finishes.
+
+### Why not `supabase db push --include-seed`?
+
+That is the canonical command, and it works if your Supabase account can
+provision the CLI's temporary database role. On accounts that cannot, it fails
+before touching the schema:
+
+```
+unexpected login role status 400: Failed to create login role:
+ERROR: 42501: permission denied to alter role
+DETAIL: Only roles with the CREATEROLE attribute and the ADMIN option
+        on role "cli_login_postgres" may alter this role.
+```
+
+Two ways round it, in order of preference:
+
+- `npm run seed:apply` (above) — needs no database role at all.
+- `npx supabase db push --include-seed --db-url "$DB_URL"`, where `$DB_URL` is
+  the connection string from **Project Settings → Database**. Passing the URL
+  directly skips the login-role step. Migrations still need
+  `npx supabase login && npx supabase link` for `db push` without `--db-url`.
 
 Do the two together: between them the site has an empty catalog.
 
