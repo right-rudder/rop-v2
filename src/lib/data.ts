@@ -1,19 +1,35 @@
 /**
  * Data-access layer backed by Supabase.
  *
- * Async getters reading from the database (src/lib/mock-data.ts now only
- * feeds the seed script). Server Components, Server Actions, and Route
- * Handlers should import from here; pass plain data down to Client
- * Components as props.
+ * Server Components, Server Actions, and Route Handlers import from here and
+ * pass plain data down to Client Components as props. Three tiers:
  *
- * Catalog getters are wrapped in React cache() for per-request memoization:
- * the same query issued twice while rendering one request (e.g. by
- * generateMetadata and the page, or by getLocationMaps and getSearchIndex)
- * only hits Supabase once. Nothing is cached across requests. Callers must
- * not mutate returned arrays/objects — they're shared within the request.
+ * 1. Catalog — states, cities, airports, programs, trainer aircraft, flight
+ *    schools and their join tables. Public-read, rarely changes. Read with
+ *    the cookie-less anon client (lib/supabase/public) so the request carries
+ *    no session, and served through Next's cross-request data cache
+ *    (`unstable_cache`, tag CATALOG_TAG, CATALOG_TTL_SECONDS) wrapped in
+ *    React's per-request `cache()`. Every server action that writes a
+ *    catalog row — or a review, which re-computes a school's rating — must
+ *    call `invalidateCatalog()`.
+ *
+ *    The `load*` exports are the same readers without the cross-request
+ *    layer, for actions that need a fresh answer (slug uniqueness,
+ *    idempotent approval, ownership checks).
+ *
+ * 2. User-generated public content — reviews, comments, profiles. Public-
+ *    read but expected to appear immediately, so: anon client, per-request
+ *    memo only.
+ *
+ * 3. RLS-scoped — favorites, submissions, leads, admin counts. Read with the
+ *    session (cookie) client; never cached across requests.
+ *
+ * Callers must not mutate returned arrays/objects — they're shared.
  */
 import { cache } from "react";
+import { unstable_cache, updateTag } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { createPublicClient } from "@/lib/supabase/public";
 import type {
   State,
   City,
@@ -39,9 +55,45 @@ import type {
   SchoolSearchItem,
   AirportSearchItem,
 } from "@/components/HeroSearch";
-import { schoolHref, isAirportCode } from "@/lib/utils";
+import { schoolHref, isAirportCode, pickAirportMatch } from "@/lib/utils";
 
 type FaaPart = "61" | "141" | "both";
+
+// ── Cross-request cache ────────────────────────────────────────────────────────
+
+/** Tag on every cached catalog read; `invalidateCatalog()` expires them all. */
+export const CATALOG_TAG = "catalog";
+/** Safety net for writes that bypass the app (SQL editor, seed script). */
+const CATALOG_TTL_SECONDS = 60 * 60;
+
+/**
+ * Expire every cached catalog read. Server Actions only (`updateTag`): the
+ * caller sees its own write on the very next render instead of stale data.
+ */
+export function invalidateCatalog(): void {
+  updateTag(CATALOG_TAG);
+}
+
+/** What `unstable_cache` can put in a cache key: the JSON of the arguments. */
+type CacheArg = string | number | boolean | null | CacheArg[];
+
+/**
+ * Cross-request cache (keyed by `name` + the JSON of the arguments) plus a
+ * per-request memo so the same call from generateMetadata and the page body
+ * resolves once. Return values are stored as JSON, so loaders that may find
+ * nothing return `null` (an `undefined` result would not round-trip).
+ */
+function cached<A extends CacheArg[], R>(
+  name: string,
+  loader: (...args: A) => Promise<R>,
+): (...args: A) => Promise<R> {
+  return cache(
+    unstable_cache(loader, [CATALOG_TAG, name], {
+      tags: [CATALOG_TAG],
+      revalidate: CATALOG_TTL_SECONDS,
+    }),
+  );
+}
 
 // ── Row → app-type mappers ─────────────────────────────────────────────────────
 
@@ -212,48 +264,55 @@ function orThrow<T>(result: { data: T | null; error: { message: string } | null 
 
 const STATE_SELECT = "*, flight_schools(count), airports(count)";
 
-export const getStates = cache(async (): Promise<State[]> => {
-  const supabase = await createClient();
-  const res = await supabase.from("states").select(STATE_SELECT).order("name");
+export const getStates = cached("states", async (): Promise<State[]> => {
+  const res = await createPublicClient().from("states").select(STATE_SELECT).order("name");
   return (orThrow(res) as unknown as StateRowWithCounts[]).map(toState);
 });
 
+const loadStateBySlug = async (slug: string): Promise<State | null> => {
+  const res = await createPublicClient()
+    .from("states")
+    .select(STATE_SELECT)
+    .eq("slug", slug)
+    .maybeSingle();
+  const row = orThrow(res) as unknown as StateRowWithCounts | null;
+  return row ? toState(row) : null;
+};
+const cachedStateBySlug = cached("state-by-slug", loadStateBySlug);
+
 export const getStateBySlug = cache(
-  async (slug: string): Promise<State | undefined> => {
-    const supabase = await createClient();
-    const res = await supabase
-      .from("states")
-      .select(STATE_SELECT)
-      .eq("slug", slug)
-      .maybeSingle();
-    const row = orThrow(res) as unknown as StateRowWithCounts | null;
-    return row ? toState(row) : undefined;
-  },
+  async (slug: string): Promise<State | undefined> =>
+    (await cachedStateBySlug(slug)) ?? undefined,
 );
 
 // ── Cities ─────────────────────────────────────────────────────────────────────
 
-export const getCities = cache(async (): Promise<City[]> => {
-  const supabase = await createClient();
-  const res = await supabase.from("cities").select("*").order("name");
+export const getCities = cached("cities", async (): Promise<City[]> => {
+  const res = await createPublicClient().from("cities").select("*").order("name");
   return orThrow(res).map(toCity);
 });
 
+/** Fresh read (no cross-request cache) for slug-collision checks in actions. */
+export async function loadCityBySlug(slug: string): Promise<City | null> {
+  const res = await createPublicClient().from("cities").select("*").eq("slug", slug).maybeSingle();
+  const row = orThrow(res);
+  return row ? toCity(row) : null;
+}
+const cachedCityBySlug = cached("city-by-slug", loadCityBySlug);
+
 export const getCityBySlug = cache(
-  async (slug: string): Promise<City | undefined> => {
-    const supabase = await createClient();
-    const res = await supabase.from("cities").select("*").eq("slug", slug).maybeSingle();
-    const row = orThrow(res);
-    return row ? toCity(row) : undefined;
-  },
+  async (slug: string): Promise<City | undefined> =>
+    (await cachedCityBySlug(slug)) ?? undefined,
 );
 
-export async function getCitiesBySlugs(slugs: string[]): Promise<City[]> {
-  if (slugs.length === 0) return [];
-  const supabase = await createClient();
-  const res = await supabase.from("cities").select("*").in("slug", slugs);
-  return orThrow(res).map(toCity);
-}
+export const getCitiesBySlugs = cached(
+  "cities-by-slugs",
+  async (slugs: string[]): Promise<City[]> => {
+    if (slugs.length === 0) return [];
+    const res = await createPublicClient().from("cities").select("*").in("slug", slugs);
+    return orThrow(res).map(toCity);
+  },
+);
 
 type CityRowWithCounts = Tables<"cities"> & {
   flight_schools: { count: number }[];
@@ -261,36 +320,37 @@ type CityRowWithCounts = Tables<"cities"> & {
 };
 
 /** Cities with per-city school and airport counts (for the cities explorer) */
-export async function getCitiesWithCounts(): Promise<
-  (City & { schoolCount: number; airportCount: number })[]
-> {
-  const supabase = await createClient();
-  const res = await supabase
-    .from("cities")
-    .select("*, flight_schools(count), airports(count)")
-    .order("name");
-  return (orThrow(res) as unknown as CityRowWithCounts[]).map((row) => ({
-    ...toCity(row),
-    schoolCount: row.flight_schools[0]?.count ?? 0,
-    airportCount: row.airports[0]?.count ?? 0,
-  }));
-}
+export const getCitiesWithCounts = cached(
+  "cities-with-counts",
+  async (): Promise<(City & { schoolCount: number; airportCount: number })[]> => {
+    const res = await createPublicClient()
+      .from("cities")
+      .select("*, flight_schools(count), airports(count)")
+      .order("name");
+    return (orThrow(res) as unknown as CityRowWithCounts[]).map((row) => ({
+      ...toCity(row),
+      schoolCount: row.flight_schools[0]?.count ?? 0,
+      airportCount: row.airports[0]?.count ?? 0,
+    }));
+  },
+);
 
-export async function getCitiesByState(stateSlug: string): Promise<City[]> {
-  const supabase = await createClient();
-  const res = await supabase
-    .from("cities")
-    .select("*")
-    .eq("state_slug", stateSlug)
-    .order("name");
-  return orThrow(res).map(toCity);
-}
+export const getCitiesByState = cached(
+  "cities-by-state",
+  async (stateSlug: string): Promise<City[]> => {
+    const res = await createPublicClient()
+      .from("cities")
+      .select("*")
+      .eq("state_slug", stateSlug)
+      .order("name");
+    return orThrow(res).map(toCity);
+  },
+);
 
 // ── Airports ───────────────────────────────────────────────────────────────────
 
-export const getAirports = cache(async (): Promise<Airport[]> => {
-  const supabase = await createClient();
-  const res = await supabase.from("airports").select("*").order("icao");
+export const getAirports = cached("airports", async (): Promise<Airport[]> => {
+  const res = await createPublicClient().from("airports").select("*").order("icao");
   return orThrow(res).map(toAirport);
 });
 
@@ -299,128 +359,148 @@ type AirportRowWithCount = Tables<"airports"> & {
 };
 
 /** Airports with per-airport school counts (for the airports explorer) */
-export async function getAirportsWithSchoolCounts(): Promise<
-  (Airport & { schoolCount: number })[]
-> {
-  const supabase = await createClient();
-  const res = await supabase
-    .from("airports")
-    .select("*, flight_schools(count)")
-    .order("icao");
-  return (orThrow(res) as unknown as AirportRowWithCount[]).map((row) => ({
-    ...toAirport(row),
-    schoolCount: row.flight_schools[0]?.count ?? 0,
-  }));
-}
-
-/**
- * Look up airport by any of its three identifiers (case-insensitive).
- *
- * `code` usually comes straight from the URL, so it is validated before it
- * goes anywhere near a filter. ICAO (the canonical slug) wins over IATA /
- * FAA LID, and an ambiguous alternate identifier returns the first match
- * instead of throwing.
- */
-export const getAirportByCode = cache(
-  async (code: string): Promise<Airport | undefined> => {
-    const upper = code.trim().toUpperCase();
-    if (!isAirportCode(upper)) return undefined;
-    const supabase = await createClient();
-    const byIcao = orThrow(
-      await supabase.from("airports").select("*").eq("icao", upper).maybeSingle(),
-    );
-    if (byIcao) return toAirport(byIcao);
-    const alternates = orThrow(
-      await supabase
-        .from("airports")
-        .select("*")
-        .or(`iata.eq.${upper},faa_lid.eq.${upper}`)
-        .order("icao")
-        .limit(1),
-    );
-    return alternates[0] ? toAirport(alternates[0]) : undefined;
+export const getAirportsWithSchoolCounts = cached(
+  "airports-with-counts",
+  async (): Promise<(Airport & { schoolCount: number })[]> => {
+    const res = await createPublicClient()
+      .from("airports")
+      .select("*, flight_schools(count)")
+      .order("icao");
+    return (orThrow(res) as unknown as AirportRowWithCount[]).map((row) => ({
+      ...toAirport(row),
+      schoolCount: row.flight_schools[0]?.count ?? 0,
+    }));
   },
 );
 
-export async function getAirportsByCity(citySlug: string): Promise<Airport[]> {
-  const supabase = await createClient();
-  const res = await supabase
-    .from("airports")
-    .select("*")
-    .eq("city_slug", citySlug)
-    .order("icao");
-  return orThrow(res).map(toAirport);
+/**
+ * Look up an airport by any of its three identifiers (case-insensitive) in
+ * one query. `code` usually comes straight from the URL, so it is validated
+ * before it goes anywhere near a filter (that also keeps the `or` filter
+ * free of PostgREST syntax characters). ICAO — the canonical slug — wins
+ * over IATA / FAA LID; see pickAirportMatch.
+ *
+ * Fresh read (no cross-request cache) for the catalog-or-create step in
+ * submission approval.
+ */
+export async function loadAirportByCode(code: string): Promise<Airport | null> {
+  const upper = code.trim().toUpperCase();
+  if (!isAirportCode(upper)) return null;
+  const rows = orThrow(
+    await createPublicClient()
+      .from("airports")
+      .select("*")
+      .or(`icao.eq.${upper},iata.eq.${upper},faa_lid.eq.${upper}`)
+      .order("icao"),
+  );
+  const row = pickAirportMatch(rows, upper);
+  return row ? toAirport(row) : null;
 }
+const cachedAirportByCode = cached("airport-by-code", loadAirportByCode);
 
-export async function getAirportsByState(stateSlug: string): Promise<Airport[]> {
-  const supabase = await createClient();
-  const res = await supabase
-    .from("airports")
-    .select("*")
-    .eq("state_slug", stateSlug)
-    .order("icao");
-  return orThrow(res).map(toAirport);
-}
+export const getAirportByCode = cache(
+  async (code: string): Promise<Airport | undefined> =>
+    (await cachedAirportByCode(code)) ?? undefined,
+);
+
+export const getAirportsByCity = cached(
+  "airports-by-city",
+  async (citySlug: string): Promise<Airport[]> => {
+    const res = await createPublicClient()
+      .from("airports")
+      .select("*")
+      .eq("city_slug", citySlug)
+      .order("icao");
+    return orThrow(res).map(toAirport);
+  },
+);
+
+export const getAirportsByState = cached(
+  "airports-by-state",
+  async (stateSlug: string): Promise<Airport[]> => {
+    const res = await createPublicClient()
+      .from("airports")
+      .select("*")
+      .eq("state_slug", stateSlug)
+      .order("icao");
+    return orThrow(res).map(toAirport);
+  },
+);
 
 // ── Programs ───────────────────────────────────────────────────────────────────
 
-export const getPrograms = cache(async (): Promise<Program[]> => {
-  const supabase = await createClient();
-  const res = await supabase.from("programs").select("*").order("sort_order");
+export const getPrograms = cached("programs", async (): Promise<Program[]> => {
+  const res = await createPublicClient().from("programs").select("*").order("sort_order");
   return orThrow(res).map(toProgram);
 });
 
-export const getProgramBySlug = cache(
-  async (slug: string): Promise<Program | undefined> => {
-    const supabase = await createClient();
-    const res = await supabase.from("programs").select("*").eq("slug", slug).maybeSingle();
+const cachedProgramBySlug = cached(
+  "program-by-slug",
+  async (slug: string): Promise<Program | null> => {
+    const res = await createPublicClient().from("programs").select("*").eq("slug", slug).maybeSingle();
     const row = orThrow(res);
-    return row ? toProgram(row) : undefined;
+    return row ? toProgram(row) : null;
   },
 );
 
-export async function getProgramsBySlugs(slugs: string[]): Promise<Program[]> {
-  if (slugs.length === 0) return [];
-  const supabase = await createClient();
-  const res = await supabase
-    .from("programs")
-    .select("*")
-    .in("slug", slugs)
-    .order("sort_order");
-  return orThrow(res).map(toProgram);
-}
+export const getProgramBySlug = cache(
+  async (slug: string): Promise<Program | undefined> =>
+    (await cachedProgramBySlug(slug)) ?? undefined,
+);
+
+export const getProgramsBySlugs = cached(
+  "programs-by-slugs",
+  async (slugs: string[]): Promise<Program[]> => {
+    if (slugs.length === 0) return [];
+    const res = await createPublicClient()
+      .from("programs")
+      .select("*")
+      .in("slug", slugs)
+      .order("sort_order");
+    return orThrow(res).map(toProgram);
+  },
+);
 
 // ── Trainer Aircraft ───────────────────────────────────────────────────────────
 
-export const getTrainerAircraft = cache(async (): Promise<TrainerAircraft[]> => {
-  const supabase = await createClient();
-  const res = await supabase.from("trainer_aircraft").select("*").order("sort_order");
-  return orThrow(res).map(toAircraft);
-});
+export const getTrainerAircraft = cached(
+  "trainer-aircraft",
+  async (): Promise<TrainerAircraft[]> => {
+    const res = await createPublicClient().from("trainer_aircraft").select("*").order("sort_order");
+    return orThrow(res).map(toAircraft);
+  },
+);
 
-export const getAircraftBySlug = cache(
-  async (slug: string): Promise<TrainerAircraft | undefined> => {
-    const supabase = await createClient();
-    const res = await supabase
+const cachedAircraftBySlug = cached(
+  "aircraft-by-slug",
+  async (slug: string): Promise<TrainerAircraft | null> => {
+    const res = await createPublicClient()
       .from("trainer_aircraft")
       .select("*")
       .eq("slug", slug)
       .maybeSingle();
     const row = orThrow(res);
-    return row ? toAircraft(row) : undefined;
+    return row ? toAircraft(row) : null;
   },
 );
 
-export async function getAircraftBySlugs(slugs: string[]): Promise<TrainerAircraft[]> {
-  if (slugs.length === 0) return [];
-  const supabase = await createClient();
-  const res = await supabase
-    .from("trainer_aircraft")
-    .select("*")
-    .in("slug", slugs)
-    .order("sort_order");
-  return orThrow(res).map(toAircraft);
-}
+export const getAircraftBySlug = cache(
+  async (slug: string): Promise<TrainerAircraft | undefined> =>
+    (await cachedAircraftBySlug(slug)) ?? undefined,
+);
+
+export const getAircraftBySlugs = cached(
+  "aircraft-by-slugs",
+  async (slugs: string[]): Promise<TrainerAircraft[]> => {
+    if (slugs.length === 0) return [];
+    const res = await createPublicClient()
+      .from("trainer_aircraft")
+      .select("*")
+      .in("slug", slugs)
+      .order("sort_order");
+    return orThrow(res).map(toAircraft);
+  },
+);
 
 // ── Flight Schools ─────────────────────────────────────────────────────────────
 
@@ -428,34 +508,59 @@ async function selectSchools(
   filters?: Record<string, string | boolean>,
   ids?: string[],
 ): Promise<FlightSchool[]> {
-  const supabase = await createClient();
-  let query = supabase.from("flight_schools").select(SCHOOL_SELECT);
+  let query = createPublicClient().from("flight_schools").select(SCHOOL_SELECT);
   if (filters) query = query.match(filters);
   if (ids) query = query.in("id", ids);
   const res = await query.order("name");
   return (orThrow(res) as unknown as SchoolRowWithJoins[]).map(toSchool);
 }
 
-export const getFlightSchools = cache(async (): Promise<FlightSchool[]> => {
+/**
+ * Schools linked to one row of a join table, in a single query. The join
+ * table is embedded twice: once in full (so `programSlugs` / `aircraftSlugs`
+ * stay complete) and once under the `matched` alias with `!inner`, which
+ * turns the filter on it into a filter on the schools themselves.
+ */
+async function selectSchoolsByLink(
+  table: "school_programs" | "school_aircraft",
+  column: "program_slug" | "aircraft_slug",
+  slug: string,
+): Promise<FlightSchool[]> {
+  const res = await createPublicClient()
+    .from("flight_schools")
+    .select(`${SCHOOL_SELECT}, matched:${table}!inner(${column})`)
+    .eq(`matched.${column}`, slug)
+    .order("name");
+  return (orThrow(res) as unknown as SchoolRowWithJoins[]).map(toSchool);
+}
+
+export const getFlightSchools = cached("schools", async (): Promise<FlightSchool[]> => {
   return selectSchools();
 });
 
+/** Fresh read (no cross-request cache) — slug uniqueness in submission approval. */
+export async function loadSchoolBySlug(slug: string): Promise<FlightSchool | null> {
+  const res = await createPublicClient()
+    .from("flight_schools")
+    .select(SCHOOL_SELECT)
+    .eq("slug", slug)
+    .maybeSingle();
+  const row = orThrow(res) as unknown as SchoolRowWithJoins | null;
+  return row ? toSchool(row) : null;
+}
+const cachedSchoolBySlug = cached("school-by-slug", loadSchoolBySlug);
+
 export const getSchoolBySlug = cache(
-  async (slug: string): Promise<FlightSchool | undefined> => {
-    const supabase = await createClient();
-    const res = await supabase
-      .from("flight_schools")
-      .select(SCHOOL_SELECT)
-      .eq("slug", slug)
-      .maybeSingle();
-    const row = orThrow(res) as unknown as SchoolRowWithJoins | null;
-    return row ? toSchool(row) : undefined;
-  },
+  async (slug: string): Promise<FlightSchool | undefined> =>
+    (await cachedSchoolBySlug(slug)) ?? undefined,
 );
 
-export async function getSchoolById(id: string): Promise<FlightSchool | undefined> {
-  const supabase = await createClient();
-  const res = await supabase
+/**
+ * Fresh read for actions that check ownership or clean up a replaced logo —
+ * they must see the row as it is now, not as it was cached.
+ */
+export async function loadSchoolById(id: string): Promise<FlightSchool | undefined> {
+  const res = await createPublicClient()
     .from("flight_schools")
     .select(SCHOOL_SELECT)
     .eq("id", id)
@@ -464,72 +569,74 @@ export async function getSchoolById(id: string): Promise<FlightSchool | undefine
   return row ? toSchool(row) : undefined;
 }
 
-export async function getSchoolsByState(stateSlug: string): Promise<FlightSchool[]> {
-  return selectSchools({ state_slug: stateSlug });
-}
+export const getSchoolsByState = cached(
+  "schools-by-state",
+  (stateSlug: string): Promise<FlightSchool[]> => selectSchools({ state_slug: stateSlug }),
+);
 
-export async function getSchoolsByCity(citySlug: string): Promise<FlightSchool[]> {
-  return selectSchools({ city_slug: citySlug });
-}
+export const getSchoolsByCity = cached(
+  "schools-by-city",
+  (citySlug: string): Promise<FlightSchool[]> => selectSchools({ city_slug: citySlug }),
+);
 
-export async function getSchoolsByAirport(icao: string): Promise<FlightSchool[]> {
-  return selectSchools({ primary_airport_code: icao.toUpperCase() });
-}
+export const getSchoolsByAirport = cached(
+  "schools-by-airport",
+  (icao: string): Promise<FlightSchool[]> =>
+    selectSchools({ primary_airport_code: icao.toUpperCase() }),
+);
 
-export async function getFeaturedSchools(): Promise<FlightSchool[]> {
-  return selectSchools({ featured: true });
-}
+export const getFeaturedSchools = cached(
+  "schools-featured",
+  (): Promise<FlightSchool[]> => selectSchools({ featured: true }),
+);
 
 /**
  * All schools sorted by a weighted score that factors in both rating and
  * review count: score = rating × log(reviewCount + 1)
  */
-export async function getTopRatedSchools(): Promise<FlightSchool[]> {
+export const getTopRatedSchools = cache(async (): Promise<FlightSchool[]> => {
   const schools = await getFlightSchools();
   const score = (s: FlightSchool) => s.rating * Math.log(s.reviewCount + 1);
   // Copy before sorting — getFlightSchools() is memoized and its array is
   // shared with every other caller in this request
   return [...schools].sort((a, b) => score(b) - score(a));
-}
+});
+
+const getSchoolsByOrganization = cached(
+  "schools-by-organization",
+  (organizationId: string): Promise<FlightSchool[]> =>
+    selectSchools({ organization_id: organizationId }),
+);
 
 /** All sibling listings for the same brand (excludes the given school itself) */
 export async function getRelatedSchools(school: FlightSchool): Promise<FlightSchool[]> {
   if (!school.organizationId) return [];
-  const siblings = await selectSchools({ organization_id: school.organizationId });
+  const siblings = await getSchoolsByOrganization(school.organizationId);
   return siblings.filter((s) => s.id !== school.id);
 }
 
-export async function getSchoolsByProgram(programSlug: string): Promise<FlightSchool[]> {
-  const supabase = await createClient();
-  const links = orThrow(
-    await supabase
-      .from("school_programs")
-      .select("school_id")
-      .eq("program_slug", programSlug),
-  );
-  const ids = links.map((l) => l.school_id);
-  if (ids.length === 0) return [];
-  return selectSchools(undefined, ids);
-}
+export const getSchoolsByProgram = cached(
+  "schools-by-program",
+  (programSlug: string): Promise<FlightSchool[]> =>
+    selectSchoolsByLink("school_programs", "program_slug", programSlug),
+);
 
-export async function getSchoolsByAircraftSlug(
-  aircraftSlug: string,
-): Promise<FlightSchool[]> {
-  const supabase = await createClient();
-  const links = orThrow(
-    await supabase
-      .from("school_aircraft")
-      .select("school_id")
-      .eq("aircraft_slug", aircraftSlug),
-  );
-  const ids = links.map((l) => l.school_id);
-  if (ids.length === 0) return [];
-  return selectSchools(undefined, ids);
-}
+export const getSchoolsByAircraftSlug = cached(
+  "schools-by-aircraft",
+  (aircraftSlug: string): Promise<FlightSchool[]> =>
+    selectSchoolsByLink("school_aircraft", "aircraft_slug", aircraftSlug),
+);
 
-export async function getSchoolsManagedByUser(userId: string): Promise<FlightSchool[]> {
+/** Fresh read — the idempotency check in submission approval. */
+export function loadSchoolsManagedByUser(userId: string): Promise<FlightSchool[]> {
   return selectSchools({ managed_by: userId });
 }
+export const getSchoolsManagedByUser = cached("schools-managed-by", loadSchoolsManagedByUser);
+
+const cachedSchoolsByIds = cached(
+  "schools-by-ids",
+  (ids: string[]): Promise<FlightSchool[]> => selectSchools(undefined, ids),
+);
 
 /** Schools for a set of ids, keyed by id */
 export async function getSchoolsByIds(
@@ -537,7 +644,8 @@ export async function getSchoolsByIds(
 ): Promise<Record<string, FlightSchool>> {
   const byId: Record<string, FlightSchool> = {};
   if (ids.length === 0) return byId;
-  const schools = await selectSchools(undefined, [...new Set(ids)]);
+  // Sorted + deduped so the cache key doesn't depend on the caller's order
+  const schools = await cachedSchoolsByIds([...new Set(ids)].sort());
   for (const school of schools) byId[school.id] = school;
   return byId;
 }
@@ -546,45 +654,45 @@ export async function getSchoolsByIds(
  * City-name and state lookup maps for building "City, ST" labels without
  * per-row queries.
  */
-export async function getLocationMaps(): Promise<{
-  cityNameBySlug: Record<string, string>;
-  stateBySlug: Record<string, State>;
-}> {
-  const [cities, states] = await Promise.all([getCities(), getStates()]);
-  return {
-    cityNameBySlug: Object.fromEntries(cities.map((c) => [c.slug, c.name])),
-    stateBySlug: Object.fromEntries(states.map((s) => [s.slug, s])),
-  };
-}
+export const getLocationMaps = cache(
+  async (): Promise<{
+    cityNameBySlug: Record<string, string>;
+    stateBySlug: Record<string, State>;
+  }> => {
+    const [cities, states] = await Promise.all([getCities(), getStates()]);
+    return {
+      cityNameBySlug: Object.fromEntries(cities.map((c) => [c.slug, c.name])),
+      stateBySlug: Object.fromEntries(states.map((s) => [s.slug, s])),
+    };
+  },
+);
 
 // ── Reviews & Comments ─────────────────────────────────────────────────────────
+// Public-read but user-generated: anon client, per-request memo only.
 
-export async function getReviewsBySchool(schoolId: string): Promise<Review[]> {
-  const supabase = await createClient();
-  const res = await supabase
+export const getReviewsBySchool = cache(async (schoolId: string): Promise<Review[]> => {
+  const res = await createPublicClient()
     .from("reviews")
     .select("*")
     .eq("school_id", schoolId)
     .order("created_at", { ascending: false });
   return orThrow(res).map(toReview);
-}
+});
 
-export async function getReviewsByUser(userId: string): Promise<Review[]> {
-  const supabase = await createClient();
-  const res = await supabase
+export const getReviewsByUser = cache(async (userId: string): Promise<Review[]> => {
+  const res = await createPublicClient()
     .from("reviews")
     .select("*")
     .eq("user_id", userId)
     .order("created_at", { ascending: false });
   return orThrow(res).map(toReview);
-}
+});
 
 /** Reviews for a set of ids, keyed by id */
 export async function getReviewsByIds(ids: string[]): Promise<Record<string, Review>> {
   const byId: Record<string, Review> = {};
   if (ids.length === 0) return byId;
-  const supabase = await createClient();
-  const res = await supabase
+  const res = await createPublicClient()
     .from("reviews")
     .select("*")
     .in("id", [...new Set(ids)]);
@@ -598,8 +706,7 @@ export async function getCommentsForReviews(
 ): Promise<Record<string, Comment[]>> {
   const grouped: Record<string, Comment[]> = {};
   if (reviewIds.length === 0) return grouped;
-  const supabase = await createClient();
-  const res = await supabase
+  const res = await createPublicClient()
     .from("comments")
     .select("*")
     .in("review_id", reviewIds)
@@ -610,15 +717,14 @@ export async function getCommentsForReviews(
   return grouped;
 }
 
-export async function getCommentsByUser(userId: string): Promise<Comment[]> {
-  const supabase = await createClient();
-  const res = await supabase
+export const getCommentsByUser = cache(async (userId: string): Promise<Comment[]> => {
+  const res = await createPublicClient()
     .from("comments")
     .select("*")
     .eq("user_id", userId)
     .order("created_at", { ascending: false });
   return orThrow(res).map(toComment);
-}
+});
 
 /** Coerce a caller-supplied row limit to an integer in [1, 200] */
 function clampLimit(limit: number): number {
@@ -628,8 +734,7 @@ function clampLimit(limit: number): number {
 
 /** Newest reviews across every school — the moderation queue. */
 export async function getRecentReviews(limit = 50): Promise<Review[]> {
-  const supabase = await createClient();
-  const res = await supabase
+  const res = await createPublicClient()
     .from("reviews")
     .select("*")
     .order("created_at", { ascending: false })
@@ -639,8 +744,7 @@ export async function getRecentReviews(limit = 50): Promise<Review[]> {
 
 /** Newest comments across every review — the moderation queue. */
 export async function getRecentComments(limit = 50): Promise<Comment[]> {
-  const supabase = await createClient();
-  const res = await supabase
+  const res = await createPublicClient()
     .from("comments")
     .select("*")
     .order("created_at", { ascending: false })
@@ -732,70 +836,71 @@ export async function getSchoolSubmissionById(
 }
 
 // ── Users (profiles) ───────────────────────────────────────────────────────────
+// Public-read; per-request memo only so a profile edit shows up immediately.
 
-export async function getUserById(id: string): Promise<User | undefined> {
-  const supabase = await createClient();
-  const res = await supabase.from("profiles").select("*").eq("id", id).maybeSingle();
+export const getUserById = cache(async (id: string): Promise<User | undefined> => {
+  const res = await createPublicClient().from("profiles").select("*").eq("id", id).maybeSingle();
   const row = orThrow(res);
   return row ? toUser(row) : undefined;
-}
-
-// ── Search ─────────────────────────────────────────────────────────────────────
-
-/** Compact index of schools + airports for the client-side hero search */
-export async function getSearchIndex(): Promise<{
-  schools: SchoolSearchItem[];
-  airports: AirportSearchItem[];
-}> {
-  const [schools, airports, cities, states] = await Promise.all([
-    getFlightSchools(),
-    getAirports(),
-    getCities(),
-    getStates(),
-  ]);
-
-  const cityNames = Object.fromEntries(cities.map((c) => [c.slug, c.name]));
-  const statesBySlug = Object.fromEntries(states.map((s) => [s.slug, s]));
-
-  const locationOf = (citySlug: string, stateSlug: string) => {
-    const cityName = cityNames[citySlug];
-    const state = statesBySlug[stateSlug];
-    return cityName && state ? `${cityName}, ${state.abbreviation}` : citySlug;
-  };
-
-  return {
-    schools: schools.map((s) => ({
-      id: s.id,
-      name: s.name,
-      location: locationOf(s.citySlug, s.stateSlug),
-      href: schoolHref(s),
-      airport: s.primaryAirportCode,
-      stateName: statesBySlug[s.stateSlug]?.name ?? s.stateSlug,
-      stateAbbreviation: statesBySlug[s.stateSlug]?.abbreviation ?? "",
-    })),
-    airports: airports.map((a) => ({
-      id: a.id,
-      code: a.icao,
-      iata: a.iata,
-      faaLid: a.faaLid,
-      name: a.name,
-      location: locationOf(a.citySlug, a.stateSlug),
-      href: `/airports/${a.icao.toLowerCase()}`,
-    })),
-  };
-}
+});
 
 /** Profiles for a set of user ids, keyed by id (for review/comment author display) */
 export async function getUsersByIds(ids: string[]): Promise<Record<string, User>> {
   const byId: Record<string, User> = {};
   if (ids.length === 0) return byId;
-  const supabase = await createClient();
-  const res = await supabase.from("profiles").select("*").in("id", [...new Set(ids)]);
+  const res = await createPublicClient().from("profiles").select("*").in("id", [...new Set(ids)]);
   for (const row of orThrow(res)) {
     byId[row.id] = toUser(row);
   }
   return byId;
 }
+
+// ── Search ─────────────────────────────────────────────────────────────────────
+
+/** Compact index of schools + airports for the client-side hero search */
+export const getSearchIndex = cache(
+  async (): Promise<{
+    schools: SchoolSearchItem[];
+    airports: AirportSearchItem[];
+  }> => {
+    const [schools, airports, cities, states] = await Promise.all([
+      getFlightSchools(),
+      getAirports(),
+      getCities(),
+      getStates(),
+    ]);
+
+    const cityNames = Object.fromEntries(cities.map((c) => [c.slug, c.name]));
+    const statesBySlug = Object.fromEntries(states.map((s) => [s.slug, s]));
+
+    const locationOf = (citySlug: string, stateSlug: string) => {
+      const cityName = cityNames[citySlug];
+      const state = statesBySlug[stateSlug];
+      return cityName && state ? `${cityName}, ${state.abbreviation}` : citySlug;
+    };
+
+    return {
+      schools: schools.map((s) => ({
+        id: s.id,
+        name: s.name,
+        location: locationOf(s.citySlug, s.stateSlug),
+        href: schoolHref(s),
+        airport: s.primaryAirportCode,
+        stateName: statesBySlug[s.stateSlug]?.name ?? s.stateSlug,
+        stateAbbreviation: statesBySlug[s.stateSlug]?.abbreviation ?? "",
+      })),
+      airports: airports.map((a) => ({
+        id: a.id,
+        code: a.icao,
+        iata: a.iata,
+        faaLid: a.faaLid,
+        name: a.name,
+        location: locationOf(a.citySlug, a.stateSlug),
+        href: `/airports/${a.icao.toLowerCase()}`,
+      })),
+    };
+  },
+);
 
 // ── Favorites ──────────────────────────────────────────────────────────────────
 

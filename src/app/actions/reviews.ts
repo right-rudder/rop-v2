@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { invalidateCatalog } from "@/lib/data";
 import { friendlyDbError } from "@/lib/supabase/errors";
 import { safeInternalPath } from "@/lib/safe-path";
 import { isUuid } from "@/lib/permissions";
@@ -85,6 +86,9 @@ export async function submitReview(
     return { error: friendlyDbError(error) };
   }
 
+  // The on_review_change trigger just re-computed the school's rating and
+  // review_count, which every cached school read carries.
+  invalidateCatalog();
   revalidateFormPath(formData);
   return { success: true };
 }
@@ -117,6 +121,7 @@ export async function deleteReview(
     return { error: "Review not found, or you don't have permission to delete it." };
   }
 
+  invalidateCatalog(); // rating / review_count re-computed by the trigger
   revalidateFormPath(formData);
   revalidateModeration();
   return { success: true };

@@ -10,7 +10,9 @@ import {
 import { schoolHref } from "@/lib/utils";
 import { absoluteUrl } from "@/lib/site";
 
-// Rendered per request — the sitemap reads live rows from Supabase
+// Rendered per request rather than prerendered at build: that keeps `next
+// build` from needing Supabase credentials. The catalog getters are served
+// from the cross-request cache, so a warm hit costs no database queries.
 export const dynamic = "force-dynamic";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {

@@ -38,3 +38,16 @@ export function isHttpUrl(value: string): boolean {
     return false;
   }
 }
+
+/**
+ * Pick the airport row for a user-supplied code from a single `or=` lookup
+ * over icao / iata / faa_lid. ICAO — the canonical slug — wins; otherwise the
+ * first row (callers order by icao) so an ambiguous alternate identifier
+ * resolves deterministically instead of throwing.
+ */
+export function pickAirportMatch<T extends { icao: string }>(
+  rows: readonly T[],
+  code: string,
+): T | undefined {
+  return rows.find((r) => r.icao === code) ?? rows[0];
+}

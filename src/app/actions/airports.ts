@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser, isAdmin } from "@/lib/auth";
+import { invalidateCatalog } from "@/lib/data";
 
 export type AirportFormState = {
   error?: string;
@@ -45,6 +46,7 @@ export async function updateAirport(
   if (error) return { error: error.message };
   if (!data) return { error: "Airport not found (or update was blocked)." };
 
+  invalidateCatalog();
   const href = `/airports/${data.icao.toLowerCase()}`;
   revalidatePath(href);
   revalidatePath(`${href}/edit`);
