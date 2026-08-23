@@ -15,8 +15,10 @@ const supabaseProtocol = supabaseUrl.protocol === "http:" ? "http" : "https";
  * Supabase and the inline JSON-LD, and should ship report-only first.
  */
 const securityHeaders = [
-  // Two years, subdomains included. Add "; preload" after submitting to hstspreload.org.
-  { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" },
+  // Two years, all subdomains, and the preload directive hstspreload.org
+  // requires for pilottrainingnearme.com. Note the commitment: once on the
+  // preload list, every subdomain of the apex must be served over HTTPS.
+  { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   { key: "X-Frame-Options", value: "DENY" },
