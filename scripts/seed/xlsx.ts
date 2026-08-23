@@ -10,7 +10,17 @@
  */
 import { inflateRawSync } from "node:zlib";
 
-type ZipEntry = { name: string; offset: number; method: number; size: number };
+type ZipEntry = {
+  name: string;
+  offset: number;
+  method: number;
+  /** Bytes on disk. This — not the uncompressed size — bounds the deflate stream. */
+  compressedSize: number;
+};
+
+/** ZIP compression methods this reader understands. */
+const STORED = 0;
+const DEFLATE = 8;
 
 function readZipEntries(buf: Buffer): Map<string, ZipEntry> {
   // Find the End Of Central Directory record, scanning back over the comment.
@@ -44,28 +54,39 @@ function readZipEntries(buf: Buffer): Map<string, ZipEntry> {
   for (let i = 0; i < count; i++) {
     if (buf.readUInt32LE(p) !== 0x02014b50) break;
     const method = buf.readUInt16LE(p + 10);
-    const size = buf.readUInt32LE(p + 24);
+    // Central directory: +20 is the compressed size, +24 the uncompressed one.
+    const compressedSize = buf.readUInt32LE(p + 20);
     const nameLen = buf.readUInt16LE(p + 28);
     const extraLen = buf.readUInt16LE(p + 30);
     const commentLen = buf.readUInt16LE(p + 32);
     const offset = buf.readUInt32LE(p + 42);
     const name = buf.toString("utf8", p + 46, p + 46 + nameLen);
-    entries.set(name, { name, offset, method, size });
+    entries.set(name, { name, offset, method, compressedSize });
     p += 46 + nameLen + extraLen + commentLen;
   }
   return entries;
 }
 
 function readEntry(buf: Buffer, entry: ZipEntry): string {
+  if (entry.method !== STORED && entry.method !== DEFLATE) {
+    throw new Error(
+      `${entry.name}: unsupported ZIP compression method ${entry.method} (only stored and deflate are handled)`,
+    );
+  }
+  if (entry.compressedSize === 0xffffffff) {
+    throw new Error(`${entry.name}: ZIP64 per-entry sizes are not supported`);
+  }
   // Local file header: name/extra lengths differ from the central directory's.
   const h = entry.offset;
   if (buf.readUInt32LE(h) !== 0x04034b50) throw new Error(`Bad local header for ${entry.name}`);
   const nameLen = buf.readUInt16LE(h + 26);
   const extraLen = buf.readUInt16LE(h + 28);
   const start = h + 30 + nameLen + extraLen;
-  const compressed = buf.subarray(start, start + (entry.method === 0 ? entry.size : buf.length));
-  if (entry.method === 0) return compressed.toString("utf8");
-  return inflateRawSync(compressed).toString("utf8");
+  // Slice exactly the entry's bytes. Passing the rest of the archive to
+  // inflateRawSync leaves trailing data after the deflate stream, which is
+  // both wasteful and a decompression error waiting to happen.
+  const body = buf.subarray(start, start + entry.compressedSize);
+  return entry.method === STORED ? body.toString("utf8") : inflateRawSync(body).toString("utf8");
 }
 
 const ENTITIES: Record<string, string> = {
