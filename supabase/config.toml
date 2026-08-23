@@ -2,3 +2,10 @@
 # only the project ref is fixed here so `supabase db push` / `db pull` /
 # `migration list` target the right project.
 project_id = "ywqvhrslzpocxcbkhlxm"
+
+# `supabase db reset` (local) and `db push --include-seed` (remote) both take
+# the catalog from the generated seed file. Regenerate it with
+# `npm run seed:build` — never edit it by hand.
+[db.seed]
+enabled = true
+sql_paths = ["./seed.sql"]

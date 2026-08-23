@@ -50,21 +50,102 @@ out of client code and rotate it in the dashboard if it is ever exposed.
 
 ## 2. Apply the schema, then the seed data
 
-In **SQL Editor**, run in order:
+### Where the catalog comes from
 
-1. `supabase/reset.sql` — only if the project already has tables from an
-   older schema version (drops all app tables; does not touch auth.users)
-2. `supabase/schema.sql` — tables, constraints, RLS policies, grants,
-   profile trigger, rating trigger, column-protection trigger (a snapshot of
-   `supabase/migrations/`, which is the canonical history — see below)
-3. `supabase/seed.sql` — catalog data (states, cities, airports, programs,
-   aircraft, schools). Regenerate anytime with `node scripts/generate-seed.ts`
-   (it reads `src/lib/mock-data.ts`).
+States, cities, airports and flight schools are **imported**, not hand-written.
+The source is the Google Sheet **"FSF - Seed Data"** (tabs `COMPILED SCHOOLS`,
+`COMPILED AIRPORTS`, `States`), which must be shared as *Anyone with the link:
+Viewer* for the fetch step to work.
 
-> The seed is **demo data**: school websites (`example.com`) and phone
-> numbers (`555-…`) are placeholders to replace before launch, and every
-> school starts at 0 reviews — `rating` / `review_count` are owned by the
-> `refresh_school_rating` trigger and only move when real reviews are posted.
+```sh
+npm run seed:fetch    # sheet -> data/catalog/*.csv        (only when the sheet changes)
+npm run seed:build    # CSVs  -> supabase/seed.sql + data/catalog/reports/
+```
+
+Both outputs are committed. `npm run seed:check` rebuilds and fails if
+`seed.sql` no longer matches the CSVs — CI runs it so the two cannot drift.
+
+**Read `data/catalog/reports/` after every build.** It is the only record of
+what the import decided:
+
+| Report | What it means |
+|---|---|
+| `unresolved-airports.csv` | Rows skipped because their airport or state could not be resolved. Should be empty; anything here is a row missing from the site. |
+| `merged-duplicates.csv` | Rows collapsed into one listing (same name, city, state and airport). |
+| `closed-airports.csv` | Airports OurAirports marks as closed that still host a listing. |
+| `unmapped-tokens.csv` | Training tokens with no `programs` / `trainer_aircraft` catalog entry. They are stored as `flight_schools.training_tags`, and the high-count ones are candidates for real catalog entries. |
+| `cities-without-coords.csv` | Cities with no airport to derive a centroid from — they cannot be a near-me origin. |
+
+Only airports that host at least one school are imported: an airport page with
+nothing on it is a thin page, and a near-me origin is only useful where there
+is something to find.
+
+### Applying it
+
+For a database that already has accounts you want to keep (the normal case):
+
+1. Run `supabase/reset-catalog.sql` in **SQL Editor**. It deletes schools,
+   airports, cities and everything cascading off a school, and keeps
+   `auth.users`, `profiles`, `school_submissions` and `leads`.
+2. Load the catalog:
+
+   ```sh
+   npm run seed:apply              # add --dry-run first to see the plan
+   ```
+
+   This writes the same rows `seed.sql` contains, over the Data API, using the
+   `SUPABASE_SERVICE_ROLE_KEY` already in `.env.local`. It is idempotent
+   (`resolution=ignore-duplicates`), so a partial run can just be repeated, and
+   it reads the row counts back from the server when it finishes.
+
+### Why not `supabase db push --include-seed`?
+
+That is the canonical command, and it works if your Supabase account can
+provision the CLI's temporary database role. On accounts that cannot, it fails
+before touching the schema:
+
+```
+unexpected login role status 400: Failed to create login role:
+ERROR: 42501: permission denied to alter role
+DETAIL: Only roles with the CREATEROLE attribute and the ADMIN option
+        on role "cli_login_postgres" may alter this role.
+```
+
+Two ways round it, in order of preference:
+
+- `npm run seed:apply` (above) — needs no database role at all.
+- `npx supabase db push --include-seed --db-url "$DB_URL"`, where `$DB_URL` is
+  the connection string from **Project Settings → Database**. Passing the URL
+  directly skips the login-role step. Migrations still need
+  `npx supabase login && npx supabase link` for `db push` without `--db-url`.
+
+Do the two together: between them the site has an empty catalog.
+
+`reset-catalog.sql` leaves Storage alone — Supabase guards `storage.objects`
+and `storage.buckets` with a `BEFORE DELETE` trigger (`storage.protect_delete`),
+so logo files can only be removed through the Storage API. The script's last
+query lists the objects left orphaned; clear them in **Storage → school-logos**
+or with `npx supabase storage rm -r ss:///school-logos --linked`. Leaving them
+costs a few KB and breaks nothing — the app resolves logos through
+`flight_schools.logo_path`, which the reset removes.
+
+Afterwards, regenerate the types and re-dump the snapshot:
+
+```sh
+npx supabase gen types typescript --linked > src/lib/supabase/database.types.ts
+npx supabase db dump --linked -f supabase/schema.sql
+```
+
+For a brand-new project, run in **SQL Editor**: `supabase/schema.sql`, then
+`supabase/seed.sql`. (`supabase/reset.sql` is the full teardown — it drops
+every app table and the storage bucket, and is only for realigning a database
+with `schema.sql` from scratch.)
+
+> Imported listings have **no website and mostly no phone**: the source does not
+> carry them. Every school starts at 0 reviews — `rating` / `review_count` are
+> owned by the `refresh_school_rating` trigger and only move when real reviews
+> are posted. Descriptions are generated from each row's own facts and are meant
+> to be replaced by owners when they claim a listing.
 
 ### Migrations (the source of truth for schema changes)
 

@@ -214,6 +214,15 @@ function toSchool(row: SchoolRowWithJoins): FlightSchool {
     managedBy: row.managed_by ?? undefined,
     coords: toCoords(row.latitude, row.longitude),
     logoPath: row.logo_path ?? undefined,
+    schoolTypes: row.school_types ?? [],
+    vaApproved: row.va_approved ?? undefined,
+    visaTypes: row.visa_types ?? [],
+    dormitory: row.dormitory ?? undefined,
+    dpeOnSite: row.dpe_on_site ?? undefined,
+    inHouseMaintenance: row.in_house_maintenance ?? undefined,
+    hours: row.hours ?? undefined,
+    address: row.address ?? undefined,
+    trainingTags: row.training_tags ?? [],
   };
 }
 

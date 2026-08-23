@@ -57,14 +57,19 @@ create table public.cities (
 create table public.airports (
   id          text primary key,
   name        text not null,
-  icao        char(4) not null unique,    -- used as URL slug (lowercased)
-  iata        char(3),
+  -- Used as the URL slug (lowercased). Not always a 4-letter ICAO code: most
+  -- US general aviation fields publish only an FAA local identifier ("01J",
+  -- "43CO"), and fields with no published code get OurAirports' "US-1234".
+  icao        text not null unique,
+  iata        text,
   faa_lid     text,
   city_slug   text not null references public.cities (slug),
   state_slug  text not null references public.states (slug),
   description text,
   latitude    double precision,
   longitude   double precision,
+  constraint airports_icao_format      check (icao ~ '^[A-Z0-9-]{3,8}$'),
+  constraint airports_iata_format      check (iata is null or iata ~ '^[A-Z0-9]{3}$'),
   constraint airports_latitude_range  check (latitude  is null or latitude  between -90  and 90),
   constraint airports_longitude_range check (longitude is null or longitude between -180 and 180),
   constraint airports_coords_pair     check ((latitude is null) = (longitude is null))
@@ -125,11 +130,28 @@ create table public.flight_schools (
   latitude              double precision,
   longitude             double precision,
   logo_path             text,
+  -- Imported facts (scripts/seed). Booleans are tri-state: null means the
+  -- source did not say, which is not the same as false. Deliberately absent
+  -- from protect_flight_school_columns() — these describe the business, so a
+  -- listing owner is the right person to correct them.
+  school_types          text[] not null default '{}',
+  va_approved           boolean,
+  visa_types            text[] not null default '{}',
+  dormitory             boolean,
+  dpe_on_site           boolean,
+  in_house_maintenance  boolean,
+  hours                 text,
+  address               text,
+  -- Training the school offers that has no programs / trainer_aircraft
+  -- catalog row yet (rotary wing, glider, simulator classes, Part 107 ...).
+  training_tags         text[] not null default '{}',
   constraint flight_schools_name_length        check (char_length(name) between 1 and 120),
   constraint flight_schools_description_length check (char_length(description) <= 5000),
   constraint flight_schools_website_format     check (website = '' or (char_length(website) <= 300 and website ~* '^https?://')),
   constraint flight_schools_phone_length       check (char_length(phone) <= 40),
   constraint flight_schools_logo_path_length   check (logo_path is null or char_length(logo_path) <= 200),
+  constraint flight_schools_hours_length       check (hours   is null or char_length(hours)   <= 300),
+  constraint flight_schools_address_length     check (address is null or char_length(address) <= 300),
   constraint flight_schools_latitude_range  check (latitude  is null or latitude  between -90  and 90),
   constraint flight_schools_longitude_range check (longitude is null or longitude between -180 and 180),
   constraint flight_schools_coords_pair     check ((latitude is null) = (longitude is null))
@@ -273,6 +295,19 @@ create index flight_schools_organization_id_idx
   on public.flight_schools (organization_id) where organization_id is not null;
 create index flight_schools_featured_idx
   on public.flight_schools (name) where featured;
+
+-- Coordinates: near-me still filters client-side, but the catalog is large
+-- enough that the bounding-box query behind a future radius RPC needs these.
+create index airports_coords_idx
+  on public.airports (latitude, longitude) where latitude is not null;
+create index flight_schools_coords_idx
+  on public.flight_schools (latitude, longitude) where latitude is not null;
+
+-- Filtering by the imported array facts (e.g. "aviation college", "M-1 visa").
+create index flight_schools_school_types_idx
+  on public.flight_schools using gin (school_types);
+create index flight_schools_training_tags_idx
+  on public.flight_schools using gin (training_tags);
 
 -- Join tables: the primary key covers (school_id, …); the reverse lookup
 -- (schools offering a program / flying an aircraft) needs its own.

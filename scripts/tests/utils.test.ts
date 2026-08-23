@@ -12,20 +12,45 @@ test("isHttpUrl accepts only http(s) URLs", () => {
   assert.equal(isHttpUrl(""), false);
 });
 
-test("isAirportCode accepts 3–4 alphanumerics only", () => {
+test("isAirportCode accepts every identifier shape the catalog uses", () => {
+  // 4-letter ICAO, FAA local identifiers (3 and 4 char, digits anywhere), and
+  // the "US-1234" placeholder OurAirports gives fields with no published code.
   assert.equal(isAirportCode("KFFZ"), true);
   assert.equal(isAirportCode("ffz"), true);
   assert.equal(isAirportCode("1G0"), true);
+  assert.equal(isAirportCode("01J"), true);
+  assert.equal(isAirportCode("43CO"), true);
+  assert.equal(isAirportCode("US-0880"), true);
+  assert.equal(isAirportCode("US-10896"), true);
+
   assert.equal(isAirportCode("KF"), false);
-  assert.equal(isAirportCode("KFFZZ"), false);
+  assert.equal(isAirportCode("KFFZZZZZZ"), false);
+  assert.equal(isAirportCode(""), false);
+});
+
+test("isAirportCode rejects anything that could break the PostgREST or() filter", () => {
+  // getAirportByCode interpolates the code into "icao.eq.X,iata.eq.X,..." —
+  // a comma or paren would let a caller inject extra filter terms.
   assert.equal(isAirportCode("KFFZ,icao.eq.x"), false);
   assert.equal(isAirportCode("(KFFZ)"), false);
-  assert.equal(isAirportCode(""), false);
+  assert.equal(isAirportCode("KFF."), false);
+  assert.equal(isAirportCode("K*FZ"), false);
+  assert.equal(isAirportCode("K FZ"), false);
 });
 
 test("slugify", () => {
   assert.equal(slugify("Arizona Pilot Academy"), "arizona-pilot-academy");
   assert.equal(slugify("  St. Louis  "), "st-louis");
+});
+
+test("slugify collapses hyphen runs and never leaves a dangling hyphen", () => {
+  // " - " becomes three hyphens before collapsing: stripping the spaces around
+  // an existing hyphen is what produces the run.
+  assert.equal(slugify("AeroDynamic Aviation - Monterey"), "aerodynamic-aviation-monterey");
+  assert.equal(slugify("CableAir - School of Flight"), "cableair-school-of-flight");
+  assert.equal(slugify("- Leading and trailing -"), "leading-and-trailing");
+  assert.equal(slugify("Wings // Things"), "wings-things");
+  assert.equal(slugify("A -- B"), "a-b");
 });
 
 test("schoolHref lowercases the airport code", () => {

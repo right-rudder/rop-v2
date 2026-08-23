@@ -16,7 +16,7 @@ import {
   getPrograms,
   invalidateCatalog,
 } from "@/lib/data";
-import { slugify } from "@/lib/utils";
+import { slugify, isAirportCode } from "@/lib/utils";
 import type { SchoolSubmission, State } from "@/lib/types";
 
 export type AdminActionState = {
@@ -71,9 +71,11 @@ async function resolveAirportIcao(
   if (existing) return existing.icao;
 
   const icao = code.toUpperCase();
-  if (!/^[A-Z0-9]{4}$/.test(icao)) {
+  // Most US general aviation fields have only a 3-4 character FAA local
+  // identifier, so accept those as well as 4-letter ICAO codes.
+  if (!isAirportCode(icao)) {
     throw new Error(
-      `Airport "${code}" is not in the catalog and is not a valid 4-character ICAO code. Add the airport first.`,
+      `Airport "${code}" is not in the catalog and is not a valid airport identifier. Add the airport first.`,
     );
   }
 

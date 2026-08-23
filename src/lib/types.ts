@@ -128,7 +128,7 @@ export type FlightSchool = {
    * Single-location schools omit this field.
    */
   organizationId?: string;
-  /** Slugs referencing the programs[] catalog in mock-data / DB */
+  /** Slugs referencing the programs catalog (public.programs) */
   programSlugs: string[];
   rating: number;
   reviewCount: number;
@@ -139,7 +139,7 @@ export type FlightSchool = {
   /** Whether the school operates under FAR Part 61, Part 141, or both */
   faaPart?: "61" | "141" | "both";
   contacts?: ContactPerson[];
-  /** Slugs referencing the trainerAircraft[] catalog in mock-data / DB */
+  /** Slugs referencing the aircraft catalog (public.trainer_aircraft) */
   aircraftSlugs?: string[];
   estimatedPlanes?: FleetRange;
   estimatedInstructors?: FleetRange;
@@ -152,6 +152,31 @@ export type FlightSchool = {
    * not a URL — resolve it with publicImageUrl() from lib/supabase/storage.
    */
   logoPath?: string;
+
+  // ── Imported facts ──────────────────────────────────────────────────────
+  // Populated by the catalog import (scripts/seed). Booleans are tri-state:
+  // undefined means the source did not say, which is not the same as "no".
+
+  /** "flight-school" | "helicopter-school" | "aviation-college" */
+  schoolTypes: string[];
+  /** Approved for VA education benefits */
+  vaApproved?: boolean;
+  /** Student visas the school can sponsor, e.g. ["M-1", "F-1"] */
+  visaTypes: string[];
+  /** On-site student housing */
+  dormitory?: boolean;
+  /** A Designated Pilot Examiner works on site */
+  dpeOnSite?: boolean;
+  inHouseMaintenance?: boolean;
+  /** Free-text opening hours as published by the school */
+  hours?: string;
+  /** Street address of the school's office/hangar */
+  address?: string;
+  /**
+   * Training the school offers that has no entry in the programs / aircraft
+   * catalogs yet (rotary wing, glider, simulator classes, Part 107 ...).
+   */
+  trainingTags: string[];
 };
 
 export type Review = {

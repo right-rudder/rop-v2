@@ -13,7 +13,11 @@ export function slugify(str: string): string {
     .toLowerCase()
     .replace(/[^a-z0-9\s-]/g, "")
     .trim()
-    .replace(/\s+/g, "-");
+    .replace(/\s+/g, "-")
+    // A name like "AeroDynamic Aviation - Monterey" turns the " - " into three
+    // hyphens; collapse runs and trim the ends so the URL stays readable.
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
 }
 
 /** Convert a slug back to a title-cased display string: "st-louis" → "St Louis" */
@@ -26,7 +30,9 @@ export function slugToTitle(slug: string): string {
 
 /** 3–4 character alphanumeric airport identifier (ICAO / IATA / FAA LID), any case */
 export function isAirportCode(code: string): boolean {
-  return /^[A-Za-z0-9]{3,4}$/.test(code);
+  // Mirrors AIRPORT_CODE in lib/geo.ts — that module deliberately has no
+  // runtime imports, so the rule is stated in both places. Keep them in step.
+  return /^[a-z0-9-]{3,8}$/i.test(code);
 }
 
 /** Absolute http(s) URL — the only kind we store or link to */
