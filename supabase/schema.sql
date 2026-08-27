@@ -267,6 +267,58 @@ create index leads_school_created_idx on public.leads (school_id, created_at des
 create index leads_ip_created_idx     on public.leads (ip_hash, created_at desc);
 create index leads_email_school_idx   on public.leads (lower(email), school_id, created_at desc);
 
+-- ── School Claims (listing ownership requests) ───────────────
+-- A user asks to manage a listing; an admin approves, which sets
+-- flight_schools.managed_by. Decided rows stay as the ownership record
+-- (decided_by / decided_at), so only pending rows are deduplicated.
+create table public.school_claims (
+  id         uuid primary key default gen_random_uuid(),
+  school_id  text not null references public.flight_schools (id) on delete cascade,
+  user_id    uuid not null references auth.users (id) on delete cascade,
+  status     text not null default 'pending' check (status in ('pending', 'approved', 'rejected')),
+  role_title text not null,
+  message    text not null default '',
+  work_email text not null,
+  decided_by uuid references auth.users (id) on delete set null,
+  decided_at timestamptz,
+  created_at timestamptz not null default now(),
+  constraint school_claims_role_length    check (char_length(role_title) between 1 and 120),
+  constraint school_claims_message_length check (char_length(message) <= 2000),
+  constraint school_claims_email_format   check (char_length(work_email) <= 254 and work_email ~* '^[^@\s]+@[^@\s]+\.[^@\s]+$')
+);
+create unique index school_claims_one_pending_idx
+  on public.school_claims (school_id, user_id) where status = 'pending';
+create index school_claims_status_created_idx
+  on public.school_claims (status, created_at desc);
+create index school_claims_user_id_idx   on public.school_claims (user_id);
+create index school_claims_school_id_idx on public.school_claims (school_id);
+
+-- ── Notifications (in-app, ownership events) ─────────────────
+-- Written by admin server actions when ownership changes; the recipient
+-- may only flip read_at (column grant below). Email delivery is a
+-- separate fire-and-forget hop in src/lib/notify.ts.
+create table public.notifications (
+  id         uuid primary key default gen_random_uuid(),
+  user_id    uuid not null references auth.users (id) on delete cascade,
+  type       text not null check (type in ('claim_approved', 'claim_rejected', 'listing_assigned', 'listing_revoked')),
+  school_id  text references public.flight_schools (id) on delete set null,
+  title      text not null,
+  body       text not null default '',
+  href       text not null default '',
+  read_at    timestamptz,
+  created_at timestamptz not null default now(),
+  constraint notifications_title_length check (char_length(title) between 1 and 200),
+  constraint notifications_body_length  check (char_length(body) <= 1000),
+  constraint notifications_href_length  check (char_length(href) <= 300)
+);
+create index notifications_user_created_idx
+  on public.notifications (user_id, created_at desc);
+-- Partial: the navbar badge only ever counts unread rows.
+create index notifications_user_unread_idx
+  on public.notifications (user_id) where read_at is null;
+create index notifications_school_id_idx
+  on public.notifications (school_id) where school_id is not null;
+
 -- ── Indexes ──────────────────────────────────────────────────
 -- Postgres does not index foreign-key columns on its own; these cover
 -- every filter / join / count embed the app issues. Kept in sync with
@@ -357,6 +409,8 @@ alter table public.comments       enable row level security;
 alter table public.school_submissions enable row level security;
 alter table public.favorites     enable row level security;
 alter table public.leads         enable row level security;
+alter table public.school_claims enable row level security;
+alter table public.notifications enable row level security;
 
 -- Public read for catalog / browse tables
 create policy "Public read" on public.states          for select using (true);
@@ -481,6 +535,40 @@ create policy "Admin read" on public.leads
 create policy "Admin update" on public.leads
   for update to authenticated
   using ((select public.is_admin())) with check ((select public.is_admin()));
+
+-- Claim review: a user files a claim for themselves, on a listing nobody
+-- owns yet, always as pending; admins read every claim and decide it.
+-- The claim column inside the subquery is qualified (school_claims.school_id):
+-- a bare school_id would bind to flight_schools instead — the same shadowing
+-- bug fixed for the storage policies below.
+create policy "Own claim insert" on public.school_claims
+  for insert to authenticated
+  with check (
+    (select auth.uid()) = user_id
+    and status = 'pending'
+    and exists (
+      select 1 from public.flight_schools fs
+      where fs.id = school_claims.school_id and fs.managed_by is null
+    )
+  );
+create policy "Own claims read" on public.school_claims
+  for select to authenticated using ((select auth.uid()) = user_id);
+create policy "Admin read" on public.school_claims
+  for select to authenticated using ((select public.is_admin()));
+create policy "Admin update" on public.school_claims
+  for update to authenticated
+  using ((select public.is_admin())) with check ((select public.is_admin()));
+
+-- Notifications: recipients read and mark their own; every ownership event
+-- that writes one is admin-initiated, so no service role is involved.
+create policy "Own notifications read" on public.notifications
+  for select to authenticated using ((select auth.uid()) = user_id);
+create policy "Admin insert" on public.notifications
+  for insert to authenticated with check ((select public.is_admin()));
+create policy "Own notifications update" on public.notifications
+  for update to authenticated
+  using ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
 
 -- School join tables: owner + admin write (program/aircraft sync on edit,
 -- and creating links when approving a submission)
@@ -651,6 +739,26 @@ revoke execute on function public.submit_lead(text, text, text, text, text, text
 grant  execute on function public.submit_lead(text, text, text, text, text, text, text, text) to service_role;
 
 -- ============================================================
+-- user_id_by_email — account lookup behind "assign owner"
+-- ============================================================
+-- Admins assign a listing by typing the new owner's email. auth.users is
+-- not on the Data API and profiles has no email column, so this definer
+-- function does the lookup. Server-only: executable by service_role alone,
+-- never by anon/authenticated, so it cannot be used to probe which email
+-- addresses have accounts.
+create or replace function public.user_id_by_email(p_email text)
+returns uuid
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select id from auth.users where lower(email) = lower(trim(p_email)) limit 1;
+$$;
+revoke execute on function public.user_id_by_email(text) from public, anon, authenticated;
+grant  execute on function public.user_id_by_email(text) to service_role;
+
+-- ============================================================
 -- Data API grants
 -- ============================================================
 -- Newer Supabase projects no longer expose tables to the Data API
@@ -677,6 +785,12 @@ grant select on
 grant select on public.school_submissions to authenticated;
 grant select, insert, delete on public.favorites to authenticated;
 grant select, update (status) on public.leads to authenticated;
+-- Claims: admins only ever flip the decision columns, so the claim's own
+-- content (role, message, work email) is immutable once filed.
+grant select, insert, update (status, decided_by, decided_at)
+  on public.school_claims to authenticated;
+-- Notifications: recipients may only flip read state.
+grant select, insert, update (read_at) on public.notifications to authenticated;
 
 -- authenticated: writes only where a policy exists
 grant insert, update, delete on public.reviews  to authenticated;
