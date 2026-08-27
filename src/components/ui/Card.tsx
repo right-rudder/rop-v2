@@ -4,7 +4,7 @@ import { cn } from "@/lib/cn";
 
 const base = "rounded-2xl border border-line bg-surface";
 const interactiveCls =
-  "group block transition-[transform,border-color,box-shadow] duration-200 ease-out " +
+  "group block transition-[transform,translate,border-color,box-shadow] duration-200 ease-out " +
   "hover:-translate-y-0.5 hover:border-accent/40 hover:shadow-card " +
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-paper";
 

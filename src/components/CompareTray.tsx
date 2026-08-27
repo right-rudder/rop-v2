@@ -16,7 +16,7 @@ export function CompareTray() {
       aria-label="Compare schools"
       className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface/95 shadow-card backdrop-blur"
     >
-      <Container className="flex flex-wrap items-center gap-3 py-3">
+      <Container className="flex flex-wrap items-center gap-x-4 gap-y-2 py-3">
         <span className="font-mono text-xs uppercase tracking-[0.12em] text-muted">
           Compare <span className="text-ink">{picks.length}</span>/{COMPARE_MAX}
         </span>
@@ -31,14 +31,14 @@ export function CompareTray() {
                 type="button"
                 onClick={() => remove(p.id)}
                 aria-label={`Remove ${p.name} from compare`}
-                className="rounded-full text-muted transition-colors hover:text-ink"
+                className="-mr-0.5 rounded-full p-0.5 text-muted transition-colors hover:bg-surface-2 hover:text-ink"
               >
                 <X size={12} />
               </button>
             </li>
           ))}
         </ul>
-        <div className="flex items-center gap-2">
+        <div className="ml-auto flex w-full shrink-0 items-center justify-end gap-2 sm:w-auto">
           <Button variant="ghost" size="sm" onClick={clear}>
             Clear
           </Button>

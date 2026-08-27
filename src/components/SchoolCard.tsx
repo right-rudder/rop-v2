@@ -57,14 +57,14 @@ export function SchoolCard({
           <ArrowUpRight
             size={18}
             aria-hidden
-            className="shrink-0 text-muted transition-[color,transform] duration-200 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-accent-ink"
+            className="shrink-0 text-muted transition-[color,transform,translate] duration-200 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-accent-ink"
           />
         )}
       </div>
 
       <div className="mb-5 flex items-start gap-3">
         {logoPath && <SchoolLogo name={name} logoPath={logoPath} size="sm" />}
-        <h3 className="line-clamp-2 font-display text-xl font-bold leading-tight tracking-tight text-ink">
+        <h3 className="line-clamp-2 font-display text-xl font-bold leading-tight tracking-tight text-ink transition-colors group-hover:text-accent-ink">
           {name}
         </h3>
       </div>

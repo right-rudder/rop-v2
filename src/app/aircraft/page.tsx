@@ -96,7 +96,7 @@ export default async function AircraftPage({
                     <ArrowUpRight
                       size={18}
                       aria-hidden
-                      className="mt-1 shrink-0 text-muted transition-[color,transform] duration-200 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-accent-ink"
+                      className="mt-1 shrink-0 text-muted transition-[color,transform,translate] duration-200 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-accent-ink"
                     />
                   </div>
                   <p className="mb-4 line-clamp-2 text-sm text-muted">{ac.description}</p>

@@ -14,6 +14,7 @@ export const navLinks: NavLink[] = [
   {
     label: "Browse",
     children: [
+      { label: "Near Me",          href: "/near-me",          mobileLabel: "Schools Near Me"    },
       { label: "By Airport",       href: "/airports",         mobileLabel: "Browse by Airport"  },
       { label: "By City",          href: "/cities",           mobileLabel: "Browse by City"     },
       { label: "By State",         href: "/states",           mobileLabel: "Browse by State"    },

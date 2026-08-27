@@ -30,7 +30,7 @@ export function FavoriteButton({
   const busy = pending.has(schoolId);
   const base = cn(
     "inline-flex items-center justify-center rounded-full border text-sm font-semibold",
-    "transition-[background-color,color,border-color,transform] duration-200",
+    "transition-[background-color,color,border-color,transform,translate] duration-200",
     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-paper",
     saved
       ? "border-accent/40 bg-accent-soft text-accent-ink"

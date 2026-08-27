@@ -871,7 +871,7 @@ export function AdvancedSearchExplorer({ schools, programs, aircraft, states, ci
                 {visible.map((school) => (
                   <div key={school.id} className="relative h-full">
                   <Card href={school.href} className="flex h-full flex-col p-5">
-                    <p className="mb-1.5 flex items-center justify-between pr-20 font-mono text-xs uppercase tracking-[0.12em] text-muted">
+                    <p className="mb-4 flex items-center justify-between pr-20 font-mono text-xs uppercase tracking-[0.12em] text-muted">
                       <span className="font-semibold text-sky">{school.airportCode}</span>
                       {school.distanceMiles !== undefined && (
                         <span className="text-accent-ink">{formatMiles(school.distanceMiles)}</span>

@@ -5,6 +5,7 @@ import {
   ArrowRight,
   Bell,
   Building2,
+  LocateFixed,
   Map,
   MessageSquare,
   PencilLine,
@@ -75,6 +76,13 @@ export default async function Home() {
   ];
 
   const browse = [
+    {
+      href: "/near-me",
+      Icon: LocateFixed,
+      title: "Near me",
+      body: "Use your location to find the closest schools.",
+      count: "Your location",
+    },
     {
       href: "/airports",
       Icon: LogoMark,
@@ -207,7 +215,7 @@ export default async function Home() {
         title="Start from where you are"
         description="Every school is filed under its state, city and home airport — pick the way in that matches what you already know."
       >
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
           {browse.map((b, i) => (
             <Reveal key={b.href} index={i} className="h-full">
               <Card href={b.href} className="flex h-full flex-col p-5">
