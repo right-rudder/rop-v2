@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   NOTIFICATION_TYPES,
   buildNotification,
+  notificationLinkLabel,
   type NotificationType,
 } from "../../src/lib/notifications.ts";
 
@@ -39,6 +40,16 @@ test("falls back to a generic name when the school has none", () => {
   const copy = buildNotification("claim_approved", "   ", PATH, EDIT);
   assert.ok(copy.body.includes("your listing"));
   assert.ok(copy.emailSubject.includes("your listing"));
+});
+
+test("the link label matches where the link actually goes", () => {
+  // "View listing" on a link to the editor would misdescribe it, so the label
+  // and the href have to agree for every type.
+  for (const type of NOTIFICATION_TYPES) {
+    const { href } = buildNotification(type, SCHOOL, PATH, EDIT);
+    const label = notificationLinkLabel(type);
+    assert.equal(label, href === EDIT ? "Manage listing" : "View listing", type);
+  }
 });
 
 test("an unknown type would not silently produce empty copy", () => {

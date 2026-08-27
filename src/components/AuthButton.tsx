@@ -69,12 +69,19 @@ export function AuthButton({
         <Bell size={14} />
         Alerts
         {viewer.unreadNotifications > 0 && (
-          <span
-            aria-hidden
-            className="inline-flex min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-bold leading-4 text-accent-ink"
-          >
-            {viewer.unreadNotifications > 9 ? "9+" : viewer.unreadNotifications}
-          </span>
+          <>
+            {/* The badge truncates to "9+" and title text isn't reliably
+                announced, so the real count goes in text of its own. */}
+            <span
+              aria-hidden
+              className="inline-flex min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-bold leading-4 text-accent-ink"
+            >
+              {viewer.unreadNotifications > 9 ? "9+" : viewer.unreadNotifications}
+            </span>
+            <span className="sr-only">
+              {viewer.unreadNotifications} unread
+            </span>
+          </>
         )}
       </Link>
       {viewer.isAdmin && (

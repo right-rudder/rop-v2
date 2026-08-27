@@ -118,12 +118,21 @@ export async function approveClaim(
   // approveSubmission. Setting managed_by is idempotent, so if anything fails
   // in between, the claim stays pending and approving again finishes the job.
   // The reverse order could strand a claim as approved with no ownership.
+  //
+  // The owner condition repeats the check above inside the write: another
+  // admin can assign the listing between the two, and a bare id filter would
+  // silently overwrite them. Matching the claimant too keeps it idempotent.
   try {
-    const { error } = await supabase
+    const { data: owned, error } = await supabase
       .from("flight_schools")
       .update({ managed_by: claim.userId })
-      .eq("id", school.id);
+      .eq("id", school.id)
+      .or(`managed_by.is.null,managed_by.eq.${claim.userId}`)
+      .select("id");
     if (error) return { error: friendlyDbError(error) };
+    if (!owned || owned.length === 0) {
+      return { error: "Someone else took this listing while you were looking — refresh and try again." };
+    }
   } finally {
     invalidateCatalog();
   }
@@ -328,5 +337,9 @@ export async function markNotificationsRead(
   if (error) return { error: friendlyDbError(error) };
 
   revalidatePath("/notifications");
+  // The bell's unread count is resolved in the root layout, so the page alone
+  // is not enough — the badge would stay stale until something else re-rendered
+  // the layout. Same reason profile.ts revalidates the layout after a rename.
+  revalidatePath("/", "layout");
   return { message: id ? "Marked as read." : "All caught up." };
 }

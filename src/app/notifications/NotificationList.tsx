@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Check, CheckCheck } from "lucide-react";
 import type { AppNotification } from "@/lib/types";
 import { markNotificationsRead } from "@/app/actions/claims";
+import { notificationLinkLabel } from "@/lib/notifications";
 import { useActionToast } from "@/components/ToastProvider";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -18,12 +19,17 @@ function formatDate(iso: string): string {
   });
 }
 
-export function NotificationList({ notifications }: { notifications: AppNotification[] }) {
-  // One action for both buttons: sending no id marks everything unread.
+export function NotificationList({
+  notifications,
+  /** Total unread for this user, which can exceed what the capped list shows. */
+  unreadCount,
+}: {
+  notifications: AppNotification[];
+  unreadCount: number;
+}) {
+  // One action for both buttons: sending no id marks every unread row read.
   const [state, action, pending] = useActionState(markNotificationsRead, {});
   useActionToast(state, { errorTitle: "Couldn't update notifications" });
-
-  const unreadCount = notifications.filter((n) => !n.readAt).length;
 
   return (
     <div className="space-y-5">
@@ -71,7 +77,7 @@ export function NotificationList({ notifications }: { notifications: AppNotifica
                         href={notification.href}
                         className="text-sm text-accent-ink hover:underline"
                       >
-                        View listing
+                        {notificationLinkLabel(notification.type)}
                       </Link>
                     )}
                   </p>

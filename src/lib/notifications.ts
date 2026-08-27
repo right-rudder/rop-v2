@@ -16,6 +16,19 @@ export const NOTIFICATION_TYPES: readonly NotificationType[] = [
   "listing_revoked",
 ];
 
+/** Events that hand someone a listing link to its editor, not its public page. */
+function grantsListing(type: NotificationType): boolean {
+  return type === "claim_approved" || type === "listing_assigned";
+}
+
+/**
+ * Label for the notification's link. Kept next to buildNotification so the
+ * wording always matches where `href` actually points.
+ */
+export function notificationLinkLabel(type: NotificationType): string {
+  return grantsListing(type) ? "Manage listing" : "View listing";
+}
+
 export type NotificationCopy = {
   title: string;
   body: string;

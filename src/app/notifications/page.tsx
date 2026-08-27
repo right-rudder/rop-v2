@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth";
-import { getNotificationsForUser } from "@/lib/data";
+import { getNotificationsForUser, getUnreadNotificationCount } from "@/lib/data";
 import { NotificationList } from "./NotificationList";
 import { PageHero } from "@/components/PageHero";
 import { Container } from "@/components/ui/Container";
@@ -16,8 +16,12 @@ export default async function NotificationsPage() {
   const viewer = await getCurrentUser();
   if (!viewer) redirect("/login?next=/notifications");
 
-  const notifications = await getNotificationsForUser(viewer.id);
-  const unread = notifications.filter((n) => !n.readAt).length;
+  // The list is capped, so the unread total comes from its own count query —
+  // filtering the page would undercount anyone with unread items further back.
+  const [notifications, unread] = await Promise.all([
+    getNotificationsForUser(viewer.id),
+    getUnreadNotificationCount(viewer.id),
+  ]);
 
   return (
     <div className="pb-20">
@@ -47,7 +51,7 @@ export default async function NotificationsPage() {
             </p>
           </Card>
         ) : (
-          <NotificationList notifications={notifications} />
+          <NotificationList notifications={notifications} unreadCount={unread} />
         )}
       </Container>
     </div>
