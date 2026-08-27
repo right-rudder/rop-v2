@@ -95,8 +95,10 @@ export async function approveClaim(
   _prev: ClaimActionState,
   formData: FormData,
 ): Promise<ClaimActionState> {
+  // The !viewer half is redundant with isAdmin, but it narrows the type so
+  // recording who decided the claim below needs no non-null assertion.
   const viewer = await getCurrentUser();
-  if (!isAdmin(viewer)) return { error: "Admin access required." };
+  if (!viewer || !isAdmin(viewer)) return { error: "Admin access required." };
 
   const claimId = field(formData, "claimId");
   const claim = await getClaimById(claimId);
@@ -110,7 +112,7 @@ export async function approveClaim(
   }
 
   const supabase = await createClient();
-  const decided = { decided_by: viewer!.id, decided_at: new Date().toISOString() };
+  const decided = { decided_by: viewer.id, decided_at: new Date().toISOString() };
 
   // Ownership first, then the status flip — the same crash-safe order as
   // approveSubmission. Setting managed_by is idempotent, so if anything fails
@@ -172,7 +174,7 @@ export async function rejectClaim(
   formData: FormData,
 ): Promise<ClaimActionState> {
   const viewer = await getCurrentUser();
-  if (!isAdmin(viewer)) return { error: "Admin access required." };
+  if (!viewer || !isAdmin(viewer)) return { error: "Admin access required." };
 
   const claimId = field(formData, "claimId");
   const claim = await getClaimById(claimId);
@@ -183,7 +185,7 @@ export async function rejectClaim(
     .from("school_claims")
     .update({
       status: "rejected",
-      decided_by: viewer!.id,
+      decided_by: viewer.id,
       decided_at: new Date().toISOString(),
     })
     .eq("id", claim.id)
