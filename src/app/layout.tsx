@@ -6,7 +6,7 @@ import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { BASE_URL } from "@/lib/site";
 import { getCurrentUser, isAdmin } from "@/lib/auth";
-import { getFavoriteSchoolIds } from "@/lib/data";
+import { getFavoriteSchoolIds, getUnreadNotificationCount } from "@/lib/data";
 import { FavoritesProvider } from "@/components/FavoritesProvider";
 import { CompareProvider } from "@/components/CompareProvider";
 import { CompareTray } from "@/components/CompareTray";
@@ -58,9 +58,17 @@ export default async function RootLayout({
   // Server-resolved auth state for the navbar. Memoized per request, so pages
   // that also call getCurrentUser() don't pay for a second lookup.
   const viewer = await getCurrentUser();
-  const navViewer = viewer ? { id: viewer.id, isAdmin: isAdmin(viewer) } : null;
-  // Saved-school ids, seeded once here so every card's heart reads context.
-  const favoriteIds = viewer ? await getFavoriteSchoolIds(viewer.id) : [];
+  // Saved-school ids, seeded once here so every card's heart reads context;
+  // the unread count rides along as a head-only query.
+  const [favoriteIds, unreadNotifications] = viewer
+    ? await Promise.all([
+        getFavoriteSchoolIds(viewer.id),
+        getUnreadNotificationCount(viewer.id),
+      ])
+    : [[], 0];
+  const navViewer = viewer
+    ? { id: viewer.id, isAdmin: isAdmin(viewer), unreadNotifications }
+    : null;
 
   return (
     <html

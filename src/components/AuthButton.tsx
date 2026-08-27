@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ShieldCheck, Heart } from "lucide-react";
+import { ShieldCheck, Heart, Bell } from "lucide-react";
 import { logout } from "@/app/actions/auth";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/cn";
@@ -8,6 +8,8 @@ import { cn } from "@/lib/cn";
 export type NavViewer = {
   id: string;
   isAdmin: boolean;
+  /** Drives the bell's badge; 0 hides it. */
+  unreadNotifications: number;
 };
 
 /**
@@ -50,6 +52,30 @@ export function AuthButton({
       >
         <Heart size={14} />
         Saved
+      </Link>
+      <Link
+        href="/notifications"
+        title={
+          viewer.unreadNotifications > 0
+            ? `Notifications (${viewer.unreadNotifications} unread)`
+            : "Notifications"
+        }
+        onClick={onNavigate}
+        className={cn(
+          "relative inline-flex items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1.5 text-xs font-semibold text-ink transition-colors hover:border-ink/40",
+          mobile && "flex-1 justify-center",
+        )}
+      >
+        <Bell size={14} />
+        Alerts
+        {viewer.unreadNotifications > 0 && (
+          <span
+            aria-hidden
+            className="inline-flex min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-bold leading-4 text-accent-ink"
+          >
+            {viewer.unreadNotifications > 9 ? "9+" : viewer.unreadNotifications}
+          </span>
+        )}
       </Link>
       {viewer.isAdmin && (
         <Link

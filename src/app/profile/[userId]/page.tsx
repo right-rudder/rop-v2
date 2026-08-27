@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Pencil, ShieldCheck } from "lucide-react";
+import { BadgeCheck, Pencil, ShieldCheck } from "lucide-react";
 import {
   getUserById,
   getReviewsByUser,
@@ -108,6 +108,14 @@ export default async function ProfilePage({ params }: Props) {
               <Badge tone="accent">
                 <ShieldCheck size={11} />
                 Admin
+              </Badge>
+            )}
+            {/* Owning a listing is what makes someone a school owner — there
+                is no such role on the profile to fall out of sync. */}
+            {managedSchools.length > 0 && (
+              <Badge tone="ok">
+                <BadgeCheck size={11} />
+                Flight school owner
               </Badge>
             )}
           </>
