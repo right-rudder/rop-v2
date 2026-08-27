@@ -14,6 +14,7 @@ const browse = [
 ];
 
 const account = [
+  { href: "/how-it-works", label: "How it works" },
   { href: "/login", label: "Log in" },
   { href: "/signup", label: "Sign up" },
   { href: "/schools/add", label: "Add a school" },

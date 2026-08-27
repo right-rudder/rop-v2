@@ -20,4 +20,7 @@ export const navLinks: NavLink[] = [
       { label: "Advanced Search",  href: "/search",           mobileLabel: "Advanced Search"    },
     ],
   },
+  // "Help" rather than "How It Works": a fourth top-level entry wraps the
+  // brand onto two lines at the md breakpoint, where the desktop nav starts.
+  { label: "Help", href: "/how-it-works" },
 ];

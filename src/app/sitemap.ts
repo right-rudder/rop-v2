@@ -50,6 +50,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: absoluteUrl("/aircraft"), changeFrequency: "monthly", priority: 0.8 },
     { url: absoluteUrl("/top-rated"), changeFrequency: "weekly", priority: 0.9 },
     { url: absoluteUrl("/featured"), changeFrequency: "weekly", priority: 0.9 },
+    { url: absoluteUrl("/how-it-works"), changeFrequency: "monthly", priority: 0.7 },
   ];
 
   const stateRoutes: MetadataRoute.Sitemap = states.map((s) => ({

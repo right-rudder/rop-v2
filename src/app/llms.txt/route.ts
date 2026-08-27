@@ -84,6 +84,7 @@ export async function GET(): Promise<Response> {
     ...aircraft.map((a) => md(a.displayName, `/aircraft/${a.slug}`, a.make)),
     "",
     "## Optional",
+    md("How it works", "/how-it-works", "help and FAQs: searching, requesting information, reviews and comments, and how school owners claim, add or edit a listing"),
     md("Privacy policy", "/privacy-policy"),
     md("Terms of service", "/terms-of-service"),
     md("Add a flight school", "/schools/add", "school owners can submit a listing (account required)"),
