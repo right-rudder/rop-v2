@@ -1,6 +1,7 @@
 "use server";
 
 import { withFlash } from "@/lib/toast";
+import { notifyUser } from "@/lib/notify";
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -227,6 +228,24 @@ export async function updateSchool(
     // Nothing points at the object we just stored, so don't leave it behind.
     if (logoPath) await removeImage(supabase, BUCKETS.schoolLogos, logoPath);
     return { error: friendlyDbError(error) };
+  }
+
+  // Featuring is the one edit here that happens *to* the owner rather than by
+  // them, so they get told. Only on the way up — nobody wants mail about being
+  // un-featured — and not when the admin featuring it is the owner themself.
+  // Best-effort like every notification: the flag is already saved.
+  const nowFeatured = admin && formData.get("featured") === "on";
+  if (nowFeatured && !school.featured && school.managedBy && school.managedBy !== viewer.id) {
+    await notifyUser({
+      userId: school.managedBy,
+      type: "listing_featured",
+      school: {
+        id: school.id,
+        name: school.name,
+        path: schoolHref(school),
+        editPath: `/schools/${school.slug}/edit`,
+      },
+    });
   }
 
   // The row now points somewhere else, so the old object is unreachable. Do

@@ -58,3 +58,11 @@ test("an unknown type would not silently produce empty copy", () => {
   const copy = buildNotification("claim_approved" as NotificationType, SCHOOL, PATH, EDIT);
   assert.ok(copy.href.startsWith("/"));
 });
+
+test("featuring links to the public listing, where the owner can see the result", () => {
+  const copy = buildNotification("listing_featured", SCHOOL, PATH, EDIT);
+  assert.equal(copy.href, PATH);
+  assert.equal(notificationLinkLabel("listing_featured"), "View listing");
+  assert.match(copy.title, /featured/i);
+  assert.ok(copy.body.includes(SCHOOL));
+});

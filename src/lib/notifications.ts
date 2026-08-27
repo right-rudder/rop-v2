@@ -1,5 +1,5 @@
 /**
- * Copy for ownership-change notifications. Pure — no imports — so the tests in
+ * Copy for listing notifications — ownership changes and featuring. Pure — no imports — so the tests in
  * scripts/tests run this file directly under `node --test`. The delivery side
  * (DB row + email hop) lives in src/lib/notify.ts.
  */
@@ -7,13 +7,15 @@ export type NotificationType =
   | "claim_approved"
   | "claim_rejected"
   | "listing_assigned"
-  | "listing_revoked";
+  | "listing_revoked"
+  | "listing_featured";
 
 export const NOTIFICATION_TYPES: readonly NotificationType[] = [
   "claim_approved",
   "claim_rejected",
   "listing_assigned",
   "listing_revoked",
+  "listing_featured",
 ];
 
 /** Events that hand someone a listing link to its editor, not its public page. */
@@ -77,6 +79,13 @@ export function buildNotification(
         body: `You no longer manage ${name}. Get in touch if you have questions.`,
         href: schoolPath,
         emailSubject: `You no longer manage ${name}`,
+      };
+    case "listing_featured":
+      return {
+        title: "Your listing is now featured",
+        body: `${name} now appears in the Featured section on the home page.`,
+        href: schoolPath,
+        emailSubject: `${name} is now featured`,
       };
   }
 }

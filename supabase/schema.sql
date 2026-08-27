@@ -300,7 +300,7 @@ create index school_claims_school_id_idx on public.school_claims (school_id);
 create table public.notifications (
   id         uuid primary key default gen_random_uuid(),
   user_id    uuid not null references auth.users (id) on delete cascade,
-  type       text not null check (type in ('claim_approved', 'claim_rejected', 'listing_assigned', 'listing_revoked')),
+  type       text not null check (type in ('claim_approved', 'claim_rejected', 'listing_assigned', 'listing_revoked', 'listing_featured')),
   school_id  text references public.flight_schools (id) on delete set null,
   title      text not null,
   body       text not null default '',
