@@ -73,6 +73,11 @@ export const FLASH_TOASTS = {
   "school-updated": { tone: "ok", title: "Listing saved", description: "Your changes are live." },
   "airport-updated": { tone: "ok", title: "Airport saved", description: "Your changes are live." },
   "profile-updated": { tone: "ok", title: "Profile saved" },
+  "claim-submitted": {
+    tone: "ok",
+    title: "Claim submitted",
+    description: "We'll let you know once it's been reviewed.",
+  },
 } satisfies Record<string, ToastInput>;
 
 export type FlashCode = keyof typeof FLASH_TOASTS;
