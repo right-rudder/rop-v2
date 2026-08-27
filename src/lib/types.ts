@@ -1,3 +1,8 @@
+// The notification union lives with its copy builder in ./notifications;
+// re-exported here so consumers get it from the usual place.
+import type { NotificationType } from "./notifications";
+export type { NotificationType };
+
 /** WGS-84 coordinate pair (decimal degrees). */
 export type LatLng = { lat: number; lng: number };
 
@@ -247,6 +252,50 @@ export type SchoolSubmission = {
   estimatedPlanes?: FleetRange;
   estimatedInstructors?: FleetRange;
   contacts: ContactPerson[];
+  createdAt: string;
+};
+
+/** Claims move through the same three states as submissions. */
+export type ClaimStatus = SubmissionStatus;
+
+/** A request to manage a listing, awaiting or carrying an admin decision */
+export type SchoolClaim = {
+  id: string;
+  schoolId: string;
+  /** auth.users id of the claimant */
+  userId: string;
+  status: ClaimStatus;
+  /** The claimant's role at the school, e.g. "Chief Flight Instructor" */
+  roleTitle: string;
+  message: string;
+  /**
+   * Where the claimant can be reached at the school. Evidence for the admin
+   * review — compared against the listing's website domain — not a login.
+   */
+  workEmail: string;
+  /** auth.users id of the deciding admin; unset while pending */
+  decidedBy?: string;
+  decidedAt?: string;
+  createdAt: string;
+};
+
+/**
+ * An in-app notification about an ownership change. Named AppNotification
+ * because `Notification` is a DOM global.
+ */
+export type AppNotification = {
+  id: string;
+  /** auth.users id of the recipient */
+  userId: string;
+  type: NotificationType;
+  /** null once the school has been removed — the notice is kept */
+  schoolId: string | null;
+  title: string;
+  body: string;
+  /** Same-site path the notification links to */
+  href: string;
+  /** Unset while unread */
+  readAt?: string;
   createdAt: string;
 };
 

@@ -2,12 +2,12 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { ADMIN_TABS, isAdminTabActive } from "../../src/lib/admin-nav.ts";
 
-test("lists the four admin sections with Overview first", () => {
-  assert.equal(ADMIN_TABS.length, 4);
+test("lists the five admin sections with Overview first", () => {
+  assert.equal(ADMIN_TABS.length, 5);
   assert.equal(ADMIN_TABS[0].href, "/admin");
   assert.deepEqual(
     ADMIN_TABS.map((t) => t.href),
-    ["/admin", "/admin/submissions", "/admin/leads", "/admin/moderation"],
+    ["/admin", "/admin/submissions", "/admin/claims", "/admin/leads", "/admin/moderation"],
   );
 });
 

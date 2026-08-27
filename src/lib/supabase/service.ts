@@ -2,10 +2,16 @@ import { createClient } from "@supabase/supabase-js";
 import type { Database } from "./database.types";
 
 /**
- * Service-role client — bypasses RLS. Server-only, and used for exactly one
- * thing: calling public.submit_lead(), which is executable by service_role
- * alone so the rate-limit fingerprint is always computed on the server.
- * Never import this from a Client Component.
+ * Service-role client — bypasses RLS. Server-only; never import it from a
+ * Client Component. Used for three things, each of which needs a privilege the
+ * Data API roles deliberately do not have:
+ *
+ *   - public.submit_lead(), executable by service_role alone so the rate-limit
+ *     fingerprint is always computed on the server;
+ *   - public.user_id_by_email(), likewise, so "assign owner by email" cannot
+ *     double as a way to probe which addresses have accounts;
+ *   - reading a recipient's account email when sending a notification
+ *     (auth.users is not on the Data API).
  */
 export function createServiceClient() {
   if (typeof window !== "undefined") {

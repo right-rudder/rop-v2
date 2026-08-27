@@ -2,6 +2,7 @@ import { notFound, permanentRedirect } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
 import {
+  BadgeCheck,
   BedDouble,
   ClipboardCheck,
   Clock,
@@ -10,6 +11,7 @@ import {
   Globe,
   Mail,
   MapPin,
+  Pencil,
   Phone,
   Plane,
   Send,
@@ -40,6 +42,7 @@ import {
   getUsersByIds,
   getLocationMaps,
   getAirports,
+  getPendingClaimFor,
 } from "@/lib/data";
 import { getCurrentUser, isAdmin } from "@/lib/auth";
 import { schoolHref } from "@/lib/utils";
@@ -236,6 +239,15 @@ export default async function SchoolDetailPage({ params }: Props) {
     trainingDetails.push({ icon: <MapPin size={16} />, label: "Address", value: school.address });
   }
 
+  // Ownership affordances. Editing is gated again on the edit route and in the
+  // action — this only decides what to show.
+  const viewerIsAdmin = isAdmin(viewer);
+  const canEditSchool = Boolean(viewer && (school.managedBy === viewer.id || viewerIsAdmin));
+  const claimHref = `/schools/${school.slug}/claim`;
+  const isUnclaimed = !school.managedBy;
+  const viewerClaimPending =
+    viewer && isUnclaimed ? Boolean(await getPendingClaimFor(viewer.id, school.id)) : false;
+
   // Pre-fill the request form for signed-in visitors
   const leadViewer = viewer
     ? {
@@ -299,6 +311,28 @@ export default async function SchoolDetailPage({ params }: Props) {
                   {school.phone}
                 </Button>
               )}
+              {canEditSchool && (
+                <Button href={`/schools/${school.slug}/edit`} variant="secondary">
+                  <Pencil size={15} />
+                  Edit school
+                </Button>
+              )}
+              {isUnclaimed &&
+                !viewerIsAdmin &&
+                (viewerClaimPending ? (
+                  <span className="inline-flex items-center gap-2 rounded-xl border border-line px-4 py-3 text-sm text-muted">
+                    <BadgeCheck size={15} aria-hidden />
+                    Claim pending review
+                  </span>
+                ) : (
+                  <Button
+                    href={viewer ? claimHref : `/login?next=${encodeURIComponent(claimHref)}`}
+                    variant="ghost"
+                  >
+                    <BadgeCheck size={15} />
+                    Claim this listing
+                  </Button>
+                ))}
           </div>
         }
       />
@@ -423,7 +457,7 @@ export default async function SchoolDetailPage({ params }: Props) {
                 usersById={usersById}
                 programShortNames={programShortNames}
                 currentUserId={viewer?.id ?? null}
-                viewerIsAdmin={isAdmin(viewer)}
+                viewerIsAdmin={viewerIsAdmin}
               />
             </section>
 

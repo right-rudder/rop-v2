@@ -517,6 +517,84 @@ export type Database = {
         };
         Relationships: [];
       };
+      school_claims: {
+        Row: {
+          id: string;
+          school_id: string;
+          user_id: string;
+          status: string;
+          role_title: string;
+          message: string;
+          work_email: string;
+          decided_by: string | null;
+          decided_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          school_id: string;
+          user_id: string;
+          status?: string;
+          role_title: string;
+          message?: string;
+          work_email: string;
+          decided_by?: string | null;
+          decided_at?: string | null;
+          created_at?: string;
+        };
+        // Only status / decided_by / decided_at are granted to the Data API
+        // roles; the rest are here because the generator emits them.
+        Update: {
+          id?: string;
+          school_id?: string;
+          user_id?: string;
+          status?: string;
+          role_title?: string;
+          message?: string;
+          work_email?: string;
+          decided_by?: string | null;
+          decided_at?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      notifications: {
+        Row: {
+          id: string;
+          user_id: string;
+          type: string;
+          school_id: string | null;
+          title: string;
+          body: string;
+          href: string;
+          read_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          type: string;
+          school_id?: string | null;
+          title: string;
+          body?: string;
+          href?: string;
+          read_at?: string | null;
+          created_at?: string;
+        };
+        // Recipients only ever hold the read_at column grant.
+        Update: {
+          id?: string;
+          user_id?: string;
+          type?: string;
+          school_id?: string | null;
+          title?: string;
+          body?: string;
+          href?: string;
+          read_at?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -532,6 +610,11 @@ export type Database = {
           p_ip_hash: string;
         };
         Returns: string;
+      };
+      /** service_role only — see the grant in supabase/schema.sql. */
+      user_id_by_email: {
+        Args: { p_email: string };
+        Returns: string | null;
       };
     };
     Enums: Record<string, never>;

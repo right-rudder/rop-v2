@@ -46,6 +46,10 @@ import type {
   UserRole,
   SchoolSubmission,
   SubmissionStatus,
+  SchoolClaim,
+  ClaimStatus,
+  AppNotification,
+  NotificationType,
   LatLng,
   Lead,
   LeadStatus,
@@ -765,6 +769,7 @@ export async function getRecentComments(limit = 50): Promise<Comment[]> {
 
 export type AdminCounts = {
   pendingSubmissions: number;
+  pendingClaims: number;
   newLeads: number;
   reviews: number;
   comments: number;
@@ -786,14 +791,16 @@ export async function getAdminCounts(): Promise<AdminCounts> {
     return res.count ?? 0;
   };
   const head = { count: "exact", head: true } as const;
-  const [pendingSubmissions, newLeads, reviews, comments, reviewsLast7Days] = await Promise.all([
-    count(supabase.from("school_submissions").select("id", head).eq("status", "pending")),
-    count(supabase.from("leads").select("id", head).eq("status", "new")),
-    count(supabase.from("reviews").select("id", head)),
-    count(supabase.from("comments").select("id", head)),
-    count(supabase.from("reviews").select("id", head).gte("created_at", since)),
-  ]);
-  return { pendingSubmissions, newLeads, reviews, comments, reviewsLast7Days };
+  const [pendingSubmissions, pendingClaims, newLeads, reviews, comments, reviewsLast7Days] =
+    await Promise.all([
+      count(supabase.from("school_submissions").select("id", head).eq("status", "pending")),
+      count(supabase.from("school_claims").select("id", head).eq("status", "pending")),
+      count(supabase.from("leads").select("id", head).eq("status", "new")),
+      count(supabase.from("reviews").select("id", head)),
+      count(supabase.from("comments").select("id", head)),
+      count(supabase.from("reviews").select("id", head).gte("created_at", since)),
+    ]);
+  return { pendingSubmissions, pendingClaims, newLeads, reviews, comments, reviewsLast7Days };
 }
 
 // ── School submissions ─────────────────────────────────────────────────────────
@@ -842,6 +849,99 @@ export async function getSchoolSubmissionById(
     .maybeSingle();
   const row = orThrow(res);
   return row ? toSubmission(row) : undefined;
+}
+
+// ── School claims ──────────────────────────────────────────────────────────────
+// Reads are RLS-gated: claimants see their own rows, admins see all.
+
+function toClaim(row: Tables<"school_claims">): SchoolClaim {
+  return {
+    id: row.id,
+    schoolId: row.school_id,
+    userId: row.user_id,
+    status: row.status as ClaimStatus,
+    roleTitle: row.role_title,
+    message: row.message,
+    workEmail: row.work_email,
+    decidedBy: row.decided_by ?? undefined,
+    decidedAt: row.decided_at ?? undefined,
+    createdAt: row.created_at,
+  };
+}
+
+export async function getSchoolClaims(status?: ClaimStatus): Promise<SchoolClaim[]> {
+  const supabase = await createClient();
+  let query = supabase.from("school_claims").select("*");
+  if (status) query = query.eq("status", status);
+  const res = await query.order("created_at", { ascending: false });
+  return orThrow(res).map(toClaim);
+}
+
+export async function getClaimById(id: string): Promise<SchoolClaim | undefined> {
+  const supabase = await createClient();
+  const res = await supabase.from("school_claims").select("*").eq("id", id).maybeSingle();
+  const row = orThrow(res);
+  return row ? toClaim(row) : undefined;
+}
+
+/** The viewer's live claim on a listing, if any — drives the claim button state. */
+export async function getPendingClaimFor(
+  userId: string,
+  schoolId: string,
+): Promise<SchoolClaim | undefined> {
+  const supabase = await createClient();
+  const res = await supabase
+    .from("school_claims")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("school_id", schoolId)
+    .eq("status", "pending")
+    .maybeSingle();
+  const row = orThrow(res);
+  return row ? toClaim(row) : undefined;
+}
+
+// ── Notifications ──────────────────────────────────────────────────────────────
+// RLS-scoped to the recipient; never cached across requests.
+
+function toNotification(row: Tables<"notifications">): AppNotification {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    type: row.type as NotificationType,
+    schoolId: row.school_id,
+    title: row.title,
+    body: row.body,
+    href: row.href,
+    readAt: row.read_at ?? undefined,
+    createdAt: row.created_at,
+  };
+}
+
+export async function getNotificationsForUser(
+  userId: string,
+  limit = 50,
+): Promise<AppNotification[]> {
+  const supabase = await createClient();
+  const res = await supabase
+    .from("notifications")
+    .select("*")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  return orThrow(res).map(toNotification);
+}
+
+/** Unread badge count. Resolved in the root layout, so it stays a head query. */
+export async function getUnreadNotificationCount(userId: string): Promise<number> {
+  const supabase = await createClient();
+  const res = await supabase
+    .from("notifications")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .is("read_at", null);
+  if (res.error) throw new Error(`Supabase query failed: ${res.error.message}`);
+  return res.count ?? 0;
 }
 
 // ── Users (profiles) ───────────────────────────────────────────────────────────
