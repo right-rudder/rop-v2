@@ -4,6 +4,7 @@ export type AdminTab = { label: string; href: string };
 export const ADMIN_TABS: readonly AdminTab[] = [
   { label: "Overview", href: "/admin" },
   { label: "Submissions", href: "/admin/submissions" },
+  { label: "Claims", href: "/admin/claims" },
   { label: "Leads", href: "/admin/leads" },
   { label: "Moderation", href: "/admin/moderation" },
 ];

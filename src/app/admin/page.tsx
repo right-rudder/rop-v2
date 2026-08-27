@@ -1,6 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
-import { Inbox, Mail, ShieldAlert } from "lucide-react";
+import { BadgeCheck, Inbox, Mail, ShieldAlert } from "lucide-react";
 import { getCurrentUser, isAdmin } from "@/lib/auth";
 import { getAdminCounts } from "@/lib/data";
 import { AdminPage } from "./AdminShell";
@@ -29,6 +29,14 @@ export default async function AdminOverviewPage() {
       detail: "Approve or reject new school listings.",
     },
     {
+      href: "/admin/claims",
+      icon: BadgeCheck,
+      title: "Claims",
+      value: counts.pendingClaims,
+      label: `pending ${plural(counts.pendingClaims, "claim", "claims")}`,
+      detail: "Requests to manage an existing listing.",
+    },
+    {
       href: "/admin/leads",
       icon: Mail,
       title: "Leads",
@@ -52,7 +60,7 @@ export default async function AdminOverviewPage() {
       title="Admin"
       description="Moderation queue and inbound requests at a glance."
     >
-      <div className="grid gap-5 sm:grid-cols-3">
+      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
         {tiles.map((tile) => (
           <Card key={tile.href} href={tile.href} className="flex flex-col gap-4 p-6">
             <div className="flex items-center gap-2 text-sm font-semibold text-ink">
