@@ -273,6 +273,26 @@ function orThrow<T>(result: { data: T | null; error: { message: string } | null 
   return result.data as T;
 }
 
+/** PostgREST silently clips every response to the project's "Max rows" (1000 by default). */
+const PAGE_SIZE = 1000;
+
+/**
+ * Collect every row of an unbounded catalog query by paging through it in
+ * PAGE_SIZE chunks. `build` must return a freshly-built, ordered query each
+ * time it is called (PostgREST builders are mutable). Stops on the first
+ * short page, so a catalog that fits in one page costs exactly one request.
+ */
+async function fetchAll<T>(
+  build: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>,
+): Promise<T[]> {
+  const rows: T[] = [];
+  for (let from = 0; ; from += PAGE_SIZE) {
+    const page = orThrow(await build(from, from + PAGE_SIZE - 1));
+    rows.push(...page);
+    if (page.length < PAGE_SIZE) return rows;
+  }
+}
+
 // ── States ─────────────────────────────────────────────────────────────────────
 
 const STATE_SELECT = "*, flight_schools(count), airports(count)";
@@ -301,8 +321,10 @@ export const getStateBySlug = cache(
 // ── Cities ─────────────────────────────────────────────────────────────────────
 
 export const getCities = cached("cities", async (): Promise<City[]> => {
-  const res = await createPublicClient().from("cities").select("*").order("name");
-  return orThrow(res).map(toCity);
+  const rows = await fetchAll((from, to) =>
+    createPublicClient().from("cities").select("*").order("name").range(from, to),
+  );
+  return rows.map(toCity);
 });
 
 /** Fresh read (no cross-request cache) for slug-collision checks in actions. */
@@ -363,8 +385,10 @@ export const getCitiesByState = cached(
 // ── Airports ───────────────────────────────────────────────────────────────────
 
 export const getAirports = cached("airports", async (): Promise<Airport[]> => {
-  const res = await createPublicClient().from("airports").select("*").order("icao");
-  return orThrow(res).map(toAirport);
+  const rows = await fetchAll((from, to) =>
+    createPublicClient().from("airports").select("*").order("icao").range(from, to),
+  );
+  return rows.map(toAirport);
 });
 
 type AirportRowWithCount = Tables<"airports"> & {
@@ -375,11 +399,14 @@ type AirportRowWithCount = Tables<"airports"> & {
 export const getAirportsWithSchoolCounts = cached(
   "airports-with-counts",
   async (): Promise<(Airport & { schoolCount: number })[]> => {
-    const res = await createPublicClient()
-      .from("airports")
-      .select("*, flight_schools(count)")
-      .order("icao");
-    return (orThrow(res) as unknown as AirportRowWithCount[]).map((row) => ({
+    const rows = await fetchAll((from, to) =>
+      createPublicClient()
+        .from("airports")
+        .select("*, flight_schools(count)")
+        .order("icao")
+        .range(from, to),
+    );
+    return (rows as unknown as AirportRowWithCount[]).map((row) => ({
       ...toAirport(row),
       schoolCount: row.flight_schools[0]?.count ?? 0,
     }));
@@ -521,11 +548,13 @@ async function selectSchools(
   filters?: Record<string, string | boolean>,
   ids?: string[],
 ): Promise<FlightSchool[]> {
-  let query = createPublicClient().from("flight_schools").select(SCHOOL_SELECT);
-  if (filters) query = query.match(filters);
-  if (ids) query = query.in("id", ids);
-  const res = await query.order("name");
-  return (orThrow(res) as unknown as SchoolRowWithJoins[]).map(toSchool);
+  const rows = await fetchAll((from, to) => {
+    let query = createPublicClient().from("flight_schools").select(SCHOOL_SELECT);
+    if (filters) query = query.match(filters);
+    if (ids) query = query.in("id", ids);
+    return query.order("name").range(from, to);
+  });
+  return (rows as unknown as SchoolRowWithJoins[]).map(toSchool);
 }
 
 /**
@@ -539,12 +568,15 @@ async function selectSchoolsByLink(
   column: "program_slug" | "aircraft_slug",
   slug: string,
 ): Promise<FlightSchool[]> {
-  const res = await createPublicClient()
-    .from("flight_schools")
-    .select(`${SCHOOL_SELECT}, matched:${table}!inner(${column})`)
-    .eq(`matched.${column}`, slug)
-    .order("name");
-  return (orThrow(res) as unknown as SchoolRowWithJoins[]).map(toSchool);
+  const rows = await fetchAll((from, to) =>
+    createPublicClient()
+      .from("flight_schools")
+      .select(`${SCHOOL_SELECT}, matched:${table}!inner(${column})`)
+      .eq(`matched.${column}`, slug)
+      .order("name")
+      .range(from, to),
+  );
+  return (rows as unknown as SchoolRowWithJoins[]).map(toSchool);
 }
 
 export const getFlightSchools = cached("schools", async (): Promise<FlightSchool[]> => {
@@ -774,6 +806,11 @@ export type AdminCounts = {
   reviews: number;
   comments: number;
   reviewsLast7Days: number;
+  users: number;
+  listings: number;
+  /** Distinct users who manage at least one listing. */
+  owners: number;
+  airports: number;
 };
 
 /**
@@ -791,16 +828,50 @@ export async function getAdminCounts(): Promise<AdminCounts> {
     return res.count ?? 0;
   };
   const head = { count: "exact", head: true } as const;
-  const [pendingSubmissions, pendingClaims, newLeads, reviews, comments, reviewsLast7Days] =
-    await Promise.all([
-      count(supabase.from("school_submissions").select("id", head).eq("status", "pending")),
-      count(supabase.from("school_claims").select("id", head).eq("status", "pending")),
-      count(supabase.from("leads").select("id", head).eq("status", "new")),
-      count(supabase.from("reviews").select("id", head)),
-      count(supabase.from("comments").select("id", head)),
-      count(supabase.from("reviews").select("id", head).gte("created_at", since)),
-    ]);
-  return { pendingSubmissions, pendingClaims, newLeads, reviews, comments, reviewsLast7Days };
+  // PostgREST has no COUNT(DISTINCT), so owners are deduped here. Managed
+  // listings are a small fraction of the catalog; this stays cheap.
+  const countOwners = async (): Promise<number> => {
+    const res = await supabase
+      .from("flight_schools")
+      .select("managed_by")
+      .not("managed_by", "is", null);
+    return new Set(orThrow(res).map((r) => r.managed_by)).size;
+  };
+  const [
+    pendingSubmissions,
+    pendingClaims,
+    newLeads,
+    reviews,
+    comments,
+    reviewsLast7Days,
+    users,
+    listings,
+    owners,
+    airports,
+  ] = await Promise.all([
+    count(supabase.from("school_submissions").select("id", head).eq("status", "pending")),
+    count(supabase.from("school_claims").select("id", head).eq("status", "pending")),
+    count(supabase.from("leads").select("id", head).eq("status", "new")),
+    count(supabase.from("reviews").select("id", head)),
+    count(supabase.from("comments").select("id", head)),
+    count(supabase.from("reviews").select("id", head).gte("created_at", since)),
+    count(supabase.from("profiles").select("id", head)),
+    count(supabase.from("flight_schools").select("id", head)),
+    countOwners(),
+    count(supabase.from("airports").select("id", head)),
+  ]);
+  return {
+    pendingSubmissions,
+    pendingClaims,
+    newLeads,
+    reviews,
+    comments,
+    reviewsLast7Days,
+    users,
+    listings,
+    owners,
+    airports,
+  };
 }
 
 // ── School submissions ─────────────────────────────────────────────────────────

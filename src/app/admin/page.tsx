@@ -1,6 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
-import { BadgeCheck, Inbox, Mail, ShieldAlert } from "lucide-react";
+import { BadgeCheck, Building2, Inbox, Mail, Plane, ShieldAlert, UserCheck, Users } from "lucide-react";
 import { getCurrentUser, isAdmin } from "@/lib/auth";
 import { getAdminCounts } from "@/lib/data";
 import { AdminPage } from "./AdminShell";
@@ -54,6 +54,13 @@ export default async function AdminOverviewPage() {
     },
   ];
 
+  const totals = [
+    { icon: Users, label: plural(counts.users, "user", "users"), value: counts.users },
+    { icon: Building2, label: plural(counts.listings, "listing", "listings"), value: counts.listings },
+    { icon: UserCheck, label: plural(counts.owners, "owner", "owners"), value: counts.owners },
+    { icon: Plane, label: plural(counts.airports, "airport", "airports"), value: counts.airports },
+  ];
+
   return (
     <AdminPage
       eyebrow="Overview"
@@ -77,6 +84,30 @@ export default async function AdminOverviewPage() {
           </Card>
         ))}
       </div>
+
+      <section aria-labelledby="admin-totals" className="mt-8">
+        <h2
+          id="admin-totals"
+          className="font-mono text-xs uppercase tracking-[0.12em] text-muted"
+        >
+          Directory totals
+        </h2>
+        <dl className="mt-3 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          {totals.map((stat) => (
+            <Card key={stat.label} className="flex items-center gap-4 p-5">
+              <stat.icon size={18} className="shrink-0 text-accent-ink" aria-hidden />
+              <div className="flex flex-col-reverse">
+                <dt className="mt-1.5 font-mono text-xs uppercase tracking-[0.12em] text-muted">
+                  {stat.label}
+                </dt>
+                <dd className="font-display text-3xl font-bold leading-none tracking-tight text-ink">
+                  {stat.value.toLocaleString()}
+                </dd>
+              </div>
+            </Card>
+          ))}
+        </dl>
+      </section>
     </AdminPage>
   );
 }
