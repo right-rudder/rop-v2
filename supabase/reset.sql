@@ -11,6 +11,9 @@
 -- instead — that is the normal path.
 -- ============================================================
 
+drop table if exists public.ownership_events   cascade;
+drop table if exists public.notifications      cascade;
+drop table if exists public.school_claims      cascade;
 drop table if exists public.leads              cascade;
 drop table if exists public.favorites          cascade;
 drop table if exists public.school_submissions cascade;
@@ -31,6 +34,8 @@ drop function if exists public.handle_new_user()               cascade;
 drop function if exists public.refresh_school_rating()         cascade;
 drop function if exists public.recompute_school_rating(text)   cascade;
 drop function if exists public.protect_flight_school_columns() cascade;
+drop function if exists public.log_ownership_change()          cascade;
+drop function if exists public.user_id_by_email(text)          cascade;
 drop function if exists public.is_admin()                      cascade;
 drop function if exists public.submit_lead(text, text, text, text, text, text, text, text) cascade;
 

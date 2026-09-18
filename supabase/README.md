@@ -36,10 +36,38 @@ LEAD_IP_SALT=<any random string>                                       # optiona
 Leads are always stored in `public.leads` and listed at `/admin/leads`; the
 webhook only adds the GHL hand-off. Without the URL nothing is sent.
 
-Every user-facing write goes through the user's session and RLS. The one
-exception is lead capture: the `submitLead` server action calls the
-server-only `submit_lead()` function with the **service-role key**, so the
-rate-limit fingerprint can't be forged by a direct Data API caller.
+Listing ownership talks to two more GoHighLevel workflows, both optional and
+both best-effort — a missing URL or a failed POST is logged and never fails
+the admin's action:
+
+```ini
+GHL_NOTIFY_WEBHOOK_URL=<Inbound Webhook URL>   # server-only; emails ownership notifications
+GHL_OWNER_WEBHOOK_URL=<Inbound Webhook URL>    # server-only; receives each approved owner as a contact
+```
+
+- `GHL_NOTIFY_WEBHOOK_URL` gets `{ source, event, email, subject, title, body, url }`
+  whenever an in-app notification is written (claim approved/declined, listing
+  assigned/revoked/featured). Without it notifications are in-app only.
+- `GHL_OWNER_WEBHOOK_URL` gets one flat contact payload every time an admin
+  makes someone a listing's owner — approving a claim, approving a submission,
+  assigning a listing, or inviting an owner from `/admin/users`. Fields:
+  `event` (`owner_approved`), `owner_source` (`claim_approved` |
+  `submission_approved` | `admin_assigned` | `admin_invited`), `account_status`
+  (`active` | `invited`), `approved_at`, `approved_by`, `user_id`, `first_name`,
+  `last_name`, `name`, `email`, `phone`, `role_title`, `work_email`,
+  `company_name`, `school_id`, `school_name`, `school_slug`, `school_url`,
+  `school_edit_url`, `school_website`, `school_phone`, `airport_code`, `city`,
+  `state`. Unknown values are empty strings. The builder is
+  `src/lib/owner-webhook.ts`.
+
+Every user-facing write goes through the user's session and RLS. The
+**service-role key** is reserved for what the Data API roles deliberately
+cannot do: `submit_lead()` (so the rate-limit fingerprint can't be forged by a
+direct Data API caller), `user_id_by_email()` and reading account emails
+(`auth.users` is not on the Data API), and the admin Users page, which lists
+accounts and sends invites through `auth.admin`. Each of those callers checks
+for an admin first; ownership itself is still written with the admin's own
+session, so RLS and the column-guard trigger stay the boundary.
 
 ```ini
 SUPABASE_SERVICE_ROLE_KEY=<service_role / secret key>   # server-only; never NEXT_PUBLIC_
@@ -199,6 +227,20 @@ confirm route so the SSR client can set the session cookie:
   `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=signup`
 - **Reset password**:
   `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery&next=/update-password`
+- **Invite user** (required for `/admin/users`):
+  `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=invite&next=/update-password`
+
+The Invite template is not optional. Admin invites are not PKCE, so the
+default `{{ .ConfirmationURL }}` link returns the session in the URL
+*fragment*, which a server route never sees — the invitee would land on
+`/login?error=confirm-failed`. With the `token_hash` link they arrive signed in
+on `/update-password`, set a password, and sign in normally from then on.
+
+Invites are sent by Supabase's mailer. The built-in one is limited to a few
+emails per hour; configure custom SMTP (**Authentication → Emails → SMTP
+Settings**) before inviting in volume. Invite links expire with the email OTP
+expiry set under **Authentication → Providers → Email** — “Resend invite” on
+`/admin/users` issues a fresh one.
 
 (The `/auth/confirm` route also handles the default `?code=` redirect style
 as a fallback, but the token_hash templates are the recommended setup. The
@@ -226,6 +268,10 @@ npx supabase gen types typescript --project-id ywqvhrslzpocxcbkhlxm > src/lib/su
 4. Leave a review on a school page — the school's rating and review count
    update automatically (database trigger).
 5. Password reset: `/forgot-password` → email link → `/update-password`.
-6. As a listing owner, the edit form saves content changes, but a direct
+6. As an admin, `/admin/users` → invite a new address with a listing picked:
+   the email link lands on `/update-password`, and after setting a password
+   the invitee can edit the listing. The account shows **Invite pending**
+   until then, **Invite accepted** after.
+7. As a listing owner, the edit form saves content changes, but a direct
    `PATCH …/rest/v1/flight_schools?id=eq.<id>` with `{"featured": true}`
    is rejected with `42501`.

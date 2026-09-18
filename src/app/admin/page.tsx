@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
+import Link from "next/link";
 import { BadgeCheck, Building2, Inbox, Mail, Plane, ShieldAlert, UserCheck, Users } from "lucide-react";
 import { getCurrentUser, isAdmin } from "@/lib/auth";
 import { getAdminCounts } from "@/lib/data";
@@ -86,12 +87,17 @@ export default async function AdminOverviewPage() {
       </div>
 
       <section aria-labelledby="admin-totals" className="mt-8">
-        <h2
-          id="admin-totals"
-          className="font-mono text-xs uppercase tracking-[0.12em] text-muted"
-        >
-          Directory totals
-        </h2>
+        <div className="flex items-baseline justify-between gap-4">
+          <h2
+            id="admin-totals"
+            className="font-mono text-xs uppercase tracking-[0.12em] text-muted"
+          >
+            Directory totals
+          </h2>
+          <Link href="/admin/users" className="text-sm font-semibold text-accent-ink hover:underline">
+            Manage users
+          </Link>
+        </div>
         <dl className="mt-3 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {totals.map((stat) => (
             <Card key={stat.label} className="flex items-center gap-4 p-5">

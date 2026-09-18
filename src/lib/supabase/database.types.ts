@@ -595,6 +595,38 @@ export type Database = {
         };
         Relationships: [];
       };
+      // Written by the log_ownership_change trigger alone — the API roles hold
+      // select (admins only, via RLS) and nothing else.
+      ownership_events: {
+        Row: {
+          id: string;
+          kind: string;
+          school_id: string | null;
+          school_name: string;
+          user_id: string;
+          actor_id: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          kind: string;
+          school_id?: string | null;
+          school_name: string;
+          user_id: string;
+          actor_id?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          kind?: string;
+          school_id?: string | null;
+          school_name?: string;
+          user_id?: string;
+          actor_id?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {

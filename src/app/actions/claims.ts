@@ -8,13 +8,13 @@ import { friendlyDbError } from "@/lib/supabase/errors";
 import { getCurrentUser, isAdmin } from "@/lib/auth";
 import {
   loadSchoolById,
-  loadSchoolBySlug,
   getClaimById,
   getPendingClaimFor,
   invalidateCatalog,
 } from "@/lib/data";
-import { notifyUser } from "@/lib/notify";
-import { validateClaim } from "@/lib/claims";
+import { notifyUser, sendOwnerWebhook } from "@/lib/notify";
+import { grantOwnership } from "@/lib/ownership";
+import { validateClaim, confirmsWith, OWNERSHIP_CONFIRM } from "@/lib/claims";
 import { schoolHref } from "@/lib/utils";
 import { withFlash } from "@/lib/toast";
 import type { FlightSchool } from "@/lib/types";
@@ -165,13 +165,24 @@ export async function approveClaim(
     console.error("[claims] could not supersede rival claims:", supersedeError.message);
   }
 
+  // Together, not in turn: both are best-effort network hops that never throw.
   const target = notifyTarget(school);
-  await notifyUser({ userId: claim.userId, type: "claim_approved", school: target });
+  await Promise.all([
+    notifyUser({ userId: claim.userId, type: "claim_approved", school: target }),
+    sendOwnerWebhook({
+      userId: claim.userId,
+      source: "claim_approved",
+      school,
+      approvedBy: viewer.id,
+      contact: { roleTitle: claim.roleTitle, workEmail: claim.workEmail },
+    }),
+  ]);
   for (const row of superseded ?? []) {
     await notifyUser({ userId: row.user_id, type: "claim_rejected", school: target });
   }
 
   revalidatePath("/admin/claims");
+  revalidatePath("/admin/users");
   const also = superseded?.length
     ? ` ${superseded.length} other pending ${superseded.length === 1 ? "claim was" : "claims were"} declined.`
     : "";
@@ -223,15 +234,18 @@ export async function assignOwner(
   formData: FormData,
 ): Promise<ClaimActionState> {
   const viewer = await getCurrentUser();
-  if (!isAdmin(viewer)) return { error: "Admin access required." };
+  if (!viewer || !isAdmin(viewer)) return { error: "Admin access required." };
 
-  const slug = field(formData, "schoolSlug");
+  const schoolId = field(formData, "schoolId");
   const email = field(formData, "email");
-  if (!slug) return { error: "Enter the listing's slug." };
+  if (!schoolId) return { error: "Pick a listing." };
   if (!email) return { error: "Enter the new owner's email." };
+  if (!confirmsWith(field(formData, "confirm"), OWNERSHIP_CONFIRM.assign)) {
+    return { error: `Type ${OWNERSHIP_CONFIRM.assign} to confirm the assignment.` };
+  }
 
-  const school = await loadSchoolBySlug(slug);
-  if (!school) return { error: `No listing with the slug "${slug}".` };
+  const school = await loadSchoolById(schoolId);
+  if (!school) return { error: "That listing no longer exists." };
   if (school.managedBy) {
     return { error: `${school.name} already has an owner. Revoke them first.` };
   }
@@ -251,21 +265,16 @@ export async function assignOwner(
   if (lookupError) return { error: friendlyDbError(lookupError) };
   if (!userId) return { error: `No account with the email "${email}".` };
 
-  const supabase = await createClient();
-  try {
-    const { error } = await supabase
-      .from("flight_schools")
-      .update({ managed_by: userId })
-      .eq("id", school.id)
-      .is("managed_by", null);
-    if (error) return { error: friendlyDbError(error) };
-  } finally {
-    invalidateCatalog();
-  }
+  const granted = await grantOwnership(school.id, userId);
+  if (!granted.ok) return { error: granted.error };
 
-  await notifyUser({ userId, type: "listing_assigned", school: notifyTarget(school) });
+  await Promise.all([
+    notifyUser({ userId, type: "listing_assigned", school: notifyTarget(school) }),
+    sendOwnerWebhook({ userId, source: "admin_assigned", school, approvedBy: viewer.id }),
+  ]);
 
   revalidatePath("/admin/claims");
+  revalidatePath("/admin/users");
   return { message: `${school.name} is now managed by ${email}.` };
 }
 
@@ -276,11 +285,14 @@ export async function revokeOwner(
   const viewer = await getCurrentUser();
   if (!isAdmin(viewer)) return { error: "Admin access required." };
 
-  const slug = field(formData, "schoolSlug");
-  if (!slug) return { error: "Enter the listing's slug." };
+  const schoolId = field(formData, "schoolId");
+  if (!schoolId) return { error: "Pick a listing." };
+  if (!confirmsWith(field(formData, "confirm"), OWNERSHIP_CONFIRM.revoke)) {
+    return { error: `Type ${OWNERSHIP_CONFIRM.revoke} to confirm the revocation.` };
+  }
 
-  const school = await loadSchoolBySlug(slug);
-  if (!school) return { error: `No listing with the slug "${slug}".` };
+  const school = await loadSchoolById(schoolId);
+  if (!school) return { error: "That listing no longer exists." };
   const previousOwner = school.managedBy;
   if (!previousOwner) return { error: `${school.name} has no owner to revoke.` };
 
@@ -307,6 +319,7 @@ export async function revokeOwner(
   });
 
   revalidatePath("/admin/claims");
+  revalidatePath("/admin/users");
   return { message: `${school.name} no longer has an owner.` };
 }
 
