@@ -244,6 +244,7 @@ export default async function SchoolDetailPage({ params }: Props) {
   const viewerIsAdmin = isAdmin(viewer);
   const canEditSchool = Boolean(viewer && (school.managedBy === viewer.id || viewerIsAdmin));
   const claimHref = `/schools/${school.slug}/claim`;
+  const suggestHref = `/schools/${school.slug}/suggest`;
   const isUnclaimed = !school.managedBy;
   const viewerClaimPending =
     viewer && isUnclaimed ? Boolean(await getPendingClaimFor(viewer.id, school.id)) : false;
@@ -605,6 +606,15 @@ export default async function SchoolDetailPage({ params }: Props) {
                   Visit website
                   <ExternalLink size={15} />
                 </Button>
+              )}
+              {!canEditSchool && (
+                <Link
+                  href={viewer ? suggestHref : `/login?next=${encodeURIComponent(suggestHref)}`}
+                  className="mt-4 inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-accent-ink"
+                >
+                  <Pencil size={13} aria-hidden />
+                  Suggest an edit
+                </Link>
               )}
             </Card>
           </aside>
