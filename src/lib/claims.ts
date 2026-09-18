@@ -19,27 +19,41 @@ export function confirmsWith(typed: string, word: string): boolean {
 
 const CLAIM_GRANT_WINDOW_MS = 10 * 60_000;
 
+type GrantEvent = { id: string; kind: string; schoolId: string | null; userId: string; at: string };
+type DecidedClaim = { status: string; schoolId: string; userId: string; decidedAt?: string };
+
 /**
- * Whether an ownership grant in the audit trail is the one an approved claim
- * produced — the timeline already shows that claim, so the grant would be the
- * same event twice. Matched on listing + person, and on time: approveClaim
- * writes the ownership and stamps the decision seconds apart, but a later,
- * separate grant to the same person must still show.
+ * The ids of the grant events that approved claims produced — the timeline
+ * already shows those claims, so their grants would be the same event twice.
+ *
+ * Each approved claim consumes at most ONE grant: the one for its listing and
+ * person closest to its decision time, within a few minutes (approveClaim
+ * writes the ownership and stamps the decision seconds apart). Consuming
+ * exactly one is what keeps a later, separate grant to the same person
+ * visible — approve, revoke, re-assign within minutes shows the re-assignment.
  */
-export function isClaimGrant(
-  event: { kind: string; schoolId: string | null; userId: string; at: string },
-  claims: readonly { status: string; schoolId: string; userId: string; decidedAt?: string }[],
-): boolean {
-  if (event.kind !== "granted" || !event.schoolId) return false;
-  const at = Date.parse(event.at);
-  return claims.some(
-    (c) =>
-      c.status === "approved" &&
-      c.schoolId === event.schoolId &&
-      c.userId === event.userId &&
-      c.decidedAt !== undefined &&
-      Math.abs(Date.parse(c.decidedAt) - at) <= CLAIM_GRANT_WINDOW_MS,
-  );
+export function claimGrantEventIds(
+  events: readonly GrantEvent[],
+  claims: readonly DecidedClaim[],
+): Set<string> {
+  const consumed = new Set<string>();
+  for (const claim of claims) {
+    if (claim.status !== "approved" || claim.decidedAt === undefined) continue;
+    const decidedAt = Date.parse(claim.decidedAt);
+    let best: GrantEvent | undefined;
+    let bestDistance = CLAIM_GRANT_WINDOW_MS + 1;
+    for (const event of events) {
+      if (event.kind !== "granted" || consumed.has(event.id)) continue;
+      if (event.schoolId !== claim.schoolId || event.userId !== claim.userId) continue;
+      const distance = Math.abs(Date.parse(event.at) - decidedAt);
+      if (distance < bestDistance) {
+        best = event;
+        bestDistance = distance;
+      }
+    }
+    if (best) consumed.add(best.id);
+  }
+  return consumed;
 }
 
 export type ClaimValues = {

@@ -7,7 +7,7 @@ import {
   websiteDomain,
   domainsMatch,
   confirmsWith,
-  isClaimGrant,
+  claimGrantEventIds,
   OWNERSHIP_CONFIRM,
 } from "../../src/lib/claims.ts";
 
@@ -97,20 +97,41 @@ const approved = {
   userId: "ada",
   decidedAt: "2026-09-17T12:00:05Z",
 };
-const grant = { kind: "granted", schoolId: "skyline", userId: "ada", at: "2026-09-17T12:00:03Z" };
+const grant = { id: "g1", kind: "granted", schoolId: "skyline", userId: "ada", at: "2026-09-17T12:00:03Z" };
 
-test("recognises the grant an approved claim produced", () => {
-  assert.equal(isClaimGrant(grant, [approved]), true);
+test("an approved claim consumes the grant it produced", () => {
+  assert.deepEqual([...claimGrantEventIds([grant], [approved])], ["g1"]);
 });
 
 test("keeps every other ownership event in the timeline", () => {
-  assert.equal(isClaimGrant({ ...grant, kind: "revoked" }, [approved]), false);
-  assert.equal(isClaimGrant({ ...grant, userId: "grace" }, [approved]), false);
-  assert.equal(isClaimGrant({ ...grant, schoolId: "other" }, [approved]), false);
-  assert.equal(isClaimGrant({ ...grant, schoolId: null }, [approved]), false);
-  assert.equal(isClaimGrant(grant, [{ ...approved, status: "rejected" }]), false);
-  assert.equal(isClaimGrant(grant, [{ ...approved, decidedAt: undefined }]), false);
-  assert.equal(isClaimGrant(grant, []), false);
+  const none = (events: (typeof grant)[], claims: (typeof approved)[]) =>
+    assert.equal(claimGrantEventIds(events, claims).size, 0);
+  none([{ ...grant, kind: "revoked" }], [approved]);
+  none([{ ...grant, userId: "grace" }], [approved]);
+  none([{ ...grant, schoolId: "other" }], [approved]);
+  none([{ ...grant, schoolId: null }], [approved]);
+  none([grant], [{ ...approved, status: "rejected" }]);
+  none([grant], [{ ...approved, decidedAt: undefined }]);
+  none([grant], []);
+  none([], [approved]);
   // Same person and listing, but re-assigned days after the claim was approved
-  assert.equal(isClaimGrant({ ...grant, at: "2026-09-20T09:00:00Z" }, [approved]), false);
+  none([{ ...grant, at: "2026-09-20T09:00:00Z" }], [approved]);
+});
+
+test("one claim consumes one grant — approve, revoke, re-assign within minutes still shows the re-assignment", () => {
+  const reassigned = { ...grant, id: "g2", at: "2026-09-17T12:04:00Z" };
+  const ids = claimGrantEventIds([reassigned, grant], [approved]);
+  assert.deepEqual([...ids], ["g1"]);
+});
+
+test("picks the grant closest to the decision, not the first one seen", () => {
+  const earlier = { ...grant, id: "g0", at: "2026-09-17T11:52:00Z" };
+  assert.deepEqual([...claimGrantEventIds([earlier, grant], [approved])], ["g1"]);
+});
+
+test("two approved claims on different listings each consume their own grant", () => {
+  const other = { ...approved, schoolId: "sun-city", decidedAt: "2026-09-17T13:00:00Z" };
+  const otherGrant = { ...grant, id: "g3", schoolId: "sun-city", at: "2026-09-17T13:00:02Z" };
+  const ids = claimGrantEventIds([grant, otherGrant], [approved, other]);
+  assert.deepEqual([...ids].sort(), ["g1", "g3"]);
 });

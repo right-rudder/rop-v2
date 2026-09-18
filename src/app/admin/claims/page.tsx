@@ -9,7 +9,7 @@ import {
   loadManagedSchools,
   type ListingOption,
 } from "@/lib/data";
-import { domainsMatch, isClaimGrant } from "@/lib/claims";
+import { domainsMatch, claimGrantEventIds } from "@/lib/claims";
 import { loadOwnershipEvents } from "@/lib/ownership";
 import { schoolHref } from "@/lib/utils";
 import { ClaimCard } from "./ClaimCard";
@@ -93,9 +93,10 @@ export default async function AdminClaimsPage() {
   // beside every other ownership change — assignments, invited owners, approved
   // submissions, revocations. A grant that an approved claim already shows is
   // left out rather than listed twice.
+  const shownByClaim = claimGrantEventIds(events, claims);
   const timeline = [
     ...processed.map((claim) => ({ at: claim.decidedAt ?? claim.createdAt, node: cardFor(claim) })),
-    ...events.filter((event) => !isClaimGrant(event, claims)).map((event) => {
+    ...events.filter((event) => !shownByClaim.has(event.id)).map((event) => {
       const school = event.schoolId ? schoolsById[event.schoolId] : undefined;
       return {
         at: event.at,

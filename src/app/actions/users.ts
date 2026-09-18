@@ -95,8 +95,11 @@ export async function inviteUser(
   });
   if (lookupError) return { error: friendlyDbError(lookupError) };
 
-  // An account that exists but never confirmed is invited again, which
-  // re-issues its link. A confirmed one needs no invite: with a listing picked
+  // An account that exists but never confirmed is invited again: GoTrue's
+  // /invite handler sends the invite for an existing unconfirmed user as well
+  // as a new one, and returns email_exists only for a confirmed one
+  // (supabase/auth internal/api/invite.go — isConfirmed → email_exists, else
+  // sendInvite). A confirmed account needs no invite: with a listing picked
   // this becomes a plain assignment, and without one there is nothing to do.
   let userId: string = existingId ?? "";
   let invited = true;
@@ -181,6 +184,7 @@ export async function resendInvite(
     return { error: "This person has already accepted their invite." };
   }
 
+  // Re-inviting an unconfirmed user re-sends the invite — see inviteUser.
   const { error: inviteFailed } = await service.auth.admin.inviteUserByEmail(data.user.email, {
     redirectTo: inviteRedirect(),
   });

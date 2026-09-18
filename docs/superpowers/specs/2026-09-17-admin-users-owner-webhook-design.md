@@ -60,7 +60,9 @@ response on a rare admin click.
 
 Status per account (`inviteStatus`): `invited` (has `invited_at`, not confirmed) · `accepted` ·
 `unconfirmed` (self-signup, not confirmed) · `active`. Resend is only offered for `invited` and
-calls `inviteUserByEmail` again — `auth.resend()` only supports `signup` and `email_change`.
+calls `inviteUserByEmail` again — GoTrue's `/invite` handler sends the invite for an existing
+*unconfirmed* user as well as a new one and returns `email_exists` only for a confirmed one
+(`supabase/auth` `internal/api/invite.go`); `auth.resend()` only supports `signup` and `email_change`.
 
 ## The Invite email template is required
 
@@ -109,8 +111,11 @@ spells out who gains or loses which listing and stays disabled until the admin t
 
 `/admin/claims` → **Recent activity** merges these with decided claims, newest first
 (`loadOwnershipEvents` in `src/lib/ownership.ts`, on the admin's session). A grant that an approved
-claim already shows is dropped by `isClaimGrant` (same listing + person, decided within 10 minutes)
-so it is not listed twice.
+claim already shows is dropped so it is not listed twice: `claimGrantEventIds` lets each approved
+claim consume at most one grant — the one for its listing and person closest to its decision time,
+within 10 minutes. Consuming exactly one is what keeps approve → revoke → re-assign within minutes
+honest: the re-assignment still shows. (A stored claim ↔ event link would be exact, but the trigger
+that writes events cannot know which claim, if any, caused the write.)
 
 ## Security
 
@@ -122,6 +127,6 @@ returns every account's email. The service role is used only for `user_id_by_ema
 
 `scripts/tests/owner-webhook.test.ts` (payload shape, sources, blanks, contact matching),
 `scripts/tests/admin-users.test.ts` (validation, status, sort), `scripts/tests/claims.test.ts`
-(confirm word, claim-grant de-duplication) and the updated
+(confirm word, claim-grant matching) and the updated
 `scripts/tests/admin-nav.test.ts`. Actions, the picker and the invite round-trip are verified
 manually — see the checklist in `supabase/README.md` § Verify.
