@@ -324,7 +324,11 @@ as $$
     )
   end;
 $$;
-revoke execute on function public.is_contact_list(jsonb, int, int) from public, anon, authenticated;
+-- authenticated MUST keep EXECUTE: the CHECKs below run with the inserting
+-- member's privileges, and Postgres checks it for every insert, not only
+-- contacts ones. It is a pure shape test with no data access.
+revoke execute on function public.is_contact_list(jsonb, int, int) from public, anon;
+grant  execute on function public.is_contact_list(jsonb, int, int) to authenticated;
 
 -- ── School Suggestions (member corrections to listing facts) ─
 -- A member proposes a new value for one contact/location field; an admin
