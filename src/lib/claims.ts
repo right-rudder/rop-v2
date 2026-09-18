@@ -5,6 +5,18 @@
  */
 export const CLAIM_LIMITS = { roleTitle: 120, message: 2000, email: 254 } as const;
 
+/**
+ * The word an admin types to confirm an ownership change. The dialog asks for
+ * it and the action checks it again, so a request that skipped the dialog is
+ * refused too.
+ */
+export const OWNERSHIP_CONFIRM = { assign: "ASSIGN", revoke: "REVOKE" } as const;
+
+/** Forgiving about case and stray spaces — the point is intent, not typing accuracy. */
+export function confirmsWith(typed: string, word: string): boolean {
+  return typed.trim().toUpperCase() === word;
+}
+
 export type ClaimValues = {
   roleTitle: string;
   message: string;

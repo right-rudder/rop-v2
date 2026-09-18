@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { ComponentProps, ReactNode } from "react";
 import { cn } from "@/lib/cn";
 
-type Variant = "primary" | "secondary" | "ghost";
+type Variant = "primary" | "secondary" | "ghost" | "danger";
 type Size = "sm" | "md" | "lg";
 
 const base =
@@ -17,6 +17,10 @@ const variants: Record<Variant, string> = {
   secondary:
     "bg-surface text-ink border border-line hover:border-ink/30 hover:bg-surface-2",
   ghost: "text-ink hover:bg-surface-2",
+  // Soft fill rather than solid red: --danger lightens in dark mode, where
+  // white text on it would fall below contrast.
+  danger:
+    "bg-danger-soft text-danger border border-danger/40 hover:border-danger",
 };
 
 const sizes: Record<Size, string> = {

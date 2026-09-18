@@ -8,14 +8,13 @@ import { friendlyDbError } from "@/lib/supabase/errors";
 import { getCurrentUser, isAdmin } from "@/lib/auth";
 import {
   loadSchoolById,
-  loadSchoolBySlug,
   getClaimById,
   getPendingClaimFor,
   invalidateCatalog,
 } from "@/lib/data";
 import { notifyUser, sendOwnerWebhook } from "@/lib/notify";
 import { grantOwnership } from "@/lib/ownership";
-import { validateClaim } from "@/lib/claims";
+import { validateClaim, confirmsWith, OWNERSHIP_CONFIRM } from "@/lib/claims";
 import { schoolHref } from "@/lib/utils";
 import { withFlash } from "@/lib/toast";
 import type { FlightSchool } from "@/lib/types";
@@ -237,13 +236,16 @@ export async function assignOwner(
   const viewer = await getCurrentUser();
   if (!viewer || !isAdmin(viewer)) return { error: "Admin access required." };
 
-  const slug = field(formData, "schoolSlug");
+  const schoolId = field(formData, "schoolId");
   const email = field(formData, "email");
-  if (!slug) return { error: "Enter the listing's slug." };
+  if (!schoolId) return { error: "Pick a listing." };
   if (!email) return { error: "Enter the new owner's email." };
+  if (!confirmsWith(field(formData, "confirm"), OWNERSHIP_CONFIRM.assign)) {
+    return { error: `Type ${OWNERSHIP_CONFIRM.assign} to confirm the assignment.` };
+  }
 
-  const school = await loadSchoolBySlug(slug);
-  if (!school) return { error: `No listing with the slug "${slug}".` };
+  const school = await loadSchoolById(schoolId);
+  if (!school) return { error: "That listing no longer exists." };
   if (school.managedBy) {
     return { error: `${school.name} already has an owner. Revoke them first.` };
   }
@@ -283,11 +285,14 @@ export async function revokeOwner(
   const viewer = await getCurrentUser();
   if (!isAdmin(viewer)) return { error: "Admin access required." };
 
-  const slug = field(formData, "schoolSlug");
-  if (!slug) return { error: "Enter the listing's slug." };
+  const schoolId = field(formData, "schoolId");
+  if (!schoolId) return { error: "Pick a listing." };
+  if (!confirmsWith(field(formData, "confirm"), OWNERSHIP_CONFIRM.revoke)) {
+    return { error: `Type ${OWNERSHIP_CONFIRM.revoke} to confirm the revocation.` };
+  }
 
-  const school = await loadSchoolBySlug(slug);
-  if (!school) return { error: `No listing with the slug "${slug}".` };
+  const school = await loadSchoolById(schoolId);
+  if (!school) return { error: "That listing no longer exists." };
   const previousOwner = school.managedBy;
   if (!previousOwner) return { error: `${school.name} has no owner to revoke.` };
 

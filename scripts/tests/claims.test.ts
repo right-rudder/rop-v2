@@ -6,6 +6,8 @@ import {
   emailDomain,
   websiteDomain,
   domainsMatch,
+  confirmsWith,
+  OWNERSHIP_CONFIRM,
 } from "../../src/lib/claims.ts";
 
 const valid = { roleTitle: "Chief Flight Instructor", message: "I run the school.", workEmail: "ada@school.com" };
@@ -77,4 +79,13 @@ test("domainsMatch rejects lookalikes and unknown domains", () => {
   assert.equal(domainsMatch("ada@school.com", ""), false);
   assert.equal(domainsMatch("", "https://school.com"), false);
   assert.equal(domainsMatch("ada@school.com", "call us"), false);
+});
+
+test("the ownership confirmation accepts the word in any case, and nothing else", () => {
+  assert.equal(confirmsWith("REVOKE", OWNERSHIP_CONFIRM.revoke), true);
+  assert.equal(confirmsWith("  revoke ", OWNERSHIP_CONFIRM.revoke), true);
+  assert.equal(confirmsWith("Assign", OWNERSHIP_CONFIRM.assign), true);
+  assert.equal(confirmsWith("", OWNERSHIP_CONFIRM.revoke), false);
+  assert.equal(confirmsWith("REVOK", OWNERSHIP_CONFIRM.revoke), false);
+  assert.equal(confirmsWith("ASSIGN", OWNERSHIP_CONFIRM.revoke), false);
 });

@@ -1,7 +1,14 @@
 import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { getCurrentUser, isAdmin } from "@/lib/auth";
-import { getSchoolClaims, getSchoolsByIds, getUsersByIds } from "@/lib/data";
+import {
+  getSchoolClaims,
+  getSchoolsByIds,
+  getUsersByIds,
+  getUnownedListingOptions,
+  loadManagedSchools,
+  type ListingOption,
+} from "@/lib/data";
 import { domainsMatch } from "@/lib/claims";
 import { schoolHref } from "@/lib/utils";
 import { ClaimCard } from "./ClaimCard";
@@ -18,11 +25,28 @@ export default async function AdminClaimsPage() {
   if (!viewer) redirect("/login?next=/admin/claims");
   if (!isAdmin(viewer)) notFound();
 
-  const claims = await getSchoolClaims();
+  const [claims, unowned, managed] = await Promise.all([
+    getSchoolClaims(),
+    getUnownedListingOptions(),
+    loadManagedSchools(),
+  ]);
   const [schoolsById, usersById] = await Promise.all([
     getSchoolsByIds(claims.map((c) => c.schoolId)),
-    getUsersByIds(claims.map((c) => c.userId)),
+    getUsersByIds([...claims.map((c) => c.userId), ...managed.map((m) => m.managedBy)]),
   ]);
+
+  // The revoke picker names each listing's owner, so the confirmation can say
+  // whose access is about to go. An owner without a profiles row has no name.
+  const owned: ListingOption[] = managed.map((m) => {
+    const owner = usersById[m.managedBy];
+    return {
+      id: m.id,
+      name: m.name,
+      location: m.location,
+      airport: m.airport,
+      owner: owner ? `${owner.firstName} ${owner.lastName}`.trim() : undefined,
+    };
+  });
 
   const pending = claims.filter((c) => c.status === "pending");
   const processed = claims.filter((c) => c.status !== "pending");
@@ -62,8 +86,8 @@ export default async function AdminClaimsPage() {
 
       <AdminSection title="Ownership">
         <div className="space-y-5">
-          <AssignOwnerForm />
-          <RevokeOwnerForm />
+          <AssignOwnerForm listings={unowned} />
+          <RevokeOwnerForm listings={owned} />
         </div>
       </AdminSection>
 
