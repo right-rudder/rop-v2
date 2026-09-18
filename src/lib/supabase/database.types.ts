@@ -558,6 +558,56 @@ export type Database = {
         };
         Relationships: [];
       };
+      school_suggestions: {
+        Row: {
+          id: string;
+          school_id: string;
+          user_id: string;
+          field: string;
+          proposed_value: Json;
+          current_value: Json;
+          reason: string;
+          note: string;
+          status: string;
+          decided_by: string | null;
+          decided_at: string | null;
+          applied_value: Json | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          school_id: string;
+          user_id: string;
+          field: string;
+          proposed_value: Json;
+          current_value: Json;
+          reason: string;
+          note?: string;
+          status?: string;
+          decided_by?: string | null;
+          decided_at?: string | null;
+          applied_value?: Json | null;
+          created_at?: string;
+        };
+        // Only status / decided_by / decided_at / applied_value are granted to
+        // the Data API roles; the rest are here because the generator emits them.
+        Update: {
+          id?: string;
+          school_id?: string;
+          user_id?: string;
+          field?: string;
+          proposed_value?: Json;
+          current_value?: Json;
+          reason?: string;
+          note?: string;
+          status?: string;
+          decided_by?: string | null;
+          decided_at?: string | null;
+          applied_value?: Json | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       notifications: {
         Row: {
           id: string;
@@ -642,6 +692,11 @@ export type Database = {
           p_ip_hash: string;
         };
         Returns: string;
+      };
+      /** Public: one integer per user, backing the profile's approved-corrections count. */
+      approved_suggestion_count: {
+        Args: { p_user_id: string };
+        Returns: number;
       };
       /** service_role only — see the grant in supabase/schema.sql. */
       user_id_by_email: {
