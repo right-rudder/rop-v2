@@ -110,11 +110,33 @@ export function EditSchoolForm({
         </FormSection>
       )}
 
-      {/* Location — read-only: changing it re-links catalog records */}
+      {/* Location — address and hours are the owner's to set; airport, city
+          and state are read-only because changing them re-links catalog records */}
       <FormSection
-        title="Location"
-        description="Location changes re-link the listing to other records — contact the site team to move a school."
+        title="Location &amp; hours"
+        description="Airport, city and state re-link the listing to other records — contact the site team to move a school."
       >
+        <Field label="Street address" htmlFor="address" hint="Where students should turn up — your office or hangar.">
+          <Input
+            id="address"
+            name="address"
+            type="text"
+            maxLength={LIMITS.address}
+            defaultValue={school.address ?? ""}
+            placeholder="123 Aviation Way, Suite 4"
+          />
+        </Field>
+        <Field label="Hours" htmlFor="hours" hint="Free text, as you would tell a caller.">
+          <Textarea
+            id="hours"
+            name="hours"
+            rows={2}
+            className="min-h-0"
+            maxLength={LIMITS.hours}
+            defaultValue={school.hours ?? ""}
+            placeholder="Mon–Fri 8am–6pm, Sat 9am–2pm"
+          />
+        </Field>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <Field label="Airport code (ICAO)" htmlFor="airportCode">
             <Input

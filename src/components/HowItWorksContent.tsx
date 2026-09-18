@@ -13,6 +13,7 @@ import {
   Mail,
   MessageSquare,
   Pencil,
+  PencilLine,
   PlusCircle,
   Send,
   Star,
@@ -41,6 +42,7 @@ const GUIDE_ICONS: Record<string, LucideIcon> = {
   "request-info": Send,
   "write-review": Star,
   comments: MessageSquare,
+  "suggest-edit": PencilLine,
   claim: BadgeCheck,
   "add-school": PlusCircle,
   "edit-listing": Pencil,
@@ -138,8 +140,9 @@ export function HowItWorksContent() {
               <p className="max-w-prose leading-relaxed text-muted">
                 You can use the whole directory without an account: search, compare schools side
                 by side, and send an information request to any school. An account adds the things
-                that need to be tied to a person — saving schools, writing reviews, commenting, and
-                managing a listing if you run a flight school.
+                that need to be tied to a person — saving schools, writing reviews, commenting,
+                suggesting corrections to a listing, and managing a listing if you run a flight
+                school.
               </p>
             </section>
 
@@ -154,6 +157,7 @@ export function HowItWorksContent() {
                   "Search by state, city, airport code, program, aircraft, FAA Part or rating — or within a radius of where you live.",
                   "Save the ones you like to your account, and put up to four side by side to compare programs, fleet and ratings.",
                   "Read student reviews, then send an information request straight from a listing. No account needed for that.",
+                  "Spot a wrong phone number, website or address? Suggest the correction and our team will check it and apply it.",
                 ]}
                 guides={studentGuides}
                 cta={{ label: "Search flight schools", href: "/search" }}

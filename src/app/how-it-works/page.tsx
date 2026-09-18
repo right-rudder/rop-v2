@@ -6,7 +6,7 @@ import { breadcrumbJsonLd, faqJsonLd } from "@/lib/structured-data";
 import { metaDescription } from "@/lib/seo";
 
 const DESCRIPTION =
-  "How to use Flight School Finder: search and compare flight schools, request information, write reviews, and — if you run a school — claim, add or edit your listing.";
+  "How to use Flight School Finder: search and compare flight schools, request information, write reviews, suggest corrections to a listing, and — if you run a school — claim, add or edit your listing.";
 
 export const metadata: Metadata = {
   title: "How It Works",

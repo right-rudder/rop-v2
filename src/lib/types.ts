@@ -1,6 +1,7 @@
 // The notification union lives with its copy builder in ./notifications;
 // re-exported here so consumers get it from the usual place.
 import type { NotificationType } from "./notifications";
+import type { SuggestionField, SuggestionReason, SuggestionValue } from "./suggestions";
 export type { NotificationType };
 
 /** WGS-84 coordinate pair (decimal degrees). */
@@ -64,6 +65,8 @@ export const LIMITS = {
   schoolDescription: 5000,
   website: 300,
   phone: 40,
+  address: 300,
+  hours: 300,
   location: 80,
   contactField: 120,
   contacts: 10,
@@ -276,6 +279,38 @@ export type SchoolClaim = {
   /** auth.users id of the deciding admin; unset while pending */
   decidedBy?: string;
   decidedAt?: string;
+  createdAt: string;
+};
+
+/** Suggestions move through the same three states as claims. */
+export type SuggestionStatus = SubmissionStatus;
+
+/**
+ * A member's proposed correction to one listing field, awaiting or carrying
+ * an admin decision. Approved rows are the contribution record behind the
+ * profile's "approved corrections" count.
+ */
+export type SchoolSuggestion = {
+  id: string;
+  /** Unset once the listing has been deleted — the record outlives it. */
+  schoolId?: string;
+  /** Snapshot of the listing's name at filing, so history reads without the listing. */
+  schoolName: string;
+  /** auth.users id of the member who filed it */
+  userId: string;
+  field: SuggestionField;
+  /** What the member proposes: text, or a contact list for `contacts` */
+  proposedValue: SuggestionValue;
+  /** What the listing showed when the suggestion was filed */
+  currentValue: SuggestionValue;
+  reason: SuggestionReason;
+  note: string;
+  status: SuggestionStatus;
+  /** auth.users id of the deciding admin; unset while pending */
+  decidedBy?: string;
+  decidedAt?: string;
+  /** What was written on approval — may differ from proposedValue if the admin edited it */
+  appliedValue?: SuggestionValue;
   createdAt: string;
 };
 

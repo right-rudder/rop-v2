@@ -11,6 +11,7 @@ import { BUCKETS, uploadImage, removeImage } from "@/lib/supabase/storage";
 import { getCurrentUser, isAdmin } from "@/lib/auth";
 import { loadSchoolById, getPrograms, invalidateCatalog } from "@/lib/data";
 import { schoolHref, isHttpUrl, isAirportCode } from "@/lib/utils";
+import { contactsFromEntries } from "@/lib/contacts";
 import {
   FLEET_RANGES,
   LIMITS,
@@ -36,29 +37,7 @@ function parseFleetRange(value: string): FleetRange | null {
 
 /** Rebuild ContactPerson[] from `contacts[i][field]` form inputs, dropping empty rows */
 function parseContacts(formData: FormData): ContactPerson[] | { error: string } {
-  const byIndex = new Map<number, ContactPerson>();
-  for (const [key, value] of formData.entries()) {
-    const match = key.match(/^contacts\[(\d+)\]\[(name|title|phone|email)\]$/);
-    if (!match || typeof value !== "string") continue;
-    const trimmed = value.trim();
-    if (trimmed.length > LIMITS.contactField) {
-      return {
-        error: `Contact details must be ${LIMITS.contactField} characters or fewer.`,
-      };
-    }
-    const index = Number(match[1]);
-    const contact =
-      byIndex.get(index) ?? { name: "", title: "", phone: "", email: "" };
-    contact[match[2] as keyof ContactPerson] = trimmed;
-    byIndex.set(index, contact);
-  }
-  const contacts = [...byIndex.values()].filter(
-    (c) => c.name || c.title || c.phone || c.email,
-  );
-  if (contacts.length > LIMITS.contacts) {
-    return { error: `Please list at most ${LIMITS.contacts} contacts.` };
-  }
-  return contacts;
+  return contactsFromEntries(formData.entries());
 }
 
 type SchoolFields = {
@@ -187,6 +166,18 @@ export async function updateSchool(
   if ("error" in parsed) return { error: parsed.error };
   const { fields } = parsed;
 
+  // Address and hours exist only on published listings (the submission form
+  // has no columns for them), so they are read here rather than in
+  // parseSchoolFields. Empty means "not listed", stored as null.
+  const address = field(formData, "address");
+  const hours = field(formData, "hours");
+  if (address.length > LIMITS.address) {
+    return { error: `Address must be ${LIMITS.address} characters or fewer.` };
+  }
+  if (hours.length > LIMITS.hours) {
+    return { error: `Hours must be ${LIMITS.hours} characters or fewer.` };
+  }
+
   const supabase = await createClient();
 
   // Resolve the logo before touching the row: a rejected image must not leave
@@ -218,6 +209,8 @@ export async function updateSchool(
       estimated_planes: fields.estimatedPlanes,
       estimated_instructors: fields.estimatedInstructors,
       contacts: fields.contacts,
+      address: address || null,
+      hours: hours || null,
       ...(logoPath !== undefined ? { logo_path: logoPath } : {}),
       // Featuring a listing is an admin call, not the owner's — the
       // protect_flight_school_columns trigger enforces this in the DB too

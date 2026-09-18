@@ -1,5 +1,6 @@
 /**
- * Copy for listing notifications — ownership changes and featuring. Pure — no imports — so the tests in
+ * Copy for listing notifications — ownership changes, featuring and suggestion
+ * outcomes. Pure — no imports — so the tests in
  * scripts/tests run this file directly under `node --test`. The delivery side
  * (DB row + email hop) lives in src/lib/notify.ts.
  */
@@ -8,7 +9,9 @@ export type NotificationType =
   | "claim_rejected"
   | "listing_assigned"
   | "listing_revoked"
-  | "listing_featured";
+  | "listing_featured"
+  | "suggestion_approved"
+  | "suggestion_rejected";
 
 export const NOTIFICATION_TYPES: readonly NotificationType[] = [
   "claim_approved",
@@ -16,6 +19,8 @@ export const NOTIFICATION_TYPES: readonly NotificationType[] = [
   "listing_assigned",
   "listing_revoked",
   "listing_featured",
+  "suggestion_approved",
+  "suggestion_rejected",
 ];
 
 /** Events that hand someone a listing link to its editor, not its public page. */
@@ -86,6 +91,20 @@ export function buildNotification(
         body: `${name} now appears in the Featured section on the home page.`,
         href: schoolPath,
         emailSubject: `${name} is now featured`,
+      };
+    case "suggestion_approved":
+      return {
+        title: "Your suggested edit was applied",
+        body: `Thanks — your correction to ${name} is now live on its listing.`,
+        href: schoolPath,
+        emailSubject: `Your edit to ${name} is live`,
+      };
+    case "suggestion_rejected":
+      return {
+        title: "Your suggested edit wasn't applied",
+        body: `We reviewed your correction to ${name} and kept the listing as it was. Reply to this email if you have a source we can check.`,
+        href: schoolPath,
+        emailSubject: `About your edit to ${name}`,
       };
   }
 }

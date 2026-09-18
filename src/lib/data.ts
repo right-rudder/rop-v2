@@ -53,6 +53,8 @@ import type {
   LatLng,
   Lead,
   LeadStatus,
+  SchoolSuggestion,
+  SuggestionStatus,
 } from "@/lib/types";
 import type { Tables } from "@/lib/supabase/database.types";
 import type {
@@ -60,6 +62,7 @@ import type {
   AirportSearchItem,
 } from "@/components/HeroSearch";
 import { schoolHref, isAirportCode, pickAirportMatch } from "@/lib/utils";
+import { isSuggestionField, isSuggestionReason, isSuggestionValue } from "@/lib/suggestions";
 
 type FaaPart = "61" | "141" | "both";
 
@@ -901,6 +904,7 @@ export async function getRecentComments(limit = 50): Promise<Comment[]> {
 export type AdminCounts = {
   pendingSubmissions: number;
   pendingClaims: number;
+  pendingSuggestions: number;
   newLeads: number;
   reviews: number;
   comments: number;
@@ -939,6 +943,7 @@ export async function getAdminCounts(): Promise<AdminCounts> {
   const [
     pendingSubmissions,
     pendingClaims,
+    pendingSuggestions,
     newLeads,
     reviews,
     comments,
@@ -950,6 +955,7 @@ export async function getAdminCounts(): Promise<AdminCounts> {
   ] = await Promise.all([
     count(supabase.from("school_submissions").select("id", head).eq("status", "pending")),
     count(supabase.from("school_claims").select("id", head).eq("status", "pending")),
+    count(supabase.from("school_suggestions").select("id", head).eq("status", "pending")),
     count(supabase.from("leads").select("id", head).eq("status", "new")),
     count(supabase.from("reviews").select("id", head)),
     count(supabase.from("comments").select("id", head)),
@@ -962,6 +968,7 @@ export async function getAdminCounts(): Promise<AdminCounts> {
   return {
     pendingSubmissions,
     pendingClaims,
+    pendingSuggestions,
     newLeads,
     reviews,
     comments,
@@ -1070,6 +1077,101 @@ export async function getPendingClaimFor(
   const row = orThrow(res);
   return row ? toClaim(row) : undefined;
 }
+
+// ── School suggestions ─────────────────────────────────────────────────────────
+// Reads are RLS-gated: members see their own rows, admins see all.
+
+function toSuggestion(row: Tables<"school_suggestions">): SchoolSuggestion {
+  // The CHECK constraints keep these true; a row that still fails is a bug
+  // worth surfacing, not a card to render half-empty.
+  if (!isSuggestionField(row.field)) throw new Error(`Unknown suggestion field: ${row.field}`);
+  if (!isSuggestionReason(row.reason)) throw new Error(`Unknown suggestion reason: ${row.reason}`);
+  const field = row.field;
+  const proposed = row.proposed_value;
+  const current = row.current_value;
+  if (!isSuggestionValue(field, proposed) || !isSuggestionValue(field, current)) {
+    throw new Error(`Malformed value on suggestion ${row.id}`);
+  }
+  const applied = row.applied_value ?? undefined;
+  if (applied !== undefined && !isSuggestionValue(field, applied)) {
+    throw new Error(`Malformed applied value on suggestion ${row.id}`);
+  }
+  return {
+    id: row.id,
+    schoolId: row.school_id ?? undefined,
+    schoolName: row.school_name,
+    userId: row.user_id,
+    field,
+    proposedValue: proposed,
+    currentValue: current,
+    reason: row.reason,
+    note: row.note,
+    status: row.status as SuggestionStatus,
+    decidedBy: row.decided_by ?? undefined,
+    decidedAt: row.decided_at ?? undefined,
+    appliedValue: applied,
+    createdAt: row.created_at,
+  };
+}
+
+/** Every open suggestion, oldest first — the queue is worked in filing order. */
+export async function getPendingSuggestions(): Promise<SchoolSuggestion[]> {
+  const supabase = await createClient();
+  const res = await supabase
+    .from("school_suggestions")
+    .select("*")
+    .eq("status", "pending")
+    .order("created_at", { ascending: true });
+  return orThrow(res).map(toSuggestion);
+}
+
+/**
+ * The latest decisions only. Approved rows are kept forever as the
+ * contribution record, so the history is unbounded; the queue page shows a
+ * window of it rather than loading it all.
+ */
+export async function getRecentDecidedSuggestions(limit = 50): Promise<SchoolSuggestion[]> {
+  const supabase = await createClient();
+  const res = await supabase
+    .from("school_suggestions")
+    .select("*")
+    .neq("status", "pending")
+    .order("decided_at", { ascending: false, nullsFirst: false })
+    .limit(clampLimit(limit));
+  return orThrow(res).map(toSuggestion);
+}
+
+export async function getSuggestionById(id: string): Promise<SchoolSuggestion | undefined> {
+  const supabase = await createClient();
+  const res = await supabase.from("school_suggestions").select("*").eq("id", id).maybeSingle();
+  const row = orThrow(res);
+  return row ? toSuggestion(row) : undefined;
+}
+
+/** The viewer's live suggestions on a listing — drives which fields the form disables. */
+export async function getPendingSuggestionsFor(
+  userId: string,
+  schoolId: string,
+): Promise<SchoolSuggestion[]> {
+  const supabase = await createClient();
+  const res = await supabase
+    .from("school_suggestions")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("school_id", schoolId)
+    .eq("status", "pending");
+  return orThrow(res).map(toSuggestion);
+}
+
+/**
+ * How many of a member's suggestions were applied. Goes through a definer
+ * function because the profile is public while suggestion rows are not.
+ */
+export const getApprovedSuggestionCount = cache(async (userId: string): Promise<number> => {
+  const supabase = await createClient();
+  const res = await supabase.rpc("approved_suggestion_count", { p_user_id: userId });
+  return orThrow(res) ?? 0;
+});
 
 // ── Notifications ──────────────────────────────────────────────────────────────
 // RLS-scoped to the recipient; never cached across requests.

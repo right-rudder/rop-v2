@@ -13,6 +13,7 @@
 
 drop table if exists public.ownership_events   cascade;
 drop table if exists public.notifications      cascade;
+drop table if exists public.school_suggestions cascade;
 drop table if exists public.school_claims      cascade;
 drop table if exists public.leads              cascade;
 drop table if exists public.favorites          cascade;
@@ -36,6 +37,9 @@ drop function if exists public.recompute_school_rating(text)   cascade;
 drop function if exists public.protect_flight_school_columns() cascade;
 drop function if exists public.log_ownership_change()          cascade;
 drop function if exists public.user_id_by_email(text)          cascade;
+drop function if exists public.approved_suggestion_count(uuid) cascade;
+drop function if exists public.apply_suggestion(uuid, jsonb)      cascade;
+drop function if exists public.is_contact_list(jsonb, int, int)   cascade;
 drop function if exists public.is_admin()                      cascade;
 drop function if exists public.submit_lead(text, text, text, text, text, text, text, text) cascade;
 

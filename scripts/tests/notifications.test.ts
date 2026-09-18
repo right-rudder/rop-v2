@@ -66,3 +66,14 @@ test("featuring links to the public listing, where the owner can see the result"
   assert.match(copy.title, /featured/i);
   assert.ok(copy.body.includes(SCHOOL));
 });
+
+test("suggestion outcomes link to the public listing and read differently", () => {
+  const ok = buildNotification("suggestion_approved", SCHOOL, PATH, EDIT);
+  const no = buildNotification("suggestion_rejected", SCHOOL, PATH, EDIT);
+  assert.equal(ok.href, PATH);
+  assert.equal(no.href, PATH);
+  assert.equal(notificationLinkLabel("suggestion_approved"), "View listing");
+  assert.notEqual(ok.title, no.title);
+  assert.notEqual(ok.body, no.body);
+  assert.match(ok.body, /live/i);
+});

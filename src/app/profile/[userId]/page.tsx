@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { BadgeCheck, Pencil, ShieldCheck } from "lucide-react";
+import { BadgeCheck, ClipboardCheck, Pencil, ShieldCheck } from "lucide-react";
 import {
   getUserById,
   getReviewsByUser,
@@ -11,6 +11,7 @@ import {
   getReviewsByIds,
   getPrograms,
   getLocationMaps,
+  getApprovedSuggestionCount,
 } from "@/lib/data";
 import { getCurrentUser } from "@/lib/auth";
 import { schoolHref } from "@/lib/utils";
@@ -62,15 +63,23 @@ export default async function ProfilePage({ params }: Props) {
   const user = await getUserById(userId);
   if (!user) notFound();
 
-  const [viewer, reviews, userComments, managedSchools, allPrograms, locationMaps] =
-    await Promise.all([
-      getCurrentUser(),
-      getReviewsByUser(userId),
-      getCommentsByUser(userId),
-      getSchoolsManagedByUser(userId),
-      getPrograms(),
-      getLocationMaps(),
-    ]);
+  const [
+    viewer,
+    reviews,
+    userComments,
+    managedSchools,
+    allPrograms,
+    locationMaps,
+    approvedCorrections,
+  ] = await Promise.all([
+    getCurrentUser(),
+    getReviewsByUser(userId),
+    getCommentsByUser(userId),
+    getSchoolsManagedByUser(userId),
+    getPrograms(),
+    getLocationMaps(),
+    getApprovedSuggestionCount(userId),
+  ]);
   const isOwner = viewer?.id === user.id;
   const { cityNameBySlug, stateBySlug } = locationMaps;
   const programShortNames = Object.fromEntries(
@@ -116,6 +125,14 @@ export default async function ProfilePage({ params }: Props) {
               <Badge tone="ok">
                 <BadgeCheck size={11} />
                 Flight school owner
+              </Badge>
+            )}
+            {/* Derived from approved suggestions, like the owner badge — no
+                counter to drift. The seed of a later gamification pass. */}
+            {approvedCorrections > 0 && (
+              <Badge tone="sky">
+                <ClipboardCheck size={11} />
+                {approvedCorrections} approved {approvedCorrections === 1 ? "correction" : "corrections"}
               </Badge>
             )}
           </>
