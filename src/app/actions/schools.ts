@@ -11,6 +11,7 @@ import { BUCKETS, uploadImage, removeImage } from "@/lib/supabase/storage";
 import { getCurrentUser, isAdmin } from "@/lib/auth";
 import { loadSchoolById, getPrograms, invalidateCatalog } from "@/lib/data";
 import { schoolHref, isHttpUrl, isAirportCode } from "@/lib/utils";
+import { contactsFromEntries } from "@/lib/contacts";
 import {
   FLEET_RANGES,
   LIMITS,
@@ -36,29 +37,7 @@ function parseFleetRange(value: string): FleetRange | null {
 
 /** Rebuild ContactPerson[] from `contacts[i][field]` form inputs, dropping empty rows */
 function parseContacts(formData: FormData): ContactPerson[] | { error: string } {
-  const byIndex = new Map<number, ContactPerson>();
-  for (const [key, value] of formData.entries()) {
-    const match = key.match(/^contacts\[(\d+)\]\[(name|title|phone|email)\]$/);
-    if (!match || typeof value !== "string") continue;
-    const trimmed = value.trim();
-    if (trimmed.length > LIMITS.contactField) {
-      return {
-        error: `Contact details must be ${LIMITS.contactField} characters or fewer.`,
-      };
-    }
-    const index = Number(match[1]);
-    const contact =
-      byIndex.get(index) ?? { name: "", title: "", phone: "", email: "" };
-    contact[match[2] as keyof ContactPerson] = trimmed;
-    byIndex.set(index, contact);
-  }
-  const contacts = [...byIndex.values()].filter(
-    (c) => c.name || c.title || c.phone || c.email,
-  );
-  if (contacts.length > LIMITS.contacts) {
-    return { error: `Please list at most ${LIMITS.contacts} contacts.` };
-  }
-  return contacts;
+  return contactsFromEntries(formData.entries());
 }
 
 type SchoolFields = {
