@@ -133,4 +133,9 @@ test("currentValueFor reads the listing with nulls normalised", () => {
   assert.equal(currentValueFor(school, "hours"), "");
   assert.deepEqual(currentValueFor(school, "contacts"), []);
   assert.deepEqual(currentValueFor({ ...school, contacts: [jane] }, "contacts"), [jane]);
+  // A catalog contact missing a key still comes out with all four
+  const partial = { name: "Sam" } as unknown as typeof jane;
+  assert.deepEqual(currentValueFor({ ...school, contacts: [partial] }, "contacts"), [
+    { name: "Sam", title: "", phone: "", email: "" },
+  ]);
 });

@@ -29,13 +29,16 @@ export function SuggestionCard({
   suggestion,
   schoolName,
   schoolHref,
+  /** The listing has been deleted since filing; the record keeps its name. */
+  listingGone,
   suggesterName,
   /** What the listing shows now, only when it differs from the snapshot taken at filing. */
   liveValue,
 }: {
   suggestion: SchoolSuggestion;
   schoolName: string;
-  schoolHref: string;
+  schoolHref?: string;
+  listingGone: boolean;
   suggesterName: string;
   liveValue?: string;
 }) {
@@ -77,9 +80,13 @@ export function SuggestionCard({
             <Badge tone="neutral">{suggestionReasonLabel(suggestion.reason)}</Badge>
           </p>
           <h3 className="font-display text-xl font-bold tracking-tight text-ink">
-            <Link href={schoolHref} className="hover:underline">
-              {schoolName}
-            </Link>
+            {schoolHref ? (
+              <Link href={schoolHref} className="hover:underline">
+                {schoolName}
+              </Link>
+            ) : (
+              schoolName
+            )}
           </h3>
         </div>
         <time className="shrink-0 font-mono text-xs text-muted" dateTime={suggestion.createdAt}>
@@ -113,7 +120,18 @@ export function SuggestionCard({
 
       {(error || message) && <Notice tone={error ? "error" : "ok"}>{error ?? message}</Notice>}
 
-      {suggestion.status === "pending" ? (
+      {suggestion.status === "pending" && listingGone ? (
+        <div className="space-y-4 pt-1">
+          <Notice tone="info">This listing no longer exists, so there is nothing to apply.</Notice>
+          <form action={rejectAction}>
+            <input type="hidden" name="suggestionId" value={suggestion.id} />
+            <Button type="submit" variant="secondary" full disabled={busy}>
+              <X size={15} />
+              {rejectPending ? "Declining…" : "Decline"}
+            </Button>
+          </form>
+        </div>
+      ) : suggestion.status === "pending" ? (
         <div className="space-y-4 pt-1">
           <form action={approveAction} className="space-y-4">
             <input type="hidden" name="suggestionId" value={suggestion.id} />

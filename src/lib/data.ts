@@ -1098,7 +1098,8 @@ function toSuggestion(row: Tables<"school_suggestions">): SchoolSuggestion {
   }
   return {
     id: row.id,
-    schoolId: row.school_id,
+    schoolId: row.school_id ?? undefined,
+    schoolName: row.school_name,
     userId: row.user_id,
     field,
     proposedValue: proposed,
@@ -1113,11 +1114,30 @@ function toSuggestion(row: Tables<"school_suggestions">): SchoolSuggestion {
   };
 }
 
-export async function getSchoolSuggestions(status?: SuggestionStatus): Promise<SchoolSuggestion[]> {
+/** Every open suggestion, oldest first — the queue is worked in filing order. */
+export async function getPendingSuggestions(): Promise<SchoolSuggestion[]> {
   const supabase = await createClient();
-  let query = supabase.from("school_suggestions").select("*");
-  if (status) query = query.eq("status", status);
-  const res = await query.order("created_at", { ascending: false });
+  const res = await supabase
+    .from("school_suggestions")
+    .select("*")
+    .eq("status", "pending")
+    .order("created_at", { ascending: true });
+  return orThrow(res).map(toSuggestion);
+}
+
+/**
+ * The latest decisions only. Approved rows are kept forever as the
+ * contribution record, so the history is unbounded; the queue page shows a
+ * window of it rather than loading it all.
+ */
+export async function getRecentDecidedSuggestions(limit = 50): Promise<SchoolSuggestion[]> {
+  const supabase = await createClient();
+  const res = await supabase
+    .from("school_suggestions")
+    .select("*")
+    .neq("status", "pending")
+    .order("decided_at", { ascending: false, nullsFirst: false })
+    .limit(clampLimit(limit));
   return orThrow(res).map(toSuggestion);
 }
 

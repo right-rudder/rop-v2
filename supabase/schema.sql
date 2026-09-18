@@ -293,6 +293,39 @@ create index school_claims_status_created_idx
 create index school_claims_user_id_idx   on public.school_claims (user_id);
 create index school_claims_school_id_idx on public.school_claims (school_id);
 
+-- ── is_contact_list — jsonb shape check for contact lists ────
+-- Every element is an object with exactly name/title/phone/email, each a
+-- string of at most 120 characters. Used by the school_suggestions CHECKs,
+-- so it must exist before that table.
+create or replace function public.is_contact_list(v jsonb, min_len int, max_len int)
+returns boolean
+language sql
+immutable
+set search_path = ''
+as $$
+  select case
+    when v is null or jsonb_typeof(v) <> 'array' then false
+    when jsonb_array_length(v) < min_len or jsonb_array_length(v) > max_len then false
+    else not exists (
+      select 1
+      from jsonb_array_elements(v) as e
+      where case
+        when jsonb_typeof(e) <> 'object' then true
+        else (select count(*) from jsonb_object_keys(e)) <> 4
+          or jsonb_typeof(e->'name')  is distinct from 'string'
+          or jsonb_typeof(e->'title') is distinct from 'string'
+          or jsonb_typeof(e->'phone') is distinct from 'string'
+          or jsonb_typeof(e->'email') is distinct from 'string'
+          or char_length(e->>'name')  > 120
+          or char_length(e->>'title') > 120
+          or char_length(e->>'phone') > 120
+          or char_length(e->>'email') > 120
+      end
+    )
+  end;
+$$;
+revoke execute on function public.is_contact_list(jsonb, int, int) from public, anon, authenticated;
+
 -- ── School Suggestions (member corrections to listing facts) ─
 -- A member proposes a new value for one contact/location field; an admin
 -- approves (which writes it to flight_schools) or declines. Values are jsonb:
@@ -301,7 +334,11 @@ create index school_claims_school_id_idx on public.school_claims (school_id);
 -- "approved corrections" count (approved_suggestion_count below).
 create table public.school_suggestions (
   id             uuid primary key default gen_random_uuid(),
-  school_id      text not null references public.flight_schools (id) on delete cascade,
+  -- Nullable + set null: the record outlives the listing (a catalog re-import
+  -- deletes every flight_schools row). school_name is the snapshot that keeps
+  -- the history readable, as on ownership_events.
+  school_id      text references public.flight_schools (id) on delete set null,
+  school_name    text not null,
   user_id        uuid not null references auth.users (id) on delete cascade,
   field          text not null check (field in ('phone', 'website', 'address', 'hours', 'contacts')),
   proposed_value jsonb not null,
@@ -313,23 +350,24 @@ create table public.school_suggestions (
   decided_at     timestamptz,
   applied_value  jsonb,
   created_at     timestamptz not null default now(),
+  constraint school_suggestions_school_name_length check (char_length(school_name) between 1 and 120),
   constraint school_suggestions_note_length      check (char_length(note) <= 500),
   constraint school_suggestions_other_needs_note check (reason <> 'other' or char_length(note) > 0),
+  -- Contact lists are checked element by element (is_contact_list below), so a
+  -- direct Data API insert cannot store a shape the app cannot read back.
   constraint school_suggestions_proposed_shape check (
-    (field = 'contacts'
-      and jsonb_typeof(proposed_value) = 'array'
-      and jsonb_array_length(proposed_value) between 1 and 10)
+    (field = 'contacts' and public.is_contact_list(proposed_value, 1, 10))
     or (field <> 'contacts'
       and jsonb_typeof(proposed_value) = 'string'
       and char_length(proposed_value #>> '{}') between 1 and 300)
   ),
   constraint school_suggestions_current_shape check (
-    (field = 'contacts' and jsonb_typeof(current_value) = 'array')
+    (field = 'contacts' and public.is_contact_list(current_value, 0, 100))
     or (field <> 'contacts' and jsonb_typeof(current_value) = 'string')
   ),
   constraint school_suggestions_applied_shape check (
     applied_value is null
-    or (field = 'contacts' and jsonb_typeof(applied_value) = 'array')
+    or (field = 'contacts' and public.is_contact_list(applied_value, 1, 10))
     or (field <> 'contacts' and jsonb_typeof(applied_value) = 'string')
   ),
   constraint school_suggestions_applied_on_approve check ((status = 'approved') = (applied_value is not null)),
@@ -636,7 +674,10 @@ create policy "Admin update" on public.school_claims
   using ((select public.is_admin())) with check ((select public.is_admin()));
 
 -- Suggestion review: a member files a suggestion for themselves, always as
--- pending with no decision attached; admins read every suggestion and decide it.
+-- pending with no decision attached, on a listing that exists and that they
+-- do not manage; admins edit directly, so they cannot file one. Admins read
+-- every suggestion and decide it. The suggestion column inside the subquery
+-- is qualified for the same name-binding reason as the claims policy.
 create policy "Own suggestion insert" on public.school_suggestions
   for insert to authenticated
   with check (
@@ -645,6 +686,12 @@ create policy "Own suggestion insert" on public.school_suggestions
     and decided_by is null
     and decided_at is null
     and applied_value is null
+    and not (select public.is_admin())
+    and exists (
+      select 1 from public.flight_schools fs
+      where fs.id = school_suggestions.school_id
+        and fs.managed_by is distinct from (select auth.uid())
+    )
   );
 create policy "Own suggestions read" on public.school_suggestions
   for select to authenticated using ((select auth.uid()) = user_id);
@@ -920,6 +967,56 @@ as $$
 $$;
 revoke execute on function public.approved_suggestion_count(uuid) from public;
 grant  execute on function public.approved_suggestion_count(uuid) to anon, authenticated;
+
+-- ============================================================
+-- apply_suggestion — approve as one transaction
+-- ============================================================
+-- Runs as the admin (security invoker): the "Admin update" policies on both
+-- tables and protect_flight_school_columns still apply. The status flip is a
+-- compare-and-swap; a second admin approving the same row finds no pending
+-- row and nothing is written. Any failure after the flip rolls it back.
+create or replace function public.apply_suggestion(p_id uuid, p_value jsonb)
+returns text
+language plpgsql
+security invoker
+set search_path = ''
+as $$
+declare
+  v_field     text;
+  v_school_id text;
+  v_rows      int;
+begin
+  update public.school_suggestions
+     set status = 'approved',
+         applied_value = p_value,
+         decided_by = auth.uid(),
+         decided_at = now()
+   where id = p_id and status = 'pending'
+  returning field, school_id into v_field, v_school_id;
+  if not found then
+    raise exception 'SUGGESTION_ALREADY_PROCESSED' using errcode = 'P0001';
+  end if;
+  if v_school_id is null then
+    raise exception 'SUGGESTION_LISTING_GONE' using errcode = 'P0001';
+  end if;
+
+  if v_field = 'contacts' then
+    update public.flight_schools set contacts = p_value where id = v_school_id;
+  else
+    -- field is CHECK-constrained to phone/website/address/hours, which are
+    -- the column names; %I quotes it regardless.
+    execute format('update public.flight_schools set %I = $1 where id = $2', v_field)
+      using (p_value #>> '{}'), v_school_id;
+  end if;
+  get diagnostics v_rows = row_count;
+  if v_rows = 0 then
+    raise exception 'SUGGESTION_LISTING_GONE' using errcode = 'P0001';
+  end if;
+  return v_school_id;
+end;
+$$;
+revoke execute on function public.apply_suggestion(uuid, jsonb) from public, anon;
+grant  execute on function public.apply_suggestion(uuid, jsonb) to authenticated;
 
 -- ============================================================
 -- Data API grants

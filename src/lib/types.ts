@@ -292,7 +292,10 @@ export type SuggestionStatus = SubmissionStatus;
  */
 export type SchoolSuggestion = {
   id: string;
-  schoolId: string;
+  /** Unset once the listing has been deleted — the record outlives it. */
+  schoolId?: string;
+  /** Snapshot of the listing's name at filing, so history reads without the listing. */
+  schoolName: string;
   /** auth.users id of the member who filed it */
   userId: string;
   field: SuggestionField;

@@ -561,7 +561,8 @@ export type Database = {
       school_suggestions: {
         Row: {
           id: string;
-          school_id: string;
+          school_id: string | null;
+          school_name: string;
           user_id: string;
           field: string;
           proposed_value: Json;
@@ -577,6 +578,7 @@ export type Database = {
         Insert: {
           id?: string;
           school_id: string;
+          school_name: string;
           user_id: string;
           field: string;
           proposed_value: Json;
@@ -593,7 +595,8 @@ export type Database = {
         // the Data API roles; the rest are here because the generator emits them.
         Update: {
           id?: string;
-          school_id?: string;
+          school_id?: string | null;
+          school_name?: string;
           user_id?: string;
           field?: string;
           proposed_value?: Json;
@@ -691,6 +694,14 @@ export type Database = {
           p_source_path: string;
           p_ip_hash: string;
         };
+        Returns: string;
+      };
+      /**
+       * Approve as one transaction: status compare-and-swap plus the listing
+       * write. Raises SUGGESTION_ALREADY_PROCESSED / SUGGESTION_LISTING_GONE.
+       */
+      apply_suggestion: {
+        Args: { p_id: string; p_value: Json };
         Returns: string;
       };
       /** Public: one integer per user, backing the profile's approved-corrections count. */

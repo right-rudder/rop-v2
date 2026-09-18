@@ -187,7 +187,11 @@ export type SuggestableListing = {
   contacts?: ContactPerson[] | null;
 };
 
-/** What the listing shows for a field right now, with nulls normalised. */
+/**
+ * What the listing shows for a field right now, with nulls normalised and
+ * every contact carrying all four keys — the shape the DB CHECK expects when
+ * this is stored as a suggestion's current_value.
+ */
 export function currentValueFor(school: SuggestableListing, field: SuggestionField): SuggestionValue {
   switch (field) {
     case "phone":
@@ -199,6 +203,11 @@ export function currentValueFor(school: SuggestableListing, field: SuggestionFie
     case "hours":
       return school.hours ?? "";
     case "contacts":
-      return school.contacts ?? [];
+      return (school.contacts ?? []).map((c) => ({
+        name: c.name ?? "",
+        title: c.title ?? "",
+        phone: c.phone ?? "",
+        email: c.email ?? "",
+      }));
   }
 }

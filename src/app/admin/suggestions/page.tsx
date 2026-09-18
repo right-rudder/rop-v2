@@ -1,7 +1,12 @@
 import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { getCurrentUser, isAdmin } from "@/lib/auth";
-import { getSchoolSuggestions, getSchoolsByIds, getUsersByIds } from "@/lib/data";
+import {
+  getPendingSuggestions,
+  getRecentDecidedSuggestions,
+  getSchoolsByIds,
+  getUsersByIds,
+} from "@/lib/data";
 import { currentValueFor, formatSuggestionValue, suggestionValuesEqual } from "@/lib/suggestions";
 import { schoolHref } from "@/lib/utils";
 import { SuggestionCard } from "./SuggestionCard";
@@ -19,20 +24,19 @@ export default async function AdminSuggestionsPage() {
   if (!viewer) redirect("/login?next=/admin/suggestions");
   if (!isAdmin(viewer)) notFound();
 
-  const suggestions = await getSchoolSuggestions();
+  // Approved rows are kept forever, so only a window of decisions is loaded.
+  const [pending, processed] = await Promise.all([
+    getPendingSuggestions(),
+    getRecentDecidedSuggestions(RECENT_LIMIT),
+  ]);
+  const suggestions = [...pending, ...processed];
   const [schoolsById, usersById] = await Promise.all([
-    getSchoolsByIds(suggestions.map((s) => s.schoolId)),
+    getSchoolsByIds(suggestions.flatMap((s) => (s.schoolId ? [s.schoolId] : []))),
     getUsersByIds(suggestions.map((s) => s.userId)),
   ]);
 
-  const pending = suggestions.filter((s) => s.status === "pending");
-  const processed = suggestions
-    .filter((s) => s.status !== "pending")
-    .sort((a, b) => (b.decidedAt ?? b.createdAt).localeCompare(a.decidedAt ?? a.createdAt))
-    .slice(0, RECENT_LIMIT);
-
   const cardFor = (suggestion: (typeof suggestions)[number]) => {
-    const school = schoolsById[suggestion.schoolId];
+    const school = suggestion.schoolId ? schoolsById[suggestion.schoolId] : undefined;
     const user = usersById[suggestion.userId];
     const name = [user?.firstName, user?.lastName].filter(Boolean).join(" ");
     // The listing is the authority on what it shows now; the suggestion only
@@ -43,8 +47,9 @@ export default async function AdminSuggestionsPage() {
       <SuggestionCard
         key={suggestion.id}
         suggestion={suggestion}
-        schoolName={school?.name ?? suggestion.schoolId}
-        schoolHref={school ? schoolHref(school) : "#"}
+        schoolName={school?.name ?? suggestion.schoolName}
+        schoolHref={school ? schoolHref(school) : undefined}
+        listingGone={!school}
         suggesterName={name || "Unnamed account"}
         liveValue={stale ? formatSuggestionValue(suggestion.field, live) : undefined}
       />

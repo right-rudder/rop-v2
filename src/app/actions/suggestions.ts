@@ -4,7 +4,6 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { friendlyDbError } from "@/lib/supabase/errors";
-import type { Database } from "@/lib/supabase/database.types";
 import { getCurrentUser, isAdmin } from "@/lib/auth";
 import {
   loadSchoolById,
@@ -20,7 +19,6 @@ import {
   suggestionFieldLabel,
   currentValueFor,
   type SuggestionField,
-  type SuggestionValue,
 } from "@/lib/suggestions";
 import { schoolHref } from "@/lib/utils";
 import { withFlash } from "@/lib/toast";
@@ -67,24 +65,6 @@ function carriesValue(formData: FormData, fieldKey: SuggestionField): boolean {
   return false;
 }
 
-type ListingUpdate = Database["public"]["Tables"]["flight_schools"]["Update"];
-
-/** The one-column patch an approved suggestion writes. */
-function listingPatch(fieldKey: SuggestionField, value: SuggestionValue): ListingUpdate {
-  if (fieldKey === "contacts") return { contacts: Array.isArray(value) ? value : [] };
-  const text = typeof value === "string" ? value : "";
-  switch (fieldKey) {
-    case "phone":
-      return { phone: text };
-    case "website":
-      return { website: text };
-    case "address":
-      return { address: text };
-    case "hours":
-      return { hours: text };
-  }
-}
-
 // ── Filing ────────────────────────────────────────────────────────────────────
 
 export async function createSuggestion(
@@ -128,6 +108,9 @@ export async function createSuggestion(
   const supabase = await createClient();
   const { error } = await supabase.from("school_suggestions").insert({
     school_id: school.id,
+    // Snapshot: the record outlives the listing (catalog re-imports delete
+    // every flight_schools row and the FK sets school_id null).
+    school_name: school.name,
     user_id: viewer.id,
     field: suggestion.field,
     proposed_value: suggestion.value,
@@ -161,8 +144,8 @@ export async function approveSuggestion(
     return { error: "This suggestion has already been processed." };
   }
 
-  const school = await loadSchoolById(suggestion.schoolId);
-  if (!school) return { error: "That listing no longer exists." };
+  const school = suggestion.schoolId ? await loadSchoolById(suggestion.schoolId) : undefined;
+  if (!school) return { error: "That listing no longer exists. Decline the suggestion instead." };
 
   // The admin may edit the value before applying it. The edit follows exactly
   // the member's rules; the stored reason and note ride along unchanged.
@@ -181,43 +164,27 @@ export async function approveSuggestion(
   if (!validation.ok) return { error: validation.error };
   const applied = validation.value.value;
 
+  // One transaction on the admin's session (see apply_suggestion in the
+  // migration): the status compare-and-swap and the listing write succeed or
+  // fail together, so two admins approving at once cannot leave the listing
+  // and applied_value apart, and a crash cannot strand either half.
   const supabase = await createClient();
-
-  // Listing first, then the status flip — the same crash-safe order as
-  // approveClaim. Writing the value is idempotent, so if anything fails in
-  // between, the suggestion stays pending and approving again finishes the job.
   try {
-    const { data, error } = await supabase
-      .from("flight_schools")
-      .update(listingPatch(suggestion.field, applied))
-      .eq("id", school.id)
-      .select("id");
-    if (error) return { error: friendlyDbError(error) };
-    if (!data || data.length === 0) {
-      return { error: "Couldn't update the listing — refresh and try again." };
+    const { error } = await supabase.rpc("apply_suggestion", {
+      p_id: suggestion.id,
+      p_value: applied,
+    });
+    if (error) {
+      if (error.message.includes("SUGGESTION_ALREADY_PROCESSED")) {
+        return { error: "This suggestion has already been processed." };
+      }
+      if (error.message.includes("SUGGESTION_LISTING_GONE")) {
+        return { error: "That listing no longer exists. Decline the suggestion instead." };
+      }
+      return { error: friendlyDbError(error) };
     }
   } finally {
     invalidateCatalog();
-  }
-
-  const { data: updated, error: updateError } = await supabase
-    .from("school_suggestions")
-    .update({
-      status: "approved",
-      applied_value: applied,
-      decided_by: viewer.id,
-      decided_at: new Date().toISOString(),
-    })
-    .eq("id", suggestion.id)
-    .eq("status", "pending")
-    .select("id");
-  if (updateError) {
-    return {
-      error: `${school.name} was updated, but the suggestion could not be marked approved (${updateError.message}). Approve again to finish.`,
-    };
-  }
-  if (!updated || updated.length === 0) {
-    return { error: "This suggestion has already been processed." };
   }
 
   await notifyUser({
@@ -257,7 +224,7 @@ export async function rejectSuggestion(
   if (error) return { error: friendlyDbError(error) };
   if (!data || data.length === 0) return { error: "This suggestion has already been processed." };
 
-  const school = await loadSchoolById(suggestion.schoolId);
+  const school = suggestion.schoolId ? await loadSchoolById(suggestion.schoolId) : undefined;
   if (school) {
     await notifyUser({
       userId: suggestion.userId,
