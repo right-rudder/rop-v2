@@ -319,6 +319,29 @@ create index notifications_user_unread_idx
 create index notifications_school_id_idx
   on public.notifications (school_id) where school_id is not null;
 
+-- ── Ownership events (audit trail) ───────────────────────────
+-- Written by the log_ownership_change trigger on flight_schools.managed_by,
+-- not by the app: the row lands in the same transaction as the ownership
+-- change, whichever path made it, and nobody is granted insert/update/delete.
+create table public.ownership_events (
+  id          uuid primary key default gen_random_uuid(),
+  kind        text not null check (kind in ('granted', 'revoked')),
+  school_id   text references public.flight_schools (id) on delete set null,
+  -- Snapshot: the entry stays readable after the listing is removed or renamed.
+  school_name text not null,
+  -- Who gained or lost the listing, and the admin who made the change (null
+  -- outside a user session). Deliberately NOT foreign keys: deleting an account
+  -- nulls its managed_by, which fires the trigger mid-delete — a reference to
+  -- the row being deleted would fail and block the deletion.
+  user_id     uuid not null,
+  actor_id    uuid,
+  created_at  timestamptz not null default now()
+);
+create index ownership_events_created_idx
+  on public.ownership_events (created_at desc);
+create index ownership_events_school_id_idx
+  on public.ownership_events (school_id) where school_id is not null;
+
 -- ── Indexes ──────────────────────────────────────────────────
 -- Postgres does not index foreign-key columns on its own; these cover
 -- every filter / join / count embed the app issues. Kept in sync with
@@ -411,6 +434,7 @@ alter table public.favorites     enable row level security;
 alter table public.leads         enable row level security;
 alter table public.school_claims enable row level security;
 alter table public.notifications enable row level security;
+alter table public.ownership_events enable row level security;
 
 -- Public read for catalog / browse tables
 create policy "Public read" on public.states          for select using (true);
@@ -570,6 +594,10 @@ create policy "Own notifications update" on public.notifications
   using ((select auth.uid()) = user_id)
   with check ((select auth.uid()) = user_id);
 
+-- Ownership events: admins read; the trigger is the only writer.
+create policy "Admin read" on public.ownership_events
+  for select to authenticated using ((select public.is_admin()));
+
 -- School join tables: owner + admin write (program/aircraft sync on edit,
 -- and creating links when approving a submission)
 create policy "Owner write" on public.school_programs
@@ -650,6 +678,51 @@ $$;
 create trigger protect_flight_school_columns
   before update on public.flight_schools
   for each row execute function public.protect_flight_school_columns();
+
+-- ============================================================
+-- Ownership audit trail: log every change of flight_schools.managed_by
+-- ============================================================
+-- SECURITY DEFINER because the admin's own role may not insert into
+-- ownership_events. It trusts nothing from the caller: every value comes
+-- from the row and the session.
+create or replace function public.log_ownership_change()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  previous uuid;
+begin
+  if tg_op = 'UPDATE' then
+    previous := old.managed_by;
+  end if;
+
+  if previous is not null then
+    insert into public.ownership_events (kind, school_id, school_name, user_id, actor_id)
+    values ('revoked', new.id, new.name, previous, (select auth.uid()));
+  end if;
+  if new.managed_by is not null then
+    insert into public.ownership_events (kind, school_id, school_name, user_id, actor_id)
+    values ('granted', new.id, new.name, new.managed_by, (select auth.uid()));
+  end if;
+  return null;
+end;
+$$;
+
+-- Two triggers so each can carry a WHEN clause: the catalog import upserts
+-- every listing, and none of those rows should even enter the function.
+create trigger log_ownership_on_insert
+  after insert on public.flight_schools
+  for each row
+  when (new.managed_by is not null)
+  execute function public.log_ownership_change();
+
+create trigger log_ownership_on_update
+  after update of managed_by on public.flight_schools
+  for each row
+  when (old.managed_by is distinct from new.managed_by)
+  execute function public.log_ownership_change();
 
 -- ============================================================
 -- Keep flight_schools.rating / review_count in sync with reviews
@@ -791,6 +864,8 @@ grant select, insert, update (status, decided_by, decided_at)
   on public.school_claims to authenticated;
 -- Notifications: recipients may only flip read state.
 grant select, insert, update (read_at) on public.notifications to authenticated;
+revoke all on public.ownership_events from anon, authenticated;
+grant select on public.ownership_events to authenticated;
 
 -- authenticated: writes only where a policy exists
 grant insert, update, delete on public.reviews  to authenticated;
@@ -808,6 +883,7 @@ grant execute on function public.is_admin() to anon, authenticated;
 revoke execute on function public.handle_new_user()               from public, anon, authenticated;
 revoke execute on function public.refresh_school_rating()         from public, anon, authenticated;
 revoke execute on function public.protect_flight_school_columns() from public, anon, authenticated;
+revoke execute on function public.log_ownership_change()          from public, anon, authenticated;
 -- Supabase's own "enforce RLS on new tables" event trigger, when enabled.
 do $$
 begin

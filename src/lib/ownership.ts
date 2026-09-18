@@ -1,9 +1,10 @@
 /**
- * The one write that makes someone a listing's owner. Server-only, and
- * deliberately NOT a "use server" file: every export of one becomes a publicly
- * callable action, and this has no admin check of its own — its callers do.
+ * The one write that makes someone a listing's owner, and the read of the
+ * ownership audit trail. Server-only, and deliberately NOT a "use server"
+ * file: every export of one becomes a publicly callable action, and
+ * grantOwnership has no admin check of its own — its callers do.
  *
- * It runs on the admin's own session rather than the service role, so the
+ * The write runs on the admin's own session rather than the service role, so the
  * protect_flight_school_columns trigger and RLS stay the real boundary: for
  * anyone but an admin this update is refused by the database.
  */
@@ -34,4 +35,44 @@ export async function grantOwnership(schoolId: string, userId: string): Promise<
   } finally {
     invalidateCatalog();
   }
+}
+
+/** One row of the ownership audit trail. */
+export type OwnershipEvent = {
+  id: string;
+  kind: "granted" | "revoked";
+  /** auth.users id of the person who gained or lost the listing */
+  userId: string;
+  /** null once the listing itself has been removed — schoolName still reads */
+  schoolId: string | null;
+  schoolName: string;
+  /** auth.users id of the admin who made the change; unset when it was made outside the app */
+  actorId?: string;
+  at: string;
+};
+
+/**
+ * The newest ownership changes, from public.ownership_events. That table is
+ * written by a database trigger on flight_schools.managed_by — never by this
+ * app — so it covers every path that changes an owner, claim and submission
+ * approvals included. RLS returns rows to admins only; anyone else gets [].
+ */
+export async function loadOwnershipEvents(limit = 50): Promise<OwnershipEvent[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("ownership_events")
+    .select("id, kind, user_id, school_id, school_name, actor_id, created_at")
+    .order("created_at", { ascending: false })
+    .limit(Math.min(Math.max(limit, 1), 200));
+  if (error) throw new Error(`Could not load ownership events: ${error.message}`);
+
+  return data.map((row) => ({
+    id: row.id,
+    kind: row.kind === "revoked" ? "revoked" : "granted",
+    userId: row.user_id,
+    schoolId: row.school_id,
+    schoolName: row.school_name,
+    actorId: row.actor_id ?? undefined,
+    at: row.created_at,
+  }));
 }

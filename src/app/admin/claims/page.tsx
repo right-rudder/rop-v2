@@ -9,10 +9,12 @@ import {
   loadManagedSchools,
   type ListingOption,
 } from "@/lib/data";
-import { domainsMatch } from "@/lib/claims";
+import { domainsMatch, isClaimGrant } from "@/lib/claims";
+import { loadOwnershipEvents } from "@/lib/ownership";
 import { schoolHref } from "@/lib/utils";
 import { ClaimCard } from "./ClaimCard";
 import { AssignOwnerForm, RevokeOwnerForm } from "./OwnershipForms";
+import { OwnershipEventCard } from "./OwnershipEventCard";
 import { AdminPage, AdminSection, AdminEmpty } from "../AdminShell";
 
 export const metadata: Metadata = {
@@ -25,14 +27,26 @@ export default async function AdminClaimsPage() {
   if (!viewer) redirect("/login?next=/admin/claims");
   if (!isAdmin(viewer)) notFound();
 
-  const [claims, unowned, managed] = await Promise.all([
+  const [claims, unowned, managed, events] = await Promise.all([
     getSchoolClaims(),
     getUnownedListingOptions(),
     loadManagedSchools(),
+    // The timeline is a record, not a control — it must not take the page down
+    loadOwnershipEvents().catch((e) => {
+      console.error("[admin/claims]", e instanceof Error ? e.message : e);
+      return [];
+    }),
   ]);
   const [schoolsById, usersById] = await Promise.all([
-    getSchoolsByIds(claims.map((c) => c.schoolId)),
-    getUsersByIds([...claims.map((c) => c.userId), ...managed.map((m) => m.managedBy)]),
+    getSchoolsByIds([
+      ...claims.map((c) => c.schoolId),
+      ...events.flatMap((e) => (e.schoolId ? [e.schoolId] : [])),
+    ]),
+    getUsersByIds([
+      ...claims.map((c) => c.userId),
+      ...managed.map((m) => m.managedBy),
+      ...events.flatMap((e) => (e.actorId ? [e.userId, e.actorId] : [e.userId])),
+    ]),
   ]);
 
   // The revoke picker names each listing's owner, so the confirmation can say
@@ -70,6 +84,37 @@ export default async function AdminClaimsPage() {
     );
   };
 
+  const nameOf = (userId: string | undefined) => {
+    const user = userId ? usersById[userId] : undefined;
+    return user ? `${user.firstName} ${user.lastName}`.trim() || undefined : undefined;
+  };
+
+  // One timeline, newest first: claim decisions by when they were decided,
+  // beside every other ownership change — assignments, invited owners, approved
+  // submissions, revocations. A grant that an approved claim already shows is
+  // left out rather than listed twice.
+  const timeline = [
+    ...processed.map((claim) => ({ at: claim.decidedAt ?? claim.createdAt, node: cardFor(claim) })),
+    ...events.filter((event) => !isClaimGrant(event, claims)).map((event) => {
+      const school = event.schoolId ? schoolsById[event.schoolId] : undefined;
+      return {
+        at: event.at,
+        node: (
+          <OwnershipEventCard
+            key={event.id}
+            kind={event.kind}
+            at={event.at}
+            schoolName={school?.name ?? event.schoolName}
+            schoolHref={school ? schoolHref(school) : undefined}
+            userId={event.userId}
+            userName={nameOf(event.userId)}
+            actorName={nameOf(event.actorId)}
+          />
+        ),
+      };
+    }),
+  ].sort((a, b) => b.at.localeCompare(a.at));
+
   return (
     <AdminPage
       eyebrow={`${pending.length} pending ${pending.length === 1 ? "claim" : "claims"}`}
@@ -91,9 +136,9 @@ export default async function AdminClaimsPage() {
         </div>
       </AdminSection>
 
-      {processed.length > 0 && (
-        <AdminSection title="Recently decided">
-          <div className="space-y-5">{processed.map(cardFor)}</div>
+      {timeline.length > 0 && (
+        <AdminSection title="Recent activity">
+          <div className="space-y-5">{timeline.map((entry) => entry.node)}</div>
         </AdminSection>
       )}
     </AdminPage>

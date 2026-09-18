@@ -7,6 +7,7 @@ import {
   websiteDomain,
   domainsMatch,
   confirmsWith,
+  isClaimGrant,
   OWNERSHIP_CONFIRM,
 } from "../../src/lib/claims.ts";
 
@@ -88,4 +89,28 @@ test("the ownership confirmation accepts the word in any case, and nothing else"
   assert.equal(confirmsWith("", OWNERSHIP_CONFIRM.revoke), false);
   assert.equal(confirmsWith("REVOK", OWNERSHIP_CONFIRM.revoke), false);
   assert.equal(confirmsWith("ASSIGN", OWNERSHIP_CONFIRM.revoke), false);
+});
+
+const approved = {
+  status: "approved",
+  schoolId: "skyline",
+  userId: "ada",
+  decidedAt: "2026-09-17T12:00:05Z",
+};
+const grant = { kind: "granted", schoolId: "skyline", userId: "ada", at: "2026-09-17T12:00:03Z" };
+
+test("recognises the grant an approved claim produced", () => {
+  assert.equal(isClaimGrant(grant, [approved]), true);
+});
+
+test("keeps every other ownership event in the timeline", () => {
+  assert.equal(isClaimGrant({ ...grant, kind: "revoked" }, [approved]), false);
+  assert.equal(isClaimGrant({ ...grant, userId: "grace" }, [approved]), false);
+  assert.equal(isClaimGrant({ ...grant, schoolId: "other" }, [approved]), false);
+  assert.equal(isClaimGrant({ ...grant, schoolId: null }, [approved]), false);
+  assert.equal(isClaimGrant(grant, [{ ...approved, status: "rejected" }]), false);
+  assert.equal(isClaimGrant(grant, [{ ...approved, decidedAt: undefined }]), false);
+  assert.equal(isClaimGrant(grant, []), false);
+  // Same person and listing, but re-assigned days after the claim was approved
+  assert.equal(isClaimGrant({ ...grant, at: "2026-09-20T09:00:00Z" }, [approved]), false);
 });
