@@ -65,6 +65,8 @@ export const LIMITS = {
   schoolDescription: 5000,
   website: 300,
   phone: 40,
+  address: 300,
+  hours: 300,
   location: 80,
   contactField: 120,
   contacts: 10,

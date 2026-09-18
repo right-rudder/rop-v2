@@ -278,11 +278,11 @@ export const HELP_GUIDES: HelpGuide[] = [
     steps: [
       "Sign in and open your school's listing.",
       "Choose Edit school at the top of the page.",
-      "Update whatever has changed: name, description, website, phone, logo, FAA Part, programs offered, fleet size, instructor count and contacts.",
+      "Update whatever has changed: name, description, website, phone, logo, street address, hours, FAA Part, programs offered, fleet size, instructor count and contacts.",
       "Save. Your changes are on the public listing straight away — there is no second review.",
     ],
     notes: [
-      "Airport, city and state are locked in the editor so the directory's location data stays consistent. Email us if a listing is at the wrong airport and we will move it.",
+      "Street address and hours are yours to set. Airport, city and state are locked in the editor so the directory's location data stays consistent — email us if a listing is at the wrong airport and we will move it.",
       "Only the account that manages the listing, and our team, can open the editor.",
     ],
     keywords: [
@@ -415,7 +415,7 @@ export const HELP_FAQ_GROUPS: HelpFaqGroup[] = [
       },
       {
         q: "My listing's address or hours are wrong. How do I fix them?",
-        a: `Address and hours are not in the editor yet. Email ${SUPPORT_EMAIL} with the correct details and we will update the listing for you.`,
+        a: "Open Edit school on your listing. Street address and hours are in the Location & hours section, and the change is live as soon as you save. Only the airport, city and state are locked.",
       },
       {
         q: "Do I need an account to claim or add a school?",

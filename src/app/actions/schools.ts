@@ -166,6 +166,18 @@ export async function updateSchool(
   if ("error" in parsed) return { error: parsed.error };
   const { fields } = parsed;
 
+  // Address and hours exist only on published listings (the submission form
+  // has no columns for them), so they are read here rather than in
+  // parseSchoolFields. Empty means "not listed", stored as null.
+  const address = field(formData, "address");
+  const hours = field(formData, "hours");
+  if (address.length > LIMITS.address) {
+    return { error: `Address must be ${LIMITS.address} characters or fewer.` };
+  }
+  if (hours.length > LIMITS.hours) {
+    return { error: `Hours must be ${LIMITS.hours} characters or fewer.` };
+  }
+
   const supabase = await createClient();
 
   // Resolve the logo before touching the row: a rejected image must not leave
@@ -197,6 +209,8 @@ export async function updateSchool(
       estimated_planes: fields.estimatedPlanes,
       estimated_instructors: fields.estimatedInstructors,
       contacts: fields.contacts,
+      address: address || null,
+      hours: hours || null,
       ...(logoPath !== undefined ? { logo_path: logoPath } : {}),
       // Featuring a listing is an admin call, not the owner's — the
       // protect_flight_school_columns trigger enforces this in the DB too
