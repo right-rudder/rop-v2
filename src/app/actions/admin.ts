@@ -11,11 +11,13 @@ import {
   loadCityBySlug,
   loadAirportByCode,
   loadSchoolBySlug,
+  loadSchoolById,
   loadSchoolsManagedByUser,
   getSchoolSubmissionById,
   getPrograms,
   invalidateCatalog,
 } from "@/lib/data";
+import { sendOwnerWebhook } from "@/lib/notify";
 import { slugify, isAirportCode } from "@/lib/utils";
 import type { SchoolSubmission, State } from "@/lib/types";
 
@@ -177,12 +179,36 @@ async function createSchoolFromSubmission(
   return schoolId;
 }
 
+/**
+ * Never throws: the listing is live and the submission approved by now, and a
+ * CRM hop is not worth reporting an approval as failed over.
+ */
+async function reportSubmitterAsOwner(
+  submission: SchoolSubmission,
+  schoolId: string,
+  approvedBy: string,
+): Promise<void> {
+  try {
+    const school = await loadSchoolById(schoolId);
+    if (!school) return;
+    await sendOwnerWebhook({
+      userId: submission.submittedBy,
+      source: "submission_approved",
+      school,
+      approvedBy,
+      listedContacts: submission.contacts,
+    });
+  } catch (e) {
+    console.error("[admin] owner webhook skipped:", e instanceof Error ? e.message : e);
+  }
+}
+
 export async function approveSubmission(
   _prevState: AdminActionState,
   formData: FormData,
 ): Promise<AdminActionState> {
   const viewer = await getCurrentUser();
-  if (!isAdmin(viewer)) return { error: "Admin access required." };
+  if (!viewer || !isAdmin(viewer)) return { error: "Admin access required." };
 
   const id = formData.get("submissionId") as string;
   const submission = await getSchoolSubmissionById(id);
@@ -225,7 +251,13 @@ export async function approveSubmission(
     return { error: "This submission has already been processed." };
   }
 
+  // Approving a submission makes its submitter the listing's owner, so the CRM
+  // hears about them like any other approved owner. After the status flip: a
+  // retry of a half-finished approval reaches this line exactly once.
+  await reportSubmitterAsOwner(submission, schoolId, viewer.id);
+
   revalidatePath("/admin/submissions");
+  revalidatePath("/admin/users");
   return { message: `Approved — listing "${schoolId}" is live.` };
 }
 

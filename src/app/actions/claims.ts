@@ -13,7 +13,8 @@ import {
   getPendingClaimFor,
   invalidateCatalog,
 } from "@/lib/data";
-import { notifyUser } from "@/lib/notify";
+import { notifyUser, sendOwnerWebhook } from "@/lib/notify";
+import { grantOwnership } from "@/lib/ownership";
 import { validateClaim } from "@/lib/claims";
 import { schoolHref } from "@/lib/utils";
 import { withFlash } from "@/lib/toast";
@@ -165,8 +166,18 @@ export async function approveClaim(
     console.error("[claims] could not supersede rival claims:", supersedeError.message);
   }
 
+  // Together, not in turn: both are best-effort network hops that never throw.
   const target = notifyTarget(school);
-  await notifyUser({ userId: claim.userId, type: "claim_approved", school: target });
+  await Promise.all([
+    notifyUser({ userId: claim.userId, type: "claim_approved", school: target }),
+    sendOwnerWebhook({
+      userId: claim.userId,
+      source: "claim_approved",
+      school,
+      approvedBy: viewer.id,
+      contact: { roleTitle: claim.roleTitle, workEmail: claim.workEmail },
+    }),
+  ]);
   for (const row of superseded ?? []) {
     await notifyUser({ userId: row.user_id, type: "claim_rejected", school: target });
   }
@@ -223,7 +234,7 @@ export async function assignOwner(
   formData: FormData,
 ): Promise<ClaimActionState> {
   const viewer = await getCurrentUser();
-  if (!isAdmin(viewer)) return { error: "Admin access required." };
+  if (!viewer || !isAdmin(viewer)) return { error: "Admin access required." };
 
   const slug = field(formData, "schoolSlug");
   const email = field(formData, "email");
@@ -251,19 +262,13 @@ export async function assignOwner(
   if (lookupError) return { error: friendlyDbError(lookupError) };
   if (!userId) return { error: `No account with the email "${email}".` };
 
-  const supabase = await createClient();
-  try {
-    const { error } = await supabase
-      .from("flight_schools")
-      .update({ managed_by: userId })
-      .eq("id", school.id)
-      .is("managed_by", null);
-    if (error) return { error: friendlyDbError(error) };
-  } finally {
-    invalidateCatalog();
-  }
+  const granted = await grantOwnership(school.id, userId);
+  if (!granted.ok) return { error: granted.error };
 
-  await notifyUser({ userId, type: "listing_assigned", school: notifyTarget(school) });
+  await Promise.all([
+    notifyUser({ userId, type: "listing_assigned", school: notifyTarget(school) }),
+    sendOwnerWebhook({ userId, source: "admin_assigned", school, approvedBy: viewer.id }),
+  ]);
 
   revalidatePath("/admin/claims");
   return { message: `${school.name} is now managed by ${email}.` };

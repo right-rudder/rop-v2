@@ -69,6 +69,8 @@ NEXT_PUBLIC_SITE_URL=http://localhost:3000           # production URL when deplo
 NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=                     # map views; restrict to your referrers
 NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID=                      # Cloud map style id
 GHL_WEBHOOK_URL=                                     # forward leads to a GoHighLevel workflow
+GHL_NOTIFY_WEBHOOK_URL=                              # GHL workflow that emails ownership notifications
+GHL_OWNER_WEBHOOK_URL=                               # GHL workflow that receives each approved listing owner as a contact
 LEAD_IP_SALT=                                        # random string for lead rate-limit fingerprints
 ```
 
