@@ -5,6 +5,7 @@ export const ADMIN_TABS: readonly AdminTab[] = [
   { label: "Overview", href: "/admin" },
   { label: "Submissions", href: "/admin/submissions" },
   { label: "Claims", href: "/admin/claims" },
+  { label: "Users", href: "/admin/users" },
   { label: "Leads", href: "/admin/leads" },
   { label: "Moderation", href: "/admin/moderation" },
 ];

@@ -183,6 +183,7 @@ export async function approveClaim(
   }
 
   revalidatePath("/admin/claims");
+  revalidatePath("/admin/users");
   const also = superseded?.length
     ? ` ${superseded.length} other pending ${superseded.length === 1 ? "claim was" : "claims were"} declined.`
     : "";
@@ -271,6 +272,7 @@ export async function assignOwner(
   ]);
 
   revalidatePath("/admin/claims");
+  revalidatePath("/admin/users");
   return { message: `${school.name} is now managed by ${email}.` };
 }
 
@@ -312,6 +314,7 @@ export async function revokeOwner(
   });
 
   revalidatePath("/admin/claims");
+  revalidatePath("/admin/users");
   return { message: `${school.name} no longer has an owner.` };
 }
 

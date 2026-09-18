@@ -24,6 +24,7 @@ Built for **student pilots** who want a clear picture before they book a discove
 - 🏫 **Submit a listing** — location, fleet, programs, contacts; reviewed by the team, then published
 - ✏️ **Manage your page** — owners edit their listing, upload a logo, and keep programs current
 - 📥 **Leads** — information requests land in an admin inbox and forward to your CRM via webhook
+- 🤝 **Owner onboarding** — admins invite a school contact by email and hand over the listing in one step; every approved owner is sent to your CRM
 
 ### Under the hood
 - 🤖 **AI- and SEO-ready** — schema.org structured data on every page, `llms.txt` for AI assistants, clean canonical URLs, and a sitemap that only advertises pages with real listings
@@ -62,7 +63,7 @@ Create `.env.local` with your Supabase project's values (**Project Settings → 
 ```ini
 NEXT_PUBLIC_SUPABASE_URL=https://<project-ref>.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon / publishable key>
-SUPABASE_SERVICE_ROLE_KEY=<service role key>        # server-only; used solely for lead capture
+SUPABASE_SERVICE_ROLE_KEY=<service role key>        # server-only; lead capture, owner lookups, admin invites
 NEXT_PUBLIC_SITE_URL=http://localhost:3000           # production URL when deployed
 
 # Optional
@@ -99,7 +100,7 @@ src/
   app/            routes — /{state}/{city}/{airport}/{school}, /states, /cities, /airports,
                   /programs, /aircraft, /search, /near-me, /compare, /saved, /admin/*,
                   plus sitemap, robots, llms.txt, manifest, icons, and the social card
-  app/actions/    Server Actions — auth, reviews, schools, airports, favorites, leads, admin
+  app/actions/    Server Actions — auth, reviews, schools, airports, favorites, leads, claims, users, admin
   components/     UI — explorers, cards, forms, map, toasts, and the `ui/` primitives
   content/        Editorial copy — program FAQs, state & city intros
   lib/            Data layer (cached catalog reads), auth, geo, SEO & structured-data builders

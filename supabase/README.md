@@ -227,6 +227,20 @@ confirm route so the SSR client can set the session cookie:
   `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=signup`
 - **Reset password**:
   `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery&next=/update-password`
+- **Invite user** (required for `/admin/users`):
+  `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=invite&next=/update-password`
+
+The Invite template is not optional. Admin invites are not PKCE, so the
+default `{{ .ConfirmationURL }}` link returns the session in the URL
+*fragment*, which a server route never sees — the invitee would land on
+`/login?error=confirm-failed`. With the `token_hash` link they arrive signed in
+on `/update-password`, set a password, and sign in normally from then on.
+
+Invites are sent by Supabase's mailer. The built-in one is limited to a few
+emails per hour; configure custom SMTP (**Authentication → Emails → SMTP
+Settings**) before inviting in volume. Invite links expire with the email OTP
+expiry set under **Authentication → Providers → Email** — “Resend invite” on
+`/admin/users` issues a fresh one.
 
 (The `/auth/confirm` route also handles the default `?code=` redirect style
 as a fallback, but the token_hash templates are the recommended setup. The
@@ -254,6 +268,10 @@ npx supabase gen types typescript --project-id ywqvhrslzpocxcbkhlxm > src/lib/su
 4. Leave a review on a school page — the school's rating and review count
    update automatically (database trigger).
 5. Password reset: `/forgot-password` → email link → `/update-password`.
-6. As a listing owner, the edit form saves content changes, but a direct
+6. As an admin, `/admin/users` → invite a new address with a listing picked:
+   the email link lands on `/update-password`, and after setting a password
+   the invitee can edit the listing. The account shows **Invite pending**
+   until then, **Invite accepted** after.
+7. As a listing owner, the edit form saves content changes, but a direct
    `PATCH …/rest/v1/flight_schools?id=eq.<id>` with `{"featured": true}`
    is rejected with `42501`.

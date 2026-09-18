@@ -712,6 +712,105 @@ export const getLocationMaps = cache(
   },
 );
 
+/** A listing with its owner: beside the account on /admin/users, in the revoke picker on /admin/claims. */
+export type ManagedListing = {
+  id: string;
+  name: string;
+  href: string;
+  managedBy: string;
+  /** "City, ST" */
+  location: string;
+  airport: string;
+};
+
+/**
+ * Every listing that has an owner — fresh, since the admin pages that read it
+ * are where ownership gets changed. Managed listings are a small fraction of
+ * the catalog.
+ */
+export async function loadManagedSchools(): Promise<ManagedListing[]> {
+  const [rows, { cityNameBySlug, stateBySlug }] = await Promise.all([
+    fetchAll((from, to) =>
+      createPublicClient()
+        .from("flight_schools")
+        .select("id, name, slug, state_slug, city_slug, primary_airport_code, managed_by")
+        .not("managed_by", "is", null)
+        .order("name")
+        .range(from, to),
+    ),
+    getLocationMaps(),
+  ]);
+  const locationOf = (citySlug: string, stateSlug: string) => {
+    const city = cityNameBySlug[citySlug];
+    const state = stateBySlug[stateSlug];
+    return city && state ? `${city}, ${state.abbreviation}` : citySlug;
+  };
+  return rows.flatMap((r) =>
+    r.managed_by
+      ? [
+          {
+            id: r.id,
+            name: r.name,
+            managedBy: r.managed_by,
+            location: locationOf(r.city_slug, r.state_slug),
+            airport: r.primary_airport_code,
+            href: schoolHref({
+              stateSlug: r.state_slug,
+              citySlug: r.city_slug,
+              primaryAirportCode: r.primary_airport_code,
+              slug: r.slug,
+            }),
+          },
+        ]
+      : [],
+  );
+}
+
+/** One row of the admin listing picker. */
+export type ListingOption = {
+  id: string;
+  name: string;
+  location: string;
+  airport: string;
+  /** Current owner's name, on pickers over owned listings */
+  owner?: string;
+};
+
+/**
+ * Listings nobody manages yet, for the admin invite form's picker. A lean
+ * projection of its own rather than a filter over getFlightSchools(): the full
+ * catalog is over Next's 2 MB data-cache limit, so it is refetched — and logs a
+ * cache-set failure — on every call. These rows are a tenth of that. Every
+ * ownership write invalidates the catalog tag, and the action re-reads the
+ * chosen listing fresh before assigning it.
+ */
+export const getUnownedListingOptions = cached(
+  "unowned-listing-options",
+  async (): Promise<ListingOption[]> => {
+    const [rows, { cityNameBySlug, stateBySlug }] = await Promise.all([
+      fetchAll((from, to) =>
+        createPublicClient()
+          .from("flight_schools")
+          .select("id, name, city_slug, state_slug, primary_airport_code")
+          .is("managed_by", null)
+          .order("name")
+          .range(from, to),
+      ),
+      getLocationMaps(),
+    ]);
+    return rows.map((r) => {
+      const city = cityNameBySlug[r.city_slug];
+      const state = stateBySlug[r.state_slug];
+      return {
+        id: r.id,
+        name: r.name,
+        location: city && state ? `${city}, ${state.abbreviation}` : r.city_slug,
+        airport: r.primary_airport_code,
+      };
+    });
+  },
+);
+
 // ── Reviews & Comments ─────────────────────────────────────────────────────────
 // Public-read but user-generated: anon client, per-request memo only.
 

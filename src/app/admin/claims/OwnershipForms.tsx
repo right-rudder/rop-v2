@@ -22,7 +22,7 @@ export function AssignOwnerForm() {
     <form action={action}>
       <FormSection
         title="Assign a listing"
-        description="Hands the listing to an existing account and tells them about it. The listing must not already have an owner."
+        description="Hands the listing to an existing account and tells them about it. The listing must not already have an owner. No account yet? Invite them from the Users tab instead."
       >
         {state.error && <Notice tone="error">{state.error}</Notice>}
         {state.message && <Notice tone="ok">{state.message}</Notice>}
