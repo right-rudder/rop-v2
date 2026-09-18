@@ -10,8 +10,10 @@ import type { Faq } from "@/lib/structured-data";
  * flow changes, this file changes with it — a help page that promises a
  * feature we do not have is worse than no help page. Notably: claims are
  * reviewed by hand with no automated verification, submitted schools are not
- * announced by email when they go live, reviews cannot be edited, and owners
- * cannot reply to reviews or see submitted information requests on the site.
+ * announced by email when they go live, reviews cannot be edited, owners
+ * cannot reply to reviews or see submitted information requests on the site,
+ * suggested corrections are reviewed by hand, and an owner is not told when
+ * one is applied to their listing.
  */
 
 export type HelpAudience = "students" | "owners";
@@ -172,6 +174,42 @@ export const HELP_GUIDES: HelpGuide[] = [
     keywords: ["reply", "respond", "discussion", "thread", "question"],
   },
   {
+    id: "suggest-edit",
+    audience: "students",
+    title: "Suggest a correction to a listing",
+    summary:
+      "Spotted a phone number that rings the wrong place, a dead website or an old address? Send us the right value and our team checks it before it goes live.",
+    steps: [
+      "Open the school's listing and choose Suggest an edit in the Contact & location box. Log in if you have not already — suggestions are tied to an account.",
+      "Pick the field that is wrong: phone number, website, address, hours or key contacts. The form shows what the listing currently says.",
+      "Type the correct value. For key contacts you can add, change or remove people in the same form the school itself uses.",
+      "Choose a reason from the list — out of date, wrong, doesn't work, missing, moved, typo, or other — and add a line of detail. A source, such as the school's website or a call you made, speeds things up.",
+      "Submit. Our team reviews it by hand. When it is decided you get a notification on the site and an email, and if it is approved the listing updates straight away.",
+    ],
+    notes: [
+      "One suggestion per field at a time. While one is waiting, that field is greyed out in the form; the other fields stay open.",
+      "If the value you enter matches what the listing already shows, the form tells you and nothing is sent.",
+      "Every approved correction is counted on your public profile, so the people who keep the directory accurate get credit for it.",
+      "If you manage the listing yourself, you will not see Suggest an edit — use Edit school instead.",
+    ],
+    cta: { label: "Find a listing to check", href: "/search" },
+    keywords: [
+      "wrong number",
+      "wrong phone",
+      "wrong address",
+      "wrong website",
+      "broken link",
+      "outdated",
+      "incorrect",
+      "fix",
+      "correct",
+      "report",
+      "error",
+      "mistake",
+      "update listing",
+    ],
+  },
+  {
     id: "claim",
     audience: "owners",
     title: "Claim your flight school listing",
@@ -273,7 +311,7 @@ export const HELP_FAQ_GROUPS: HelpFaqGroup[] = [
       },
       {
         q: "Do I need an account to contact a flight school?",
-        a: "No. The request information form on every listing is open to everyone. You only need an account to leave a review, comment on a review, or save schools to your favorites.",
+        a: "No. The request information form on every listing is open to everyone. You only need an account to leave a review, comment on a review, save schools to your favorites, or suggest a correction to a listing.",
       },
       {
         q: "How do I find flight schools near me?",
@@ -320,6 +358,18 @@ export const HELP_FAQ_GROUPS: HelpFaqGroup[] = [
         a: "No. Your Saved page is visible only to you when you are signed in, and search engines are told not to index it.",
       },
       {
+        q: "A listing has the wrong phone number, website or address. Can I fix it?",
+        a: "Yes. Sign in, open the listing and choose Suggest an edit in the Contact & location box. Pick the field, enter the correct value, choose a reason and submit. Our team checks every suggestion by hand, and once it is approved the listing updates immediately.",
+      },
+      {
+        q: "What happens after I suggest a correction?",
+        a: "It goes to our team for review. You get a notification on the site and an email when it is decided. Approved corrections go live on the listing straight away, and each one is counted on your public profile.",
+      },
+      {
+        q: "Which parts of a listing can I suggest changes to?",
+        a: "The phone number, website, address, hours and key contacts. Anything else — the school's name, description, programs or location — is something to email us about instead.",
+      },
+      {
         q: "Do my saved schools follow me to another device?",
         a: "Yes. The shortlist is stored on your account rather than in the browser, so signing in anywhere shows the same saved schools. Compare picks work the other way round — those stay in the browser you made them in.",
       },
@@ -358,6 +408,14 @@ export const HELP_FAQ_GROUPS: HelpFaqGroup[] = [
       {
         q: "Where do information requests from students go?",
         a: "They are passed on to your school using the contact details on your listing, and students can also call the phone number shown on the page. There is no owner inbox on the site, so keep your phone number, email and contacts current.",
+      },
+      {
+        q: "Someone suggested a change to my listing. What happens?",
+        a: "Suggestions from members go to our team, not to you, and we check each one by hand before anything changes. If we apply one, your listing updates immediately; you are not sent a notice, so it is worth glancing at your listing now and then. You can change any of those details yourself at any time from Edit school.",
+      },
+      {
+        q: "My listing's address or hours are wrong. How do I fix them?",
+        a: `Address and hours are not in the editor yet. Email ${SUPPORT_EMAIL} with the correct details and we will update the listing for you.`,
       },
       {
         q: "Do I need an account to claim or add a school?",
